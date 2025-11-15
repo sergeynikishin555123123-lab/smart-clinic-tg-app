@@ -329,10 +329,12 @@ const pages = {
     }
 };
 
-// ==================== ОСНОВНАЯ ЛОГИКА ПРИЛОЖЕНИЯ ====================
+// ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
 let currentPage = 'home';
 let currentUser = null;
+let allContent = {};
 
+// ==================== ОСНОВНЫЕ ФУНКЦИИ ПРИЛОЖЕНИЯ ====================
 function renderPage(page) {
     currentPage = page;
     const pageData = pages[page];
@@ -348,15 +350,466 @@ function renderPage(page) {
         btn.classList.toggle('active', btn.dataset.page === page);
     });
 
-    // Загружаем данные для страницы
-    if (page === 'catalog') loadCatalogContent();
-    if (page === 'profile') updateProfileStats();
+    // Инициализация специфичных для страницы функций
+    initializePage(page);
 
     console.log('✅ Страница:', page);
 }
 
-// Остальные функции приложения...
-// [Здесь будет полная реализация всех функций из ТЗ]
+function initializePage(page) {
+    switch (page) {
+        case 'home':
+            initHomePage();
+            break;
+        case 'catalog':
+            loadCatalogContent();
+            break;
+        case 'community':
+            initCommunityPage();
+            break;
+        case 'favorites':
+            initFavoritesPage();
+            break;
+        case 'profile':
+            updateProfileStats();
+            break;
+    }
+}
+
+function initHomePage() {
+    // Инициализация фильтров новостей
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            filterNews(this.dataset.filter);
+        });
+    });
+}
+
+function initCommunityPage() {
+    // Инициализация FAQ
+    document.querySelectorAll('.faq-question').forEach(question => {
+        question.addEventListener('click', function() {
+            const answer = this.nextElementSibling;
+            answer.style.display = answer.style.display === 'block' ? 'none' : 'block';
+        });
+    });
+}
+
+function initFavoritesPage() {
+    // Инициализация вкладок материалов
+    document.querySelectorAll('.material-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabId = this.dataset.tab;
+            
+            // Обновляем активные вкладки
+            document.querySelectorAll('.material-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Показываем соответствующий контент
+            document.querySelectorAll('.material-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+            
+            // Загружаем данные для вкладки
+            if (tabId === 'watch-later') loadWatchLater();
+            if (tabId === 'favorites') loadFavorites();
+        });
+    });
+}
+
+// ==================== ФУНКЦИИ КОНТЕНТА ====================
+async function loadCatalogContent() {
+    try {
+        const response = await fetch('/api/content');
+        const data = await response.json();
+        
+        if (data.success) {
+            allContent = data.data;
+            renderCatalogContent();
+            initCatalogFilters();
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки контента:', error);
+        document.getElementById('contentGrid').innerHTML = '<div class="error">Ошибка загрузки контента</div>';
+    }
+}
+
+function renderCatalogContent() {
+    const contentGrid = document.getElementById('contentGrid');
+    let allItems = [];
+
+    // Собираем все элементы контента
+    Object.keys(allContent).forEach(type => {
+        allContent[type].forEach(item => {
+            item.contentType = type;
+            allItems.push(item);
+        });
+    });
+
+    if (allItems.length === 0) {
+        contentGrid.innerHTML = '<div class="empty-state">Контент пока не добавлен</div>';
+        return;
+    }
+
+    contentGrid.innerHTML = allItems.map(item => `
+        <div class="content-card" data-type="${item.contentType}">
+            <div class="content-card-header">
+                <div class="content-icon">${getContentIcon(item.contentType)}</div>
+                <button class="favorite-btn" onclick="toggleFavorite('${item.contentType}', ${item.id})">☆</button>
+            </div>
+            <div class="content-card-body">
+                <div class="content-title">${item.title}</div>
+                <div class="content-description">${item.description || ''}</div>
+                <div class="content-meta">
+                    ${item.duration ? `<span class="meta-item">⏱️ ${item.duration}</span>` : ''}
+                    ${item.price ? `<span class="meta-item">💰 ${item.price} руб.</span>` : ''}
+                    ${!item.price ? `<span class="meta-item free">🆓 Бесплатно</span>` : ''}
+                </div>
+            </div>
+            <div class="content-card-actions">
+                <button class="btn btn-small" onclick="openContent('${item.contentType}', ${item.id})">
+                    ${getActionButtonText(item.contentType)}
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getContentIcon(contentType) {
+    const icons = {
+        'courses': '📚',
+        'podcasts': '🎧',
+        'streams': '📹',
+        'videos': '🎯',
+        'materials': '📋',
+        'events': '🗺️'
+    };
+    return icons[contentType] || '📄';
+}
+
+function getActionButtonText(contentType) {
+    const actions = {
+        'courses': 'Записаться',
+        'podcasts': 'Слушать',
+        'streams': 'Смотреть',
+        'videos': 'Смотреть',
+        'materials': 'Открыть',
+        'events': 'Участвовать'
+    };
+    return actions[contentType] || 'Открыть';
+}
+
+function initCatalogFilters() {
+    const searchInput = document.getElementById('catalogSearch');
+    const typeFilter = document.getElementById('contentTypeFilter');
+    const contentTabs = document.querySelectorAll('.content-tab');
+
+    // Поиск
+    searchInput.addEventListener('input', function() {
+        filterCatalogContent();
+    });
+
+    // Фильтр по типу
+    typeFilter.addEventListener('change', function() {
+        filterCatalogContent();
+    });
+
+    // Вкладки
+    contentTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            contentTabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            filterCatalogContent();
+        });
+    });
+}
+
+function filterCatalogContent() {
+    const searchTerm = document.getElementById('catalogSearch').value.toLowerCase();
+    const contentType = document.getElementById('contentTypeFilter').value;
+    const activeTab = document.querySelector('.content-tab.active').dataset.tab;
+
+    document.querySelectorAll('.content-card').forEach(card => {
+        const title = card.querySelector('.content-title').textContent.toLowerCase();
+        const description = card.querySelector('.content-description').textContent.toLowerCase();
+        const cardType = card.dataset.type;
+
+        const matchesSearch = title.includes(searchTerm) || description.includes(searchTerm);
+        const matchesType = contentType === 'all' || cardType === contentType;
+        const matchesTab = filterByTab(card, activeTab);
+
+        card.style.display = matchesSearch && matchesType && matchesTab ? 'block' : 'none';
+    });
+}
+
+function filterByTab(card, tab) {
+    // Здесь можно добавить логику фильтрации по вкладкам
+    // Например, популярные, новинки, бесплатные
+    return true; // Временная реализация
+}
+
+// ==================== ФУНКЦИИ ПОЛЬЗОВАТЕЛЯ ====================
+async function loadUserData() {
+    try {
+        if (window.Telegram && Telegram.WebApp) {
+            const tgUser = Telegram.WebApp.initDataUnsafe.user;
+            if (tgUser && tgUser.id) {
+                const response = await fetch(`/api/user/${tgUser.id}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUser = data.user;
+                    updateUIWithUserData();
+                    
+                    // Показываем админ-панель если пользователь админ
+                    if (currentUser.isAdmin) {
+                        document.getElementById('adminBadge').style.display = 'block';
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.log('ℹ️ Используем данные Telegram');
+        if (window.Telegram && Telegram.WebApp) {
+            const tgUser = Telegram.WebApp.initDataUnsafe.user;
+            if (tgUser) {
+                currentUser = {
+                    firstName: tgUser.first_name || 'Пользователь',
+                    subscription: { status: 'inactive' },
+                    progress: { steps: {} },
+                    isAdmin: tgUser.id === 898508164
+                };
+                updateUIWithUserData();
+                
+                if (currentUser.isAdmin) {
+                    document.getElementById('adminBadge').style.display = 'block';
+                }
+            }
+        }
+    }
+}
+
+function updateUIWithUserData() {
+    if (!currentUser) return;
+    
+    const userNameElement = document.getElementById('userName');
+    const subscriptionStatusElement = document.getElementById('subscriptionStatus');
+    
+    if (userNameElement) {
+        userNameElement.textContent = currentUser.firstName;
+    }
+    
+    if (subscriptionStatusElement) {
+        let statusHTML = '';
+        
+        if (currentUser.subscription.status === 'trial') {
+            const endDate = currentUser.subscription.endDate ? 
+                new Date(currentUser.subscription.endDate).toLocaleDateString('ru-RU') : 'неизвестно';
+            statusHTML = `
+                <div class="status-icon">🆓</div>
+                <div class="status-text">
+                    <div>Подписка: пробный период</div>
+                    <div class="status-date">до ${endDate}</div>
+                </div>
+            `;
+            subscriptionStatusElement.className = 'subscription-status trial';
+        } else if (currentUser.subscription.status === 'active') {
+            statusHTML = `
+                <div class="status-icon">✅</div>
+                <div class="status-text">Подписка: активна</div>
+            `;
+            subscriptionStatusElement.className = 'subscription-status active';
+        } else {
+            statusHTML = `
+                <div class="status-icon">❌</div>
+                <div class="status-text">Подписка: не активна</div>
+            `;
+            subscriptionStatusElement.className = 'subscription-status inactive';
+        }
+        
+        subscriptionStatusElement.innerHTML = statusHTML;
+    }
+}
+
+function updateProfileStats() {
+    if (!currentUser) return;
+    
+    document.getElementById('coursesCompleted').textContent = currentUser.progress.steps.coursesBought || 0;
+    document.getElementById('materialsWatched').textContent = currentUser.progress.steps.materialsWatched || 0;
+    document.getElementById('eventsAttended').textContent = currentUser.progress.steps.eventsParticipated || 0;
+    document.getElementById('materialsSaved').textContent = currentUser.progress.steps.materialsSaved || 0;
+}
+
+// ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+function openSection(section) {
+    const sections = {
+        'courses': { title: '📚 Курсы', handler: openCourses },
+        'fm': { title: '🎧 АНБ FM', handler: openPodcasts },
+        'streams': { title: '📹 Эфиры и Разборы', handler: openStreams },
+        'cheats': { title: '🎯 Видео-шпаргалки', handler: openVideos },
+        'practice': { title: '📋 Практические материалы', handler: openPractice },
+        'events': { title: '🗺️ Карта мероприятий', handler: openEvents },
+        'offers': { title: '🔥 Ограниченное предложение', handler: openOffers },
+        'support': { title: '💬 Поддержка', handler: openSupport }
+    };
+    
+    const sectionData = sections[section];
+    if (sectionData) {
+        sectionData.handler();
+    } else {
+        alert(`🎯 Открываем раздел: ${section}`);
+    }
+}
+
+function openCourses() {
+    renderPage('catalog');
+    // Можно добавить фильтрацию только курсов
+}
+
+function openPodcasts() {
+    alert('🎧 Раздел АНБ FM - аудио подкасты и интервью');
+}
+
+function openStreams() {
+    alert('📹 Раздел Эфиры и Разборы - прямые трансляции и разборы кейсов');
+}
+
+function openVideos() {
+    alert('🎯 Раздел Видео-шпаргалки - короткие обучающие видео');
+}
+
+function openPractice() {
+    alert('📋 Раздел Практические материалы - МРТ, кейсы, чек-листы');
+}
+
+function openEvents() {
+    alert('🗺️ Карта мероприятий - онлайн и офлайн события');
+}
+
+function openOffers() {
+    alert('🔥 Ограниченные предложения - специальные условия и акции');
+}
+
+function openSupport() {
+    alert('💬 Поддержка - связь с координатором Академии');
+}
+
+function openChat(chatType) {
+    if (!currentUser || currentUser.subscription.status === 'inactive') {
+        alert('💬 Для доступа к чатам необходима активная подписка');
+        return;
+    }
+    
+    const chatNames = {
+        'general': 'Флудилка',
+        'specialists': 'Чат специалистов'
+    };
+    
+    alert(`💬 Открываем чат: ${chatNames[chatType]}\n\nЧат будет доступен в ближайшем обновлении`);
+}
+
+function openMaterials(materialType) {
+    const types = {
+        'mri': 'МРТ разборы',
+        'cases': 'Клинические случаи',
+        'checklists': 'Чек-листы'
+    };
+    
+    alert(`📋 Открываем: ${types[materialType]}\n\nРаздел в разработке`);
+}
+
+function openContent(contentType, contentId) {
+    alert(`🎯 Открываем контент: ${contentType} ID: ${contentId}\n\nФункция будет реализована в следующем обновлении`);
+}
+
+function toggleFavorite(contentType, contentId) {
+    if (!currentUser) {
+        alert('⚠️ Необходимо войти в систему');
+        return;
+    }
+    
+    alert(`⭐ Добавлено в избранное: ${contentType} ID: ${contentId}`);
+}
+
+function changeSubscription() {
+    if (!currentUser) return;
+    
+    const modalHTML = `
+        <div class="modal" id="subscriptionModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>💳 Управление подпиской</h3>
+                    <button class="close-btn" onclick="closeModal('subscriptionModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="subscription-plans">
+                        <div class="plan-card">
+                            <div class="plan-header">
+                                <div class="plan-name">1 месяц</div>
+                                <div class="plan-price">2 900 ₽</div>
+                            </div>
+                            <ul class="plan-features">
+                                <li>✅ Полный доступ к курсам</li>
+                                <li>✅ Участие в эфирах</li>
+                                <li>✅ Практические материалы</li>
+                                <li>✅ Чат специалистов</li>
+                            </ul>
+                            <button class="btn btn-primary" onclick="selectPlan(1)">Выбрать</button>
+                        </div>
+                        
+                        <div class="plan-card popular">
+                            <div class="plan-badge">Выгодно</div>
+                            <div class="plan-header">
+                                <div class="plan-name">3 месяца</div>
+                                <div class="plan-price">7 500 ₽</div>
+                                <div class="plan-save">Экономия 600 ₽</div>
+                            </div>
+                            <ul class="plan-features">
+                                <li>✅ Полный доступ к курсам</li>
+                                <li>✅ Участие в эфирах</li>
+                                <li>✅ Практические материалы</li>
+                                <li>✅ Чат специалистов</li>
+                                <li>✅ Персональный сертификат</li>
+                            </ul>
+                            <button class="btn btn-primary" onclick="selectPlan(3)">Выбрать</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    document.getElementById('subscriptionModal').style.display = 'block';
+}
+
+function selectPlan(months) {
+    alert(`🎉 Выбран тариф на ${months} месяца\n\nИнтеграция с платежной системой будет реализована в следующем обновлении`);
+    closeModal('subscriptionModal');
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function toggleSearch() {
+    const searchContainer = document.getElementById('searchContainer');
+    searchContainer.style.display = searchContainer.style.display === 'none' ? 'block' : 'none';
+    
+    if (searchContainer.style.display === 'block') {
+        document.getElementById('searchInput').focus();
+    }
+}
+
+function goToAdminPanel() {
+    window.location.href = '/admin';
+}
 
 // ==================== ИНИЦИАЛИЗАЦИЯ ====================
 document.addEventListener('DOMContentLoaded', function() {
@@ -367,6 +820,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Инициализация поиска
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch(this.value);
+            }
+        });
+    }
+
     // Загрузка пользователя
     loadUserData();
 
@@ -374,8 +837,28 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.Telegram && Telegram.WebApp) {
         Telegram.WebApp.expand();
         Telegram.WebApp.ready();
+        
+        // Настройка интерфейса Telegram
+        Telegram.WebApp.setHeaderColor('#58b8e7');
+        Telegram.WebApp.setBackgroundColor('#ffffff');
     }
 
     renderPage('home');
     console.log('✅ WebApp загружен!');
 });
+
+function performSearch(query) {
+    if (query.trim()) {
+        alert(`🔍 Поиск: "${query}"\n\nРезультаты поиска будут отображены в каталоге`);
+        renderPage('catalog');
+        
+        // Устанавливаем значение поиска в каталоге
+        setTimeout(() => {
+            const catalogSearch = document.getElementById('catalogSearch');
+            if (catalogSearch) {
+                catalogSearch.value = query;
+                filterCatalogContent();
+            }
+        }, 100);
+    }
+}
