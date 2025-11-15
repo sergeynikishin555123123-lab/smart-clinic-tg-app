@@ -11,13 +11,13 @@ const BOT_TOKEN = process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoN
 const PORT = process.env.PORT || 3000;
 const WEBAPP_URL = process.env.WEBAPP_URL || `http://localhost:${PORT}`;
 
-// ВАШ ТЕЛЕГРАМ ID
+// ВАШ ТЕЛЕГРАМ ID - ОБЯЗАТЕЛЬНО ПРОВЕРЬТЕ ЧЕРЕЗ @userinfobot
 const ADMIN_IDS = [898508164]; 
 
 console.log('🚀 Starting Smart Clinic Bot...');
-console.log('🔧 Admin IDs:', ADMIN_IDS);
+console.log('🔧 Admin ID:', ADMIN_IDS[0]);
 
-// ==================== БАЗА ДАННЫХ В ПАМЯТИ ====================
+// ==================== ПРОСТАЯ БАЗА ДАННЫХ ====================
 const users = new Map();
 const buttonConfigs = {
   navigation: { 
@@ -42,8 +42,8 @@ const userSessions = new Map();
 
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 function isAdmin(userId) {
-  console.log(`🔐 Checking admin rights: ${userId} in [${ADMIN_IDS}] -> ${ADMIN_IDS.includes(userId)}`);
-  return ADMIN_IDS.includes(userId);
+  console.log(`🔐 Проверка прав: ${userId} == ${ADMIN_IDS[0]} -> ${userId === ADMIN_IDS[0]}`);
+  return userId === ADMIN_IDS[0];
 }
 
 function getUser(id) {
@@ -63,7 +63,6 @@ function getUser(id) {
       },
       progress: {
         level: 'Понимаю',
-        progress: 25,
         steps: {
           'Понимаю': { completed: true, progress: 100 },
           'Связываю': { completed: false, progress: 60 },
@@ -73,6 +72,7 @@ function getUser(id) {
         }
       }
     });
+    console.log(`✅ Создан новый пользователь: ${id}`);
   }
   return users.get(id);
 }
@@ -89,14 +89,9 @@ function getStats() {
     (new Date() - user.lastActivity) < 24 * 60 * 60 * 1000
   ).length;
   
-  const activeSubscriptions = Array.from(users.values()).filter(user => 
-    user.subscription.status === 'active'
-  ).length;
-  
   return {
     totalUsers,
     activeToday,
-    activeSubscriptions,
     totalCommands: Array.from(users.values()).reduce((sum, user) => sum + user.stats.commands, 0),
     totalButtons: Array.from(users.values()).reduce((sum, user) => sum + user.stats.buttons, 0)
   };
@@ -107,23 +102,27 @@ const bot = new Telegraf(BOT_TOKEN);
 
 // ==================== ОСНОВНЫЕ КОМАНДЫ ====================
 bot.start(async (ctx) => {
-  const user = getUser(ctx.from.id);
+  const userId = ctx.from.id;
+  const user = getUser(userId);
+  
   user.stats.commands++;
   user.firstName = ctx.from.first_name;
-  user.username = ctx.from.username || `user_${ctx.from.id}`;
+  user.username = ctx.from.username || `user_${userId}`;
   
-  console.log(`👤 User ${ctx.from.id} started bot`);
+  console.log(`👤 Пользователь ${userId} запустил бота`);
   
   let welcomeMessage = `👋 Добро пожаловать в Академию АНБ, ${ctx.from.first_name}!\n\n`;
   
   // Проверяем админские права
-  if (isAdmin(ctx.from.id)) {
-    welcomeMessage += `⚡ Вы администратор системы\n`;
+  if (isAdmin(userId)) {
+    welcomeMessage += `⚡ <b>Вы администратор системы</b>\n\n`;
+    console.log(`⭐ Пользователь ${userId} - АДМИНИСТРАТОР`);
   }
   
   welcomeMessage += `Я ваш помощник в мире профессионального развития.\n\nИспользуйте кнопки ниже для навигации:`;
   
   await ctx.reply(welcomeMessage, {
+    parse_mode: 'HTML',
     reply_markup: {
       keyboard: [
         ['📱 Навигация', '🎁 Акции'],
@@ -134,6 +133,7 @@ bot.start(async (ctx) => {
   });
 });
 
+// Обработчики кнопок
 bot.hears('📱 Навигация', async (ctx) => {
   updateUserActivity(ctx.from.id);
   await ctx.reply(buttonConfigs.navigation.reply, {
@@ -165,15 +165,15 @@ bot.hears('💬 Поддержка', async (ctx) => {
 
 // ==================== КОМАНДЫ БОТА ====================
 bot.help(async (ctx) => {
-  let helpText = `🤖 Помощь по боту Академии АНБ\n\nОсновные команды:\n/start - начать работу\n/help - показать справку\n/menu - показать меню\n/status - статус подписки`;
+  let helpText = `🤖 <b>Помощь по боту Академии АНБ</b>\n\n<b>Основные команды:</b>\n/start - начать работу\n/help - показать справку\n/menu - показать меню\n/status - статус подписки`;
   
   if (isAdmin(ctx.from.id)) {
     helpText += `\n/admin - панель администратора`;
   }
   
-  helpText += `\n\nИспользуйте кнопки для навигации!`;
+  helpText += `\n\n<b>Используйте кнопки для навигации!</b>`;
   
-  await ctx.reply(helpText);
+  await ctx.reply(helpText, { parse_mode: 'HTML' });
 });
 
 bot.command('menu', async (ctx) => {
@@ -197,32 +197,33 @@ bot.command('status', async (ctx) => {
     subscriptionText = `✅ Активна (${user.subscription.type})`;
   }
   
-  let statusMessage = `📊 Ваш статус:\n\n👤 Пользователь: ${user.firstName}\n💳 Подписка: ${subscriptionText}\n🎯 Уровень: ${user.progress.level}\n📅 Зарегистрирован: ${user.joinedAt.toLocaleDateString()}\n🎯 Активность: ${user.stats.buttons} действий`;
+  let statusMessage = `📊 <b>Ваш статус:</b>\n\n👤 Пользователь: ${user.firstName}\n💳 Подписка: ${subscriptionText}\n🎯 Уровень: ${user.progress.level}\n📅 Зарегистрирован: ${user.joinedAt.toLocaleDateString()}\n🎯 Активность: ${user.stats.buttons} действий`;
   
   if (isAdmin(ctx.from.id)) {
-    statusMessage += `\n\n⚡ Вы администратор системы`;
+    statusMessage += `\n\n⚡ <b>Вы администратор системы</b>`;
   }
   
-  statusMessage += `\n\n📈 Общая статистика:\n👥 Пользователей: ${stats.totalUsers}\n✅ Активных сегодня: ${stats.activeToday}`;
+  statusMessage += `\n\n📈 <b>Общая статистика:</b>\n👥 Пользователей: ${stats.totalUsers}\n✅ Активных сегодня: ${stats.activeToday}`;
   
-  await ctx.reply(statusMessage);
+  await ctx.reply(statusMessage, { parse_mode: 'HTML' });
 });
 
 // ==================== АДМИН-ПАНЕЛЬ ====================
 bot.command('admin', async (ctx) => {
   const userId = ctx.from.id;
   
-  console.log(`🔧 User ${userId} (${ctx.from.first_name}) trying to access admin panel`);
+  console.log(`🔧 Пользователь ${userId} пытается открыть админ-панель`);
   
   if (!isAdmin(userId)) {
+    console.log(`❌ Доступ запрещен для пользователя ${userId}`);
     await ctx.reply('❌ У вас нет прав доступа к админ-панели');
-    console.log(`❌ Admin access denied for user ${userId}`);
     return;
   }
 
-  console.log(`✅ Admin access granted for user ${userId}`);
+  console.log(`✅ Доступ разрешен для администратора ${userId}`);
   
-  await ctx.reply('🔧 Панель администратора', {
+  await ctx.reply('🔧 <b>Панель администратора</b>', {
+    parse_mode: 'HTML',
     reply_markup: {
       keyboard: [
         ['📊 Статистика', '✏️ Редактировать кнопки'],
@@ -234,6 +235,7 @@ bot.command('admin', async (ctx) => {
   });
 });
 
+// Обработчики админ-меню
 bot.hears('📊 Статистика', async (ctx) => {
   const userId = ctx.from.id;
   if (!isAdmin(userId)) {
@@ -244,13 +246,13 @@ bot.hears('📊 Статистика', async (ctx) => {
   const stats = getStats();
   
   await ctx.reply(
-    `📊 Статистика бота:\n\n` +
-    `👥 Всего пользователей: ${stats.totalUsers}\n` +
-    `✅ Активных за 24ч: ${stats.activeToday}\n` +
-    `💳 Активных подписок: ${stats.activeSubscriptions}\n` +
-    `📱 Команд выполнено: ${stats.totalCommands}\n` +
-    `🎯 Нажатий кнопок: ${stats.totalButtons}\n\n` +
-    `🔄 Бот запущен и работает стабильно`
+    `📊 <b>Статистика бота:</b>\n\n` +
+    `👥 Всего пользователей: <b>${stats.totalUsers}</b>\n` +
+    `✅ Активных за 24ч: <b>${stats.activeToday}</b>\n` +
+    `📱 Команд выполнено: <b>${stats.totalCommands}</b>\n` +
+    `🎯 Нажатий кнопок: <b>${stats.totalButtons}</b>\n\n` +
+    `🔄 Бот запущен и работает стабильно`,
+    { parse_mode: 'HTML' }
   );
 });
 
@@ -261,12 +263,13 @@ bot.hears('✏️ Редактировать кнопки', async (ctx) => {
     return;
   }
 
-  let message = '📋 Выберите кнопку для редактирования:\n\n';
+  let message = '📋 <b>Выберите кнопку для редактирования:</b>\n\n';
   Object.entries(buttonConfigs).forEach(([key, config]) => {
-    message += `🔹 ${config.text}\n📝 ${config.reply.substring(0, 60)}...\n\n`;
+    message += `🔹 <b>${config.text}</b>\n📝 ${config.reply.substring(0, 50)}...\n\n`;
   });
 
   await ctx.reply(message, {
+    parse_mode: 'HTML',
     reply_markup: {
       inline_keyboard: [
         [
@@ -294,10 +297,11 @@ bot.action(/edit_(.+)/, async (ctx) => {
   userSessions.set(userId, { editing: buttonType });
 
   await ctx.editMessageText(
-    `✏️ Редактирование кнопки: ${buttonConfigs[buttonType].text}\n\n` +
-    `Текущий ответ:\n${buttonConfigs[buttonType].reply}\n\n` +
-    `Отправьте новый текст ответа:`,
+    `✏️ <b>Редактирование кнопки:</b> ${buttonConfigs[buttonType].text}\n\n` +
+    `<b>Текущий ответ:</b>\n${buttonConfigs[buttonType].reply}\n\n` +
+    `<b>Отправьте новый текст ответа:</b>`,
     {
+      parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'cancel_edit' }]]
       }
@@ -323,8 +327,9 @@ bot.hears('📢 Сделать рассылку', async (ctx) => {
   
   userSessions.set(userId, { broadcasting: true });
   await ctx.reply(
-    '📢 Создание рассылки\n\nОтправьте сообщение для рассылки всем пользователям:',
+    '📢 <b>Создание рассылки</b>\n\nОтправьте сообщение для рассылки всем пользователям:',
     {
+      parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'cancel_broadcast' }]]
       }
@@ -348,7 +353,7 @@ bot.hears('👥 Пользователи', async (ctx) => {
   
   const recentUsers = Array.from(users.values())
     .sort((a, b) => b.joinedAt - a.joinedAt)
-    .slice(0, 10);
+    .slice(0, 5);
   
   let userList = '';
   recentUsers.forEach((user, index) => {
@@ -357,9 +362,9 @@ bot.hears('👥 Пользователи', async (ctx) => {
   });
 
   await ctx.reply(
-    `👥 Последние пользователи:\n\n${userList || 'Пока нет пользователей'}\n\n` +
-    `Всего: ${users.size} пользователей\n` +
-    `Активных подписок: ${getStats().activeSubscriptions}`
+    `👥 <b>Последние пользователи:</b>\n\n${userList || 'Пока нет пользователей'}\n\n` +
+    `<b>Всего:</b> ${users.size} пользователей`,
+    { parse_mode: 'HTML' }
   );
 });
 
@@ -383,6 +388,8 @@ bot.on('text', async (ctx) => {
   const text = ctx.message.text;
   const session = userSessions.get(userId);
 
+  console.log(`📨 Сообщение от ${userId}: "${text}"`);
+
   // Пропускаем команды
   if (text.startsWith('/')) return;
 
@@ -393,9 +400,11 @@ bot.on('text', async (ctx) => {
     userSessions.delete(userId);
     
     await ctx.reply(
-      `✅ Ответ для "${buttonConfigs[buttonType].text}" обновлен!\n\n` +
-      `📝 Было: ${oldReply}\n` +
-      `📝 Стало: ${text}`
+      `✅ <b>Ответ обновлен!</b>\n\n` +
+      `🔹 Кнопка: <b>${buttonConfigs[buttonType].text}</b>\n\n` +
+      `<b>Было:</b>\n${oldReply}\n\n` +
+      `<b>Стало:</b>\n${text}`,
+      { parse_mode: 'HTML' }
     );
     return;
   }
@@ -409,14 +418,15 @@ bot.on('text', async (ctx) => {
     for (const userId of userList) {
       try {
         await bot.telegram.sendMessage(userId, 
-          `📢 Рассылка от Академии АНБ:\n\n${text}\n\n` +
-          `С уважением,\nКоманда Академии АНБ`
+          `📢 <b>Рассылка от Академии АНБ</b>\n\n${text}\n\n` +
+          `<i>С уважением,\nКоманда Академии АНБ</i>`,
+          { parse_mode: 'HTML' }
         );
         sent++;
         
         // Небольшая задержка чтобы не превысить лимиты Telegram
-        if (sent % 10 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+        if (sent % 5 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       } catch (error) {
         console.log(`❌ Не удалось отправить пользователю ${userId}`);
@@ -424,7 +434,7 @@ bot.on('text', async (ctx) => {
     }
     
     userSessions.delete(userId);
-    await ctx.reply(`✅ Рассылка завершена!\nОтправлено: ${sent} пользователям\nНе удалось: ${userList.length - sent}`);
+    await ctx.reply(`✅ <b>Рассылка завершена!</b>\n\nОтправлено: <b>${sent}</b> пользователям\nНе удалось: <b>${userList.length - sent}</b>`, { parse_mode: 'HTML' });
     return;
   }
 
@@ -432,62 +442,6 @@ bot.on('text', async (ctx) => {
   if (!text.startsWith('/')) {
     await ctx.reply('🤗 Используйте кнопки меню для навигации');
   }
-});
-
-// ==================== ОБРАБОТКА WEBAPP ДАННЫХ ====================
-bot.on('web_app_data', async (ctx) => {
-  try {
-    const data = JSON.parse(ctx.webAppData.data.json());
-    console.log('📱 Data from WebApp:', data);
-    
-    const user = getUser(ctx.from.id);
-    
-    // Обработка разных типов действий из WebApp
-    switch (data.action) {
-      case 'open_category':
-        await ctx.reply(`📂 Открываю раздел: ${data.category}`);
-        break;
-        
-      case 'save_material':
-        await ctx.reply('✅ Материал сохранен в избранное');
-        break;
-        
-      case 'contact_support':
-        await ctx.reply('📞 Ваш запрос передан в поддержку. С вами свяжутся в ближайшее время.');
-        break;
-        
-      case 'update_progress':
-        if (data.step && data.progress !== undefined) {
-          user.progress.steps[data.step].progress = data.progress;
-          if (data.progress >= 100) {
-            user.progress.steps[data.step].completed = true;
-          }
-          await ctx.reply(`🎯 Прогресс обновлен: ${data.step} - ${data.progress}%`);
-        }
-        break;
-        
-      case 'subscribe':
-        user.subscription = {
-          status: 'active',
-          type: data.plan || 'monthly',
-          startDate: new Date(),
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // +30 дней
-        };
-        await ctx.reply(`🎉 Поздравляем! Вы оформили подписку "${data.plan}"`);
-        break;
-        
-      default:
-        await ctx.reply('✅ Действие выполнено');
-    }
-  } catch (error) {
-    console.error('❌ Error processing web app data:', error);
-    await ctx.reply('❌ Произошла ошибка при обработке запроса');
-  }
-});
-
-// ==================== ОБРАБОТКА ОШИБОК ====================
-bot.catch((err, ctx) => {
-  console.error(`❌ Error for ${ctx.updateType}:`, err);
 });
 
 // ==================== WEB APP SERVER ====================
@@ -499,19 +453,6 @@ app.use(express.static(join(__dirname, 'webapp')));
 // API для статистики
 app.get('/api/stats', (req, res) => {
   res.json(getStats());
-});
-
-// API для получения данных пользователя
-app.get('/api/user/:id', (req, res) => {
-  const user = getUser(parseInt(req.params.id));
-  res.json({
-    id: user.id,
-    firstName: user.firstName,
-    username: user.username,
-    subscription: user.subscription,
-    progress: user.progress,
-    stats: user.stats
-  });
 });
 
 // Все остальные запросы на index.html
@@ -534,7 +475,7 @@ async function startApp() {
     console.log('✅ Bot started successfully!');
     console.log('🔧 Admin commands: /admin');
     console.log('📊 Available commands: /start, /help, /menu, /status');
-    console.log(`⚡ Admin ID configured: ${ADMIN_IDS}`);
+    console.log(`⚡ Admin ID: ${ADMIN_IDS[0]}`);
     console.log(`🔧 Для тестирования админ-панели используйте команду: /admin`);
 
   } catch (error) {
