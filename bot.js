@@ -1,7 +1,9 @@
 import { Telegraf, Markup } from 'telegraf';
 import express from 'express';
+import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -15,9 +17,122 @@ const ADMIN_IDS = [898508164];
 
 console.log('🚀 Starting Smart Clinic Bot...');
 
+// Создаем папки для загрузки файлов
+const uploadsDir = join(__dirname, 'uploads');
+const imagesDir = join(uploadsDir, 'images');
+const videosDir = join(uploadsDir, 'videos');
+const audioDir = join(uploadsDir, 'audio');
+
+[uploadsDir, imagesDir, videosDir, audioDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+});
+
+// ==================== НАСТРОЙКА MULTER ДЛЯ ЗАГРУЗКИ ФАЙЛОВ ====================
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, imagesDir);
+        } else if (file.mimetype.startsWith('video/')) {
+            cb(null, videosDir);
+        } else if (file.mimetype.startsWith('audio/')) {
+            cb(null, audioDir);
+        } else {
+            cb(null, uploadsDir);
+        }
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + '.' + file.originalname.split('.').pop());
+    }
+});
+
+const upload = multer({ 
+    storage: storage,
+    limits: {
+        fileSize: 50 * 1024 * 1024 // 50MB limit
+    }
+});
+
 // ==================== БАЗА ДАННЫХ ====================
 const users = new Map();
 const userSurveys = new Map();
+const admins = new Set(ADMIN_IDS);
+const contentDB = {
+    courses: [
+        {
+            id: 1,
+            title: "Мануальные техники в практике",
+            description: "6 модулей по современным мануальным методикам",
+            fullDescription: "Комплексный курс, охватывающий основные мануальные техники, применяемые в неврологической практике. Изучите диагностику и коррекцию функциональных нарушений.",
+            price: 15000,
+            duration: "12 часов",
+            modules: 6,
+            image: "/uploads/images/course-1.jpg",
+            created: new Date('2024-01-15'),
+            updated: new Date('2024-01-15')
+        }
+    ],
+    podcasts: [
+        {
+            id: 1,
+            title: "АНБ FM: Основы неврологии для практикующих врачей",
+            description: "Подкаст о современных подходах в неврологии",
+            duration: "45:20",
+            audio: "/uploads/audio/podcast-1.mp3",
+            image: "/uploads/images/podcast-1.jpg",
+            created: new Date('2024-01-10')
+        }
+    ],
+    streams: [
+        {
+            id: 1,
+            title: "Разбор клинического случая: боль в пояснице",
+            description: "Подробный разбор с Ильей Чистяковым",
+            duration: "1:15:30",
+            video: "/uploads/videos/stream-1.mp4",
+            image: "/uploads/images/stream-1.jpg",
+            scheduled: new Date('2024-01-20T19:00:00'),
+            created: new Date('2024-01-18')
+        }
+    ],
+    videos: [
+        {
+            id: 1,
+            title: "Техника миофасциального релиза",
+            description: "Короткая видео-шпаргалка по технике МФР",
+            duration: "08:15",
+            video: "/uploads/videos/video-1.mp4",
+            image: "/uploads/images/video-1.jpg",
+            created: new Date('2024-01-05')
+        }
+    ],
+    materials: [
+        {
+            id: 1,
+            title: "МРТ разбор: грыжа позвоночника L4-L5",
+            description: "Детальный анализ МРТ снимков пациента с грыжей",
+            type: "mri",
+            file: "/uploads/images/mri-1.jpg",
+            image: "/uploads/images/mri-preview-1.jpg",
+            created: new Date('2024-01-08')
+        }
+    ],
+    events: [
+        {
+            id: 1,
+            title: "Онлайн-вебинар по современной реабилитации",
+            description: "Современные методы восстановительного лечения",
+            date: "2024-12-15",
+            type: "online",
+            location: "Zoom",
+            image: "/uploads/images/event-1.jpg",
+            created: new Date('2024-01-12')
+        }
+    ]
+};
+
 const botMessages = {
     navigation: `🎯 <b>Навигация по Академии АНБ</b>\n\n📱 Для полного доступа ко всем функциям откройте наше приложение:\n\n• Курсы и обучение\n• Эфиры и разборы\n• Практические материалы\n• Сообщество специалистов\n• Личный кабинет и прогресс`,
     
@@ -50,7 +165,7 @@ function getUser(id) {
                 type: 'none',
                 endDate: null 
             },
-            isAdmin: ADMIN_IDS.includes(id),
+            isAdmin: admins.has(id),
             progress: { 
                 level: 'Понимаю', 
                 steps: {
@@ -66,7 +181,7 @@ function getUser(id) {
 }
 
 function isAdmin(userId) {
-    return ADMIN_IDS.includes(userId);
+    return admins.has(userId);
 }
 
 function completeSurvey(userId) {
@@ -77,6 +192,10 @@ function completeSurvey(userId) {
         type: 'trial_7days',
         endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     };
+}
+
+function getNextId(collection) {
+    return Math.max(0, ...collection.map(item => item.id)) + 1;
 }
 
 // ==================== ОПРОС ====================
@@ -367,6 +486,7 @@ async function showMainMenu(ctx) {
 const app = express();
 app.use(express.json());
 app.use(express.static(join(__dirname, 'webapp')));
+app.use('/uploads', express.static(uploadsDir));
 
 // API для WebApp
 app.get('/api/user/:id', (req, res) => {
@@ -402,6 +522,175 @@ app.get('/api/user/:id', (req, res) => {
     }
 });
 
+app.get('/api/content/:type', (req, res) => {
+    const contentType = req.params.type;
+    if (contentDB[contentType]) {
+        res.json({ success: true, data: contentDB[contentType] });
+    } else {
+        res.status(404).json({ success: false, error: 'Content type not found' });
+    }
+});
+
+app.get('/api/content', (req, res) => {
+    res.json({ success: true, data: contentDB });
+});
+
+// API для добавления контента
+app.post('/api/content/:type', upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'video', maxCount: 1 },
+    { name: 'audio', maxCount: 1 },
+    { name: 'file', maxCount: 1 }
+]), (req, res) => {
+    const contentType = req.params.type;
+    const contentData = req.body;
+    const files = req.files;
+
+    if (!contentDB[contentType]) {
+        return res.status(404).json({ success: false, error: 'Content type not found' });
+    }
+
+    const newContent = {
+        id: getNextId(contentDB[contentType]),
+        title: contentData.title,
+        description: contentData.description,
+        fullDescription: contentData.fullDescription,
+        created: new Date(),
+        updated: new Date()
+    };
+
+    // Добавляем специфичные поля в зависимости от типа контента
+    switch (contentType) {
+        case 'courses':
+            newContent.price = parseInt(contentData.price) || 0;
+            newContent.duration = contentData.duration;
+            newContent.modules = parseInt(contentData.modules) || 1;
+            break;
+        case 'podcasts':
+            newContent.duration = contentData.duration;
+            break;
+        case 'streams':
+            newContent.duration = contentData.duration;
+            newContent.scheduled = contentData.scheduled ? new Date(contentData.scheduled) : null;
+            break;
+        case 'videos':
+            newContent.duration = contentData.duration;
+            break;
+        case 'materials':
+            newContent.type = contentData.materialType || 'other';
+            break;
+        case 'events':
+            newContent.type = contentData.eventType || 'online';
+            newContent.location = contentData.location;
+            newContent.date = contentData.date;
+            break;
+    }
+
+    // Обрабатываем загруженные файлы
+    if (files) {
+        if (files.image) {
+            newContent.image = `/uploads/images/${files.image[0].filename}`;
+        }
+        if (files.video) {
+            newContent.video = `/uploads/videos/${files.video[0].filename}`;
+        }
+        if (files.audio) {
+            newContent.audio = `/uploads/audio/${files.audio[0].filename}`;
+        }
+        if (files.file) {
+            newContent.file = `/uploads/${files.file[0].filename}`;
+        }
+    }
+
+    contentDB[contentType].push(newContent);
+
+    res.json({ success: true, data: newContent });
+});
+
+// API для удаления контента
+app.delete('/api/content/:type/:id', (req, res) => {
+    const contentType = req.params.type;
+    const contentId = parseInt(req.params.id);
+
+    if (!contentDB[contentType]) {
+        return res.status(404).json({ success: false, error: 'Content type not found' });
+    }
+
+    const index = contentDB[contentType].findIndex(item => item.id === contentId);
+    if (index === -1) {
+        return res.status(404).json({ success: false, error: 'Content not found' });
+    }
+
+    const deletedContent = contentDB[contentType].splice(index, 1)[0];
+
+    // Удаляем связанные файлы
+    if (deletedContent.image && fs.existsSync(join(__dirname, deletedContent.image))) {
+        fs.unlinkSync(join(__dirname, deletedContent.image));
+    }
+    if (deletedContent.video && fs.existsSync(join(__dirname, deletedContent.video))) {
+        fs.unlinkSync(join(__dirname, deletedContent.video));
+    }
+    if (deletedContent.audio && fs.existsSync(join(__dirname, deletedContent.audio))) {
+        fs.unlinkSync(join(__dirname, deletedContent.audio));
+    }
+    if (deletedContent.file && fs.existsSync(join(__dirname, deletedContent.file))) {
+        fs.unlinkSync(join(__dirname, deletedContent.file));
+    }
+
+    res.json({ success: true, data: deletedContent });
+});
+
+// API для управления админами
+app.get('/api/admins', (req, res) => {
+    const adminUsers = Array.from(admins).map(adminId => {
+        const user = users.get(adminId);
+        return user ? {
+            id: user.id,
+            firstName: user.firstName,
+            username: user.username,
+            joinedAt: user.joinedAt
+        } : { id: adminId };
+    });
+    res.json({ success: true, data: adminUsers });
+});
+
+app.post('/api/admins', (req, res) => {
+    const { userId } = req.body;
+    
+    if (!userId) {
+        return res.status(400).json({ success: false, error: 'User ID is required' });
+    }
+
+    admins.add(parseInt(userId));
+    
+    // Обновляем пользователя если он существует
+    const user = users.get(parseInt(userId));
+    if (user) {
+        user.isAdmin = true;
+    }
+
+    res.json({ success: true, data: { userId: parseInt(userId) } });
+});
+
+app.delete('/api/admins/:userId', (req, res) => {
+    const userId = parseInt(req.params.userId);
+    
+    // Не позволяем удалить самого себя
+    if (userId === ADMIN_IDS[0]) {
+        return res.status(400).json({ success: false, error: 'Cannot remove main admin' });
+    }
+
+    admins.delete(userId);
+    
+    // Обновляем пользователя если он существует
+    const user = users.get(userId);
+    if (user) {
+        user.isAdmin = false;
+    }
+
+    res.json({ success: true, data: { userId } });
+});
+
 app.get('/api/bot/messages', (req, res) => {
     res.json({ success: true, messages: botMessages });
 });
@@ -420,9 +709,20 @@ app.get('/api/stats', (req, res) => {
     ).length;
     const completedSurveys = Array.from(users.values()).filter(u => u.surveyCompleted).length;
     
+    // Статистика по контенту
+    const contentStats = {};
+    Object.keys(contentDB).forEach(type => {
+        contentStats[type] = contentDB[type].length;
+    });
+    
     res.json({ 
         success: true, 
-        stats: { totalUsers, activeUsers, completedSurveys } 
+        stats: { 
+            totalUsers, 
+            activeUsers, 
+            completedSurveys,
+            content: contentStats
+        } 
     });
 });
 
@@ -436,6 +736,7 @@ async function startApp() {
         app.listen(PORT, () => {
             console.log(`🌐 WebApp: http://localhost:${PORT}`);
             console.log(`📱 Admin Panel: ${WEBAPP_URL}/admin`);
+            console.log(`📁 Uploads: ${uploadsDir}`);
         });
 
         await bot.launch();
