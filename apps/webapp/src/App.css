@@ -1,0 +1,26 @@
+.App {
+  text-align: center;
+  background-color: #ffffff;
+  min-height: 100vh;
+  color: #000000;
+  font-family: 'TT Chocolates', sans-serif;
+}
+
+.App-header {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.App-header h1 {
+  color: #58b8e7;
+  margin-bottom: 10px;
+}
+
+.loading {
+  margin-top: 50px;
+  color: #58b8e7;
+  font-size: 18px;
+}
