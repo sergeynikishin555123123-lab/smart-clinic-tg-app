@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель - Академия АНБ</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <button class="back-btn" onclick="goToMainApp()">← Назад</button>
+            <h1>🔧 Админ-панель</h1>
+            <div class="header-actions">
+                <button class="icon-btn" onclick="refreshAdminData()">🔄</button>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="admin-container">
+                <div class="admin-sidebar">
+                    <div class="admin-user">
+                        <div class="admin-avatar">👑</div>
+                        <div class="admin-info">
+                            <div class="admin-name" id="adminName">Администратор</div>
+                            <div class="admin-role">Владелец системы</div>
+                        </div>
+                    </div>
+                    
+                    <nav class="admin-nav">
+                        <button class="admin-nav-btn active" data-tab="dashboard">📊 Дашборд</button>
+                        <button class="admin-nav-btn" data-tab="content">📝 Контент</button>
+                        <button class="admin-nav-btn" data-tab="users">👥 Пользователи</button>
+                        <button class="admin-nav-btn" data-tab="subscriptions">💳 Подписки</button>
+                        <button class="admin-nav-btn" data-tab="promotions">🎁 Акции</button>
+                        <button class="admin-nav-btn" data-tab="settings">⚙️ Настройки</button>
+                        <button class="admin-nav-btn" data-tab="admins">👑 Админы</button>
+                    </nav>
+                </div>
+
+                <div class="admin-content">
+                    <div class="admin-tab active" id="dashboard">
+                        <h2>📊 Дашборд системы</h2>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon">👥</div>
+                                <div class="stat-info">
+                                    <div class="stat-value" id="totalUsers">0</div>
+                                    <div class="stat-label">Всего пользователей</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">✅</div>
+                                <div class="stat-info">
+                                    <div class="stat-value" id="activeUsers">0</div>
+                                    <div class="stat-label">Активных подписок</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">📚</div>
+                                <div class="stat-info">
+                                    <div class="stat-value" id="totalCourses">0</div>
+                                    <div class="stat-label">Курсов</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">💰</div>
+                                <div class="stat-info">
+                                    <div class="stat-value" id="totalRevenue">0 ₽</div>
+                                    <div class="stat-label">Общий доход</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="recent-activity">
+                            <h3>📈 Активность за последние 7 дней</h3>
+                            <div class="activity-list" id="activityList">
+                                <div class="loading">Загрузка активности...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="admin-tab" id="content">
+                        <h2>📝 Управление контентом</h2>
+                        <div class="content-tabs">
+                            <button class="content-tab-btn active" data-content-type="courses">📚 Курсы</button>
+                            <button class="content-tab-btn" data-content-type="podcasts">🎧 АНБ FM</button>
+                            <button class="content-tab-btn" data-content-type="streams">📹 Эфиры</button>
+                            <button class="content-tab-btn" data-content-type="videos">🎯 Шпаргалки</button>
+                            <button class="content-tab-btn" data-content-type="materials">📋 Материалы</button>
+                            <button class="content-tab-btn" data-content-type="events">🗺️ Мероприятия</button>
+                        </div>
+                        
+                        <div class="content-management">
+                            <div class="content-header">
+                                <h3 id="contentTitle">Курсы</h3>
+                                <button class="btn btn-primary" onclick="showAddContentForm('courses')">+ Добавить</button>
+                            </div>
+                            <div class="content-list" id="contentList">
+                                <div class="loading">Загрузка контента...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="admin-tab" id="users">
+                        <h2>👥 Управление пользователями</h2>
+                        <div class="users-filters">
+                            <input type="text" placeholder="Поиск пользователей..." class="search-input" id="userSearch">
+                            <select class="filter-select" id="userFilter">
+                                <option value="all">Все пользователи</option>
+                                <option value="active">Активные подписки</option>
+                                <option value="trial">Пробный период</option>
+                                <option value="inactive">Неактивные</option>
+                            </select>
+                        </div>
+                        <div class="users-list" id="usersList">
+                            <div class="loading">Загрузка пользователей...</div>
+                        </div>
+                    </div>
+
+                    <!-- Остальные вкладки админ-панели -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальные окна -->
+    <div class="modal" id="addContentModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Добавить контент</h3>
+                <button class="close-btn" onclick="closeModal('addContentModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="addContentForm">
+                    <div class="form-group">
+                        <label>Название</label>
+                        <input type="text" id="contentTitleInput" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Описание</label>
+                        <textarea id="contentDescriptionInput" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Тип контента</label>
+                        <select id="contentTypeSelect" required>
+                            <option value="courses">Курс</option>
+                            <option value="podcasts">Подкаст</option>
+                            <option value="streams">Эфир</option>
+                            <option value="videos">Видео-шпаргалка</option>
+                            <option value="materials">Материал</option>
+                            <option value="events">Мероприятие</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('addContentModal')">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
