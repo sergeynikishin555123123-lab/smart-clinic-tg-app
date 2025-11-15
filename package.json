@@ -4,25 +4,26 @@
   "description": "Telegram bot + WebApp for ANB Smart Clinic",
   "type": "module",
   "scripts": {
-    "build": "npm run build:bot && npm run build:webapp",
+    "build": "npm run build:bot",
     "build:bot": "cd apps/bot && tsc",
     "build:webapp": "cd apps/webapp && npm run build",
-    "dev:bot": "cd apps/bot && nodemon --exec ts-node src/index.ts",
+    "dev:bot": "cd apps/bot && nodemon --exec node --loader ts-node/esm src/index.ts",
     "dev:webapp": "cd apps/webapp && npm run dev",
+    "start": "node apps/bot/dist/index.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "nodemon": "^3.0.0",
-    "prisma": "^5.0.0",
+    "@types/node": "^20.10.0",
+    "nodemon": "^3.0.2",
+    "prisma": "^5.7.0",
     "ts-node": "^10.9.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.3.0"
   },
   "dependencies": {
-    "@prisma/client": "^5.0.0",
-    "telegraf": "^4.16.0",
-    "express": "^4.18.0"
+    "@prisma/client": "^5.7.0",
+    "telegraf": "^4.16.3",
+    "express": "^4.18.2"
   }
 }
