@@ -1,20 +1,13 @@
 {
-  "name": "smart-clinic-tg-app",
+  "name": "smart-clinic-app",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev:bot": "cd bot && npm run dev",
-    "dev:webapp": "cd webapp && npm run dev",
-    "build:bot": "cd bot && npm run build",
-    "build:webapp": "cd webapp && npm run build",
-    "start:bot": "cd bot && npm start",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push"
-  },
-  "devDependencies": {
-    "prisma": "^5.7.0"
+    "start": "node bot.js",
+    "dev": "node bot.js"
   },
   "dependencies": {
-    "@prisma/client": "^5.7.0"
+    "telegraf": "^4.16.3",
+    "express": "^4.18.2"
   }
 }
