@@ -52,7 +52,24 @@ function getUser(id) {
       firstName: 'User',
       joinedAt: new Date(),
       lastActivity: new Date(),
-      stats: { commands: 0, buttons: 0 }
+      stats: { commands: 0, buttons: 0 },
+      subscription: {
+        status: 'inactive',
+        type: 'none',
+        startDate: null,
+        endDate: null
+      },
+      progress: {
+        level: 'Понимаю',
+        progress: 25,
+        steps: {
+          'Понимаю': { completed: true, progress: 100 },
+          'Связываю': { completed: false, progress: 60 },
+          'Применяю': { completed: false, progress: 20 },
+          'Систематизирую': { completed: false, progress: 0 },
+          'Делюсь': { completed: false, progress: 0 }
+        }
+      }
     });
   }
   return users.get(id);
@@ -70,9 +87,14 @@ function getStats() {
     (new Date() - user.lastActivity) < 24 * 60 * 60 * 1000
   ).length;
   
+  const activeSubscriptions = Array.from(users.values()).filter(user => 
+    user.subscription.status === 'active'
+  ).length;
+  
   return {
     totalUsers,
     activeToday,
+    activeSubscriptions,
     totalCommands: Array.from(users.values()).reduce((sum, user) => sum + user.stats.commands, 0),
     totalButtons: Array.from(users.values()).reduce((sum, user) => sum + user.stats.buttons, 0)
   };
@@ -135,6 +157,54 @@ bot.hears('💬 Поддержка', async (ctx) => {
   await ctx.reply(buttonConfigs.support.reply);
 });
 
+// ==================== КОМАНДЫ БОТА ====================
+bot.help(async (ctx) => {
+  await ctx.reply(
+    `🤖 Помощь по боту Академии АНБ\n\n` +
+    `Основные команды:\n` +
+    `/start - начать работу\n` +
+    `/help - показать справку\n` +
+    `/menu - показать меню\n` +
+    `/status - статус подписки\n` +
+    `/admin - панель администратора\n\n` +
+    `Используйте кнопки для навигации!`
+  );
+});
+
+bot.command('menu', async (ctx) => {
+  await ctx.reply('📋 Главное меню:', {
+    reply_markup: {
+      keyboard: [
+        ['📱 Навигация', '🎁 Акции'],
+        ['❓ Задать вопрос', '💬 Поддержка']
+      ],
+      resize_keyboard: true
+    }
+  });
+});
+
+bot.command('status', async (ctx) => {
+  const user = getUser(ctx.from.id);
+  const stats = getStats();
+  
+  let subscriptionText = '🔒 Не активна';
+  if (user.subscription.status === 'active') {
+    subscriptionText = `✅ Активна (${user.subscription.type})`;
+  }
+  
+  await ctx.reply(
+    `📊 Ваш статус:\n\n` +
+    `👤 Пользователь: ${user.firstName}\n` +
+    `💳 Подписка: ${subscriptionText}\n` +
+    `🎯 Уровень: ${user.progress.level}\n` +
+    `📅 Зарегистрирован: ${user.joinedAt.toLocaleDateString()}\n` +
+    `🎯 Активность: ${user.stats.buttons} действий\n\n` +
+    `📈 Общая статистика:\n` +
+    `👥 Пользователей: ${stats.totalUsers}\n` +
+    `✅ Активных сегодня: ${stats.activeToday}`
+  );
+});
+
 // ==================== АДМИН-ПАНЕЛЬ ====================
 bot.command('admin', async (ctx) => {
   const userId = ctx.from.id;
@@ -168,8 +238,10 @@ bot.hears('📊 Статистика', async (ctx) => {
     `📊 Статистика бота:\n\n` +
     `👥 Всего пользователей: ${stats.totalUsers}\n` +
     `✅ Активных за 24ч: ${stats.activeToday}\n` +
+    `💳 Активных подписок: ${stats.activeSubscriptions}\n` +
     `📱 Команд выполнено: ${stats.totalCommands}\n` +
-    `🎯 Нажатий кнопок: ${stats.totalButtons}`
+    `🎯 Нажатий кнопок: ${stats.totalButtons}\n\n` +
+    `🔄 Бот запущен и работает стабильно`
   );
 });
 
@@ -253,13 +325,16 @@ bot.hears('👥 Пользователи', async (ctx) => {
     .sort((a, b) => b.joinedAt - a.joinedAt)
     .slice(0, 10);
   
-  const userList = recentUsers
-    .map(user => `👤 ${user.firstName} (${user.username})\n📅 ${user.joinedAt.toLocaleDateString()}`)
-    .join('\n\n');
+  let userList = '';
+  recentUsers.forEach((user, index) => {
+    const subscriptionStatus = user.subscription.status === 'active' ? '✅' : '🔒';
+    userList += `${index + 1}. ${user.firstName} (${user.username}) ${subscriptionStatus}\n`;
+  });
 
   await ctx.reply(
     `👥 Последние пользователи:\n\n${userList || 'Пока нет пользователей'}\n\n` +
-    `Всего: ${users.size} пользователей`
+    `Всего: ${users.size} пользователей\n` +
+    `Активных подписок: ${getStats().activeSubscriptions}`
   );
 });
 
@@ -274,6 +349,57 @@ bot.hears('🔙 В главное меню', async (ctx) => {
       resize_keyboard: true
     }
   });
+});
+
+// ==================== ОБРАБОТКА WEBAPP ДАННЫХ ====================
+bot.on('web_app_data', async (ctx) => {
+  try {
+    const data = JSON.parse(ctx.webAppData.data.json());
+    console.log('📱 Data from WebApp:', data);
+    
+    const user = getUser(ctx.from.id);
+    
+    // Обработка разных типов действий из WebApp
+    switch (data.action) {
+      case 'open_category':
+        await ctx.reply(`📂 Открываю раздел: ${data.category}`);
+        break;
+        
+      case 'save_material':
+        await ctx.reply('✅ Материал сохранен в избранное');
+        break;
+        
+      case 'contact_support':
+        await ctx.reply('📞 Ваш запрос передан в поддержку. С вами свяжутся в ближайшее время.');
+        break;
+        
+      case 'update_progress':
+        if (data.step && data.progress !== undefined) {
+          user.progress.steps[data.step].progress = data.progress;
+          if (data.progress >= 100) {
+            user.progress.steps[data.step].completed = true;
+          }
+          await ctx.reply(`🎯 Прогресс обновлен: ${data.step} - ${data.progress}%`);
+        }
+        break;
+        
+      case 'subscribe':
+        user.subscription = {
+          status: 'active',
+          type: data.plan || 'monthly',
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // +30 дней
+        };
+        await ctx.reply(`🎉 Поздравляем! Вы оформили подписку "${data.plan}"`);
+        break;
+        
+      default:
+        await ctx.reply('✅ Действие выполнено');
+    }
+  } catch (error) {
+    console.error('❌ Error processing web app data:', error);
+    await ctx.reply('❌ Произошла ошибка при обработке запроса');
+  }
 });
 
 // ==================== ОБРАБОТКА СООБЩЕНИЙ ====================
@@ -297,22 +423,39 @@ bot.on('text', async (ctx) => {
     let sent = 0;
     const userList = Array.from(users.keys());
     
+    await ctx.reply(`🔄 Начинаю рассылку для ${userList.length} пользователей...`);
+    
     for (const userId of userList) {
       try {
-        await bot.telegram.sendMessage(userId, `📢 Рассылка от администратора:\n\n${text}`);
+        await bot.telegram.sendMessage(userId, 
+          `📢 Рассылка от Академии АНБ:\n\n${text}\n\n` +
+          `С уважением,\nКоманда Академии АНБ`
+        );
         sent++;
+        
+        // Небольшая задержка чтобы не превысить лимиты Telegram
+        if (sent % 10 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       } catch (error) {
         console.log(`❌ Не удалось отправить пользователю ${userId}`);
       }
     }
     
     userSessions.delete(userId);
-    await ctx.reply(`✅ Рассылка отправлена ${sent} пользователям из ${userList.length}!`);
+    await ctx.reply(`✅ Рассылка завершена!\nОтправлено: ${sent} пользователям\nНе удалось: ${userList.length - sent}`);
     return;
   }
 
   // Обычные сообщения
-  await ctx.reply('🤗 Используйте кнопки меню для навигации');
+  if (!text.startsWith('/')) {
+    await ctx.reply('🤗 Используйте кнопки меню для навигации');
+  }
+});
+
+// ==================== ОБРАБОТКА ОШИБОК ====================
+bot.catch((err, ctx) => {
+  console.error(`❌ Error for ${ctx.updateType}:`, err);
 });
 
 // ==================== WEB APP SERVER ====================
@@ -324,6 +467,35 @@ app.use(express.static(join(__dirname, 'webapp')));
 // API для статистики
 app.get('/api/stats', (req, res) => {
   res.json(getStats());
+});
+
+// API для получения данных пользователя
+app.get('/api/user/:id', (req, res) => {
+  const user = getUser(parseInt(req.params.id));
+  res.json({
+    id: user.id,
+    firstName: user.firstName,
+    username: user.username,
+    subscription: user.subscription,
+    progress: user.progress,
+    stats: user.stats
+  });
+});
+
+// API для обновления прогресса
+app.post('/api/progress/:id', express.json(), (req, res) => {
+  const user = getUser(parseInt(req.params.id));
+  const { step, progress } = req.body;
+  
+  if (step && progress !== undefined) {
+    user.progress.steps[step].progress = progress;
+    if (progress >= 100) {
+      user.progress.steps[step].completed = true;
+    }
+    res.json({ success: true, progress: user.progress });
+  } else {
+    res.status(400).json({ success: false, error: 'Invalid data' });
+  }
 });
 
 // Все остальные запросы на index.html
@@ -338,15 +510,16 @@ async function startApp() {
     app.listen(PORT, () => {
       console.log(`🌐 WebApp server running on port ${PORT}`);
       console.log(`📱 WebApp URL: ${WEBAPP_URL}`);
+      console.log(`📊 API Stats: http://localhost:${PORT}/api/stats`);
     });
 
     // Запускаем бота
     await bot.launch();
     console.log('✅ Bot started successfully!');
     console.log('🔧 Admin commands: /admin');
-    console.log('📊 WebApp: http://localhost:' + PORT);
-    console.log('📊 API Stats: http://localhost:' + PORT + '/api/stats');
+    console.log('📊 Available commands: /start, /help, /menu, /status');
     console.log(`⚠️  ВАЖНО: Замените ADMIN_IDS на ваш Telegram ID!`);
+    console.log(`📝 Текущие админы: ${ADMIN_IDS}`);
 
   } catch (error) {
     console.error('❌ Failed to start app:', error);
