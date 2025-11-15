@@ -11,343 +11,84 @@ body {
   line-height: 1.4;
 }
 
-.App {
+.app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  max-width: 100%;
-  overflow-x: hidden;
 }
 
-/* Header */
-.app-header {
+.header {
   background: #58b8e7;
   color: white;
   padding: 16px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  text-align: center;
 }
 
-.app-header h1 {
+.header h1 {
   font-size: 20px;
   font-weight: 600;
 }
 
-.admin-btn {
-  background: rgba(255,255,255,0.2);
-  border: 1px solid rgba(255,255,255,0.3);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-/* Main Content */
-.app-main {
+.main {
   flex: 1;
-  padding: 0 0 70px 0;
+  padding: 20px;
   overflow-y: auto;
 }
 
-.page {
-  padding: 20px;
+.page h2 {
+  color: #58b8e7;
+  margin-bottom: 20px;
+  text-align: center;
 }
 
-/* Search */
-.search-bar {
-  margin-bottom: 24px;
-}
-
-.search-input {
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #58b8e7;
-  border-radius: 12px;
-  font-size: 16px;
-  background: white;
-}
-
-/* Categories Grid */
-.categories-grid {
+.categories {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-  margin-bottom: 24px;
 }
 
-.category-card, .community-card {
+.category {
   background: #f8f9fa;
   border: 2px solid #58b8e7;
   border-radius: 12px;
-  padding: 16px 8px;
+  padding: 20px 12px;
   text-align: center;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.category-card:hover, .community-card:hover {
+.category:hover {
   background: #e3f2fd;
   transform: translateY(-2px);
 }
 
-.category-icon, .community-icon {
-  font-size: 24px;
-  margin-bottom: 8px;
-}
-
-.category-name, .community-name {
-  font-size: 12px;
-  font-weight: 500;
-}
-
-/* Sections */
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: #58b8e7;
-}
-
-/* News Filters */
-.news-filters {
+.navigation {
   display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-}
-
-.filter-btn {
-  background: #f8f9fa;
-  border: 1px solid #ddd;
-  border-radius: 20px;
-  padding: 8px 16px;
-  font-size: 12px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.filter-btn:hover {
-  background: #e9ecef;
-}
-
-/* News List */
-.news-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.news-item {
-  background: #f8f9fa;
-  padding: 16px;
-  border-radius: 8px;
-  border-left: 4px solid #58b8e7;
-}
-
-/* Community Grid */
-.community-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-/* Chats */
-.chats-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.chat-item {
-  background: #f8f9fa;
-  padding: 16px;
-  border-radius: 8px;
-  border-left: 4px solid #58b8e7;
-  cursor: pointer;
-}
-
-.chat-note {
-  background: #fff3cd;
-  border: 1px solid #ffeaa7;
-  border-radius: 8px;
-  padding: 12px;
-  font-size: 14px;
-  color: #856404;
-  margin-top: 16px;
-}
-
-/* Tabs */
-.tabs {
-  display: flex;
-  border-bottom: 2px solid #e9ecef;
-  margin-bottom: 16px;
-}
-
-.tab {
-  background: none;
-  border: none;
-  padding: 12px 16px;
-  font-size: 14px;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-}
-
-.tab.active {
-  border-bottom-color: #58b8e7;
-  color: #58b8e7;
-  font-weight: 500;
-}
-
-.tab-content {
-  min-height: 200px;
-}
-
-/* Profile */
-.profile-header {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  margin-bottom: 24px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 12px;
-}
-
-.profile-avatar {
-  font-size: 40px;
-}
-
-.profile-info {
-  flex: 1;
-}
-
-.profile-name {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.profile-status {
-  color: #666;
-  font-size: 14px;
-  margin-bottom: 4px;
-}
-
-.subscription-status {
-  color: #28a745;
-  font-size: 14px;
-  margin-bottom: 8px;
-}
-
-.change-subscription-btn {
-  background: #58b8e7;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-/* Journey */
-.journey-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.journey-step {
-  display: flex;
-  gap: 12px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 12px;
-  border-left: 4px solid #58b8e7;
-}
-
-.step-number {
-  font-size: 20px;
-}
-
-.step-info {
-  flex: 1;
-}
-
-.step-title {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.step-progress {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 4px;
-}
-
-.step-hint {
-  font-size: 12px;
-  color: #888;
-}
-
-/* Bottom Navigation */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   background: white;
   border-top: 1px solid #e9ecef;
-  display: flex;
-  padding: 8px;
-  z-index: 100;
+  padding: 12px;
 }
 
 .nav-btn {
   flex: 1;
   background: none;
   border: none;
-  padding: 8px 4px;
+  padding: 12px 8px;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
+  border-radius: 8px;
+  margin: 0 4px;
 }
 
 .nav-btn.active {
-  color: #58b8e7;
+  background: #58b8e7;
+  color: white;
 }
 
-.nav-icon {
-  font-size: 20px;
-}
-
-.nav-text {
-  font-size: 10px;
-}
-
-/* Responsive */
-@media (max-width: 480px) {
-  .page {
-    padding: 16px;
-  }
-  
-  .categories-grid,
-  .community-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-  
-  .category-name,
-  .community-name {
-    font-size: 11px;
-  }
+.nav-btn:hover {
+  background: #4aa8d8;
+  color: white;
 }
