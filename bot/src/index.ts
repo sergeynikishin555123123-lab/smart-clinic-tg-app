@@ -32,7 +32,7 @@ const buttonConfigs = {
 };
 
 // ЗАМЕНИТЕ НА ВАШ ТЕЛЕГРАМ ID!
-const ADMIN_IDS = [123456789]; 
+const ADMIN_IDS = [898508164]; 
 
 function isAdmin(userId: number): boolean {
   return ADMIN_IDS.includes(userId);
