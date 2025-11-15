@@ -9,19 +9,32 @@ const __dirname = dirname(__filename);
 // ==================== КОНФИГУРАЦИЯ ====================
 const BOT_TOKEN = process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4';
 const PORT = process.env.PORT || 3000;
+const WEBAPP_URL = process.env.WEBAPP_URL || `http://localhost:${PORT}`;
 
 // ЗАМЕНИТЕ НА ВАШ ТЕЛЕГРАМ ID!
-const ADMIN_IDS = [898508164]; 
+const ADMIN_IDS = [123456789]; 
 
 console.log('🚀 Starting Smart Clinic Bot...');
 
-// ==================== ПРОСТАЯ БАЗА ДАННЫХ В ПАМЯТИ ====================
+// ==================== БАЗА ДАННЫХ В ПАМЯТИ ====================
 const users = new Map();
 const buttonConfigs = {
-  navigation: { text: '📱 Навигация', reply: 'Открываю навигацию...' },
-  promotions: { text: '🎁 Акции', reply: '🎁 Раздел акций в разработке. Скоро здесь появятся специальные предложения!' },
-  question: { text: '❓ Задать вопрос', reply: '❓ Чтобы задать вопрос по обучению, напишите @academy_anb' },
-  support: { text: '💬 Поддержка', reply: '💬 Координатор академии: @academy_anb\n⏰ Часы работы: ПН-ПТ с 11:00 до 19:00' }
+  navigation: { 
+    text: '📱 Навигация', 
+    reply: 'Открываю навигацию...' 
+  },
+  promotions: { 
+    text: '🎁 Акции', 
+    reply: '🎁 Раздел акций в разработке. Скоро здесь появятся специальные предложения!' 
+  },
+  question: { 
+    text: '❓ Задать вопрос', 
+    reply: '❓ Чтобы задать вопрос по обучению, напишите @academy_anb' 
+  },
+  support: { 
+    text: '💬 Поддержка', 
+    reply: '💬 Координатор академии: @academy_anb\n⏰ Часы работы: ПН-ПТ с 11:00 до 19:00' 
+  }
 };
 
 const userSessions = new Map();
@@ -100,7 +113,7 @@ bot.hears('📱 Навигация', async (ctx) => {
       inline_keyboard: [[
         {
           text: '📱 Открыть приложение',
-          web_app: { url: `http://localhost:${PORT}` }
+          web_app: { url: WEBAPP_URL }
         }
       ]]
     }
@@ -324,6 +337,7 @@ async function startApp() {
     // Запускаем веб-сервер
     app.listen(PORT, () => {
       console.log(`🌐 WebApp server running on port ${PORT}`);
+      console.log(`📱 WebApp URL: ${WEBAPP_URL}`);
     });
 
     // Запускаем бота
@@ -332,7 +346,7 @@ async function startApp() {
     console.log('🔧 Admin commands: /admin');
     console.log('📊 WebApp: http://localhost:' + PORT);
     console.log('📊 API Stats: http://localhost:' + PORT + '/api/stats');
-    console.log(`⚠️  Don't forget to set your Telegram ID: ${ADMIN_IDS}`);
+    console.log(`⚠️  ВАЖНО: Замените ADMIN_IDS на ваш Telegram ID!`);
 
   } catch (error) {
     console.error('❌ Failed to start app:', error);
