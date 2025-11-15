@@ -1,19 +1,21 @@
-// ==================== АДМИН-ПАНЕЛЬ ====================
+// webapp/admin.js
 let adminData = {
     stats: {},
     users: [],
     content: {},
-    admins: [],
-    settings: {}
+    admins: []
 };
 
 let currentAdminTab = 'dashboard';
 let currentContentType = 'courses';
 
 // Инициализация админ-панели
-document.addEventListener('DOMContentLoaded', function() {
-    if (!isAdminUser()) {
-        alert('❌ Доступ запрещен');
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🚀 Инициализация админ-панели...');
+    
+    const isAdmin = await checkAdminStatus();
+    if (!isAdmin) {
+        alert('❌ Доступ запрещен. У вас нет прав администратора.');
         goToMainApp();
         return;
     }
@@ -22,23 +24,34 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAdminData();
 });
 
-function isAdminUser() {
-    // Проверка через API
-    if (window.Telegram && Telegram.WebApp) {
-        const tgUser = Telegram.WebApp.initDataUnsafe.user;
-        if (tgUser && tgUser.id) {
-            return checkAdminStatus(tgUser.id);
-        }
-    }
-    return false;
-}
-
-async function checkAdminStatus(userId) {
+async function checkAdminStatus() {
     try {
-        const response = await fetch(`/api/user/${userId}`);
-        const data = await response.json();
-        return data.success && data.user.isAdmin;
+        if (window.Telegram && Telegram.WebApp) {
+            const tgUser = Telegram.WebApp.initDataUnsafe.user;
+            if (tgUser && tgUser.id) {
+                console.log(`🔍 Проверка прав для пользователя: ${tgUser.id}`);
+                
+                const response = await fetch(`/api/check-admin/${tgUser.id}`);
+                const data = await response.json();
+                
+                console.log('✅ Результат проверки админа:', data);
+                
+                if (data.success && data.isAdmin) {
+                    // Загружаем данные пользователя для отображения в админке
+                    const userResponse = await fetch(`/api/user/${tgUser.id}`);
+                    const userData = await userResponse.json();
+                    
+                    if (userData.success) {
+                        document.getElementById('adminName').textContent = userData.user.firstName;
+                    }
+                    
+                    return true;
+                }
+            }
+        }
+        return false;
     } catch (error) {
+        console.error('Ошибка проверки админ-прав:', error);
         return false;
     }
 }
@@ -60,25 +73,10 @@ function initAdminPanel() {
         });
     });
 
-    // Инициализация форм
-    document.getElementById('addContentForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        addNewContent();
-    });
-
     // Инициализация поиска пользователей
     const userSearch = document.getElementById('userSearch');
     if (userSearch) {
         userSearch.addEventListener('input', debounce(searchUsers, 300));
-    }
-
-    // Инициализация формы добавления админа
-    const addAdminForm = document.getElementById('addAdminForm');
-    if (addAdminForm) {
-        addAdminForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            addNewAdmin();
-        });
     }
 }
 
@@ -115,20 +113,10 @@ function switchContentTab(contentType) {
     loadContentList(contentType);
 }
 
-function getContentTypeName(type) {
-    const names = {
-        'courses': 'Курсы',
-        'podcasts': 'АНБ FM',
-        'streams': 'Эфиры',
-        'videos': 'Видео-шпаргалки',
-        'materials': 'Материалы',
-        'events': 'Мероприятия'
-    };
-    return names[type] || type;
-}
-
 async function loadAdminData() {
     try {
+        console.log('📥 Загрузка данных админ-панели...');
+        
         // Загрузка статистики
         const statsResponse = await fetch('/api/stats');
         const statsData = await statsResponse.json();
@@ -144,6 +132,7 @@ async function loadAdminData() {
         
         if (contentData.success) {
             adminData.content = contentData.data;
+            console.log('✅ Контент загружен:', adminData.content);
         }
 
         // Загрузка списка админов
@@ -165,9 +154,8 @@ function updateDashboard() {
     document.getElementById('totalUsers').textContent = adminData.stats.totalUsers || 0;
     document.getElementById('activeUsers').textContent = adminData.stats.activeUsers || 0;
     document.getElementById('totalCourses').textContent = adminData.stats.content?.courses || 0;
-    document.getElementById('totalRevenue').textContent = '0 ₽'; // Заглушка
+    document.getElementById('totalRevenue').textContent = '0 ₽';
 
-    // Обновляем активность
     updateRecentActivity();
 }
 
@@ -199,46 +187,44 @@ function updateRecentActivity() {
 
 async function loadContentList(contentType) {
     const contentList = document.getElementById('contentList');
+    if (!contentList) return;
+    
     contentList.innerHTML = '<div class="loading">Загрузка...</div>';
 
     try {
-        const response = await fetch(`/api/content/${contentType}`);
-        const data = await response.json();
+        const content = adminData.content[contentType] || [];
         
-        if (data.success && data.data) {
-            if (data.data.length === 0) {
-                contentList.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📝</div>
-                        <div class="empty-text">Контент не найден</div>
-                        <button class="btn btn-primary" onclick="showAddContentForm('${contentType}')">Добавить первый</button>
-                    </div>
-                `;
-                return;
-            }
+        if (content.length === 0) {
+            contentList.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📝</div>
+                    <div class="empty-text">Контент не найден</div>
+                    <button class="btn btn-primary" onclick="showAddContentForm('${contentType}')">Добавить первый</button>
+                </div>
+            `;
+            return;
+        }
 
-            contentList.innerHTML = data.data.map(item => `
-                <div class="admin-content-item">
-                    <div class="content-preview">
-                        ${item.image ? `<img src="${item.image}" alt="${item.title}" class="content-thumbnail">` : ''}
-                        <div class="content-info">
-                            <div class="content-title">${item.title}</div>
-                            <div class="content-description">${item.description || 'Нет описания'}</div>
-                            <div class="content-meta">
-                                ${item.duration ? `<span>⏱️ ${item.duration}</span>` : ''}
-                                ${item.price ? `<span>💰 ${item.price} руб.</span>` : ''}
-                                ${item.type ? `<span>📁 ${getContentTypeName(item.type)}</span>` : ''}
-                                <span>📅 ${new Date(item.created).toLocaleDateString('ru-RU')}</span>
-                            </div>
+        contentList.innerHTML = content.map(item => `
+            <div class="admin-content-item">
+                <div class="content-preview">
+                    <div class="content-info">
+                        <div class="content-title">${item.title}</div>
+                        <div class="content-description">${item.description || 'Нет описания'}</div>
+                        <div class="content-meta">
+                            ${item.duration ? `<span>⏱️ ${item.duration}</span>` : ''}
+                            ${item.price ? `<span>💰 ${item.price} руб.</span>` : ''}
+                            ${item.type ? `<span>📁 ${getContentTypeName(item.type)}</span>` : ''}
+                            <span>📅 ${new Date(item.created).toLocaleDateString('ru-RU')}</span>
                         </div>
                     </div>
-                    <div class="content-actions">
-                        <button class="btn btn-small" onclick="editContent('${contentType}', ${item.id})">✏️</button>
-                        <button class="btn btn-small btn-danger" onclick="deleteContent('${contentType}', ${item.id})">🗑️</button>
-                    </div>
                 </div>
-            `).join('');
-        }
+                <div class="content-actions">
+                    <button class="btn btn-small" onclick="editContent('${contentType}', ${item.id})">✏️</button>
+                    <button class="btn btn-small btn-danger" onclick="deleteContent('${contentType}', ${item.id})">🗑️</button>
+                </div>
+            </div>
+        `).join('');
     } catch (error) {
         contentList.innerHTML = '<div class="error">Ошибка загрузки</div>';
     }
@@ -247,93 +233,108 @@ async function loadContentList(contentType) {
 function showAddContentForm(defaultType = 'courses') {
     currentContentType = defaultType;
     
-    // Очищаем форму
-    document.getElementById('addContentForm').reset();
+    const modalHTML = `
+        <div class="modal" id="addContentModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Добавить контент</h3>
+                    <button class="close-btn" onclick="closeModal('addContentModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <form id="addContentForm">
+                        <div class="form-group">
+                            <label>Тип контента</label>
+                            <select id="contentTypeSelect" required>
+                                <option value="courses">Курс</option>
+                                <option value="podcasts">Подкаст</option>
+                                <option value="streams">Эфир</option>
+                                <option value="videos">Видео-шпаргалка</option>
+                                <option value="materials">Материал</option>
+                                <option value="events">Мероприятие</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Название</label>
+                            <input type="text" id="contentTitleInput" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Описание</label>
+                            <textarea id="contentDescriptionInput" rows="3"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Полное описание</label>
+                            <textarea id="contentFullDescriptionInput" rows="5"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Длительность</label>
+                            <input type="text" id="contentDurationInput" placeholder="например: 1:30:00">
+                        </div>
+                        <div class="form-group">
+                            <label>Цена (руб.)</label>
+                            <input type="number" id="contentPriceInput" placeholder="0 для бесплатного">
+                        </div>
+                        <div class="form-group">
+                            <label>Количество модулей</label>
+                            <input type="number" id="contentModulesInput" value="1">
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeModal('addContentModal')">Отмена</button>
+                            <button type="submit" class="btn btn-primary">Сохранить</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Устанавливаем выбранный тип контента
     document.getElementById('contentTypeSelect').value = defaultType;
     
-    // Показываем/скрываем поля в зависимости от типа контента
-    updateContentFormFields(defaultType);
-    
-    document.getElementById('addContentModal').style.display = 'block';
-}
-
-function updateContentFormFields(contentType) {
-    // Скрываем все дополнительные поля
-    document.querySelectorAll('.form-field-extra').forEach(field => {
-        field.style.display = 'none';
+    // Обработчик формы
+    document.getElementById('addContentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        addNewContent();
     });
-
-    // Показываем нужные поля в зависимости от типа контента
-    switch (contentType) {
-        case 'courses':
-            document.getElementById('priceField').style.display = 'block';
-            document.getElementById('durationField').style.display = 'block';
-            document.getElementById('modulesField').style.display = 'block';
-            document.getElementById('imageField').style.display = 'block';
-            break;
-        case 'podcasts':
-            document.getElementById('durationField').style.display = 'block';
-            document.getElementById('audioField').style.display = 'block';
-            document.getElementById('imageField').style.display = 'block';
-            break;
-        case 'streams':
-            document.getElementById('durationField').style.display = 'block';
-            document.getElementById('scheduledField').style.display = 'block';
-            document.getElementById('videoField').style.display = 'block';
-            document.getElementById('imageField').style.display = 'block';
-            break;
-        case 'videos':
-            document.getElementById('durationField').style.display = 'block';
-            document.getElementById('videoField').style.display = 'block';
-            document.getElementById('imageField').style.display = 'block';
-            break;
-        case 'materials':
-            document.getElementById('materialTypeField').style.display = 'block';
-            document.getElementById('fileField').style.display = 'block';
-            document.getElementById('imageField').style.display = 'block';
-            break;
-        case 'events':
-            document.getElementById('eventTypeField').style.display = 'block';
-            document.getElementById('locationField').style.display = 'block';
-            document.getElementById('dateField').style.display = 'block';
-            document.getElementById('imageField').style.display = 'block';
-            break;
-    }
-}
-
-// Обработчик изменения типа контента
-document.getElementById('contentTypeSelect').addEventListener('change', function() {
-    updateContentFormFields(this.value);
-});
-
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
 }
 
 async function addNewContent() {
     const form = document.getElementById('addContentForm');
     const formData = new FormData(form);
     
-    const contentType = formData.get('contentType');
+    const contentType = document.getElementById('contentTypeSelect').value;
+    const contentData = {
+        title: document.getElementById('contentTitleInput').value,
+        description: document.getElementById('contentDescriptionInput').value,
+        fullDescription: document.getElementById('contentFullDescriptionInput').value,
+        duration: document.getElementById('contentDurationInput').value,
+        price: parseInt(document.getElementById('contentPriceInput').value) || 0,
+        modules: parseInt(document.getElementById('contentModulesInput').value) || 1
+    };
     
     try {
-        const response = await fetch(`/api/content/${contentType}`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showNotification('✅ Контент успешно добавлен', 'success');
-            closeModal('addContentModal');
-            form.reset();
-            
-            // Обновляем список контента
-            loadContentList(contentType);
-        } else {
-            throw new Error(data.error);
+        // В демо-режиме просто добавляем в локальную базу
+        if (!adminData.content[contentType]) {
+            adminData.content[contentType] = [];
         }
+        
+        const newContent = {
+            id: Math.max(0, ...adminData.content[contentType].map(item => item.id)) + 1,
+            ...contentData,
+            contentType: contentType,
+            created: new Date()
+        };
+        
+        adminData.content[contentType].push(newContent);
+        
+        showNotification('✅ Контент успешно добавлен', 'success');
+        closeModal('addContentModal');
+        form.reset();
+        
+        // Обновляем список контента
+        loadContentList(contentType);
+        
     } catch (error) {
         console.error('Ошибка при добавлении контента:', error);
         showNotification('❌ Ошибка при добавлении контента', 'error');
@@ -344,18 +345,12 @@ async function deleteContent(contentType, contentId) {
     if (!confirm(`🗑️ Удалить этот контент?`)) return;
 
     try {
-        const response = await fetch(`/api/content/${contentType}/${contentId}`, {
-            method: 'DELETE'
-        });
+        // В демо-режиме удаляем из локальной базы
+        adminData.content[contentType] = adminData.content[contentType].filter(item => item.id !== contentId);
         
-        const data = await response.json();
+        showNotification('✅ Контент удален', 'success');
+        loadContentList(contentType);
         
-        if (data.success) {
-            showNotification('✅ Контент удален', 'success');
-            loadContentList(contentType);
-        } else {
-            throw new Error(data.error);
-        }
     } catch (error) {
         console.error('Ошибка при удалении контента:', error);
         showNotification('❌ Ошибка при удалении контента', 'error');
@@ -371,6 +366,9 @@ function loadTabData(tab) {
         case 'users':
             loadUsersList();
             break;
+        case 'admins':
+            loadAdmins();
+            break;
         case 'subscriptions':
             loadSubscriptions();
             break;
@@ -380,47 +378,69 @@ function loadTabData(tab) {
         case 'settings':
             loadSettings();
             break;
-        case 'admins':
-            loadAdmins();
-            break;
     }
 }
 
 async function loadUsersList() {
     const usersList = document.getElementById('usersList');
+    if (!usersList) return;
+    
     usersList.innerHTML = '<div class="loading">Загрузка пользователей...</div>';
 
-    // Заглушка - в реальности будет API
-    setTimeout(() => {
-        usersList.innerHTML = `
-            <div class="admin-content-item">
-                <div class="user-info">
-                    <div class="user-avatar">👤</div>
-                    <div class="user-details">
-                        <div class="user-name">Иван Петров</div>
-                        <div class="user-meta">
-                            <span>🎯 Невролог</span>
-                            <span>🏙️ Москва</span>
-                            <span>📧 ivan@example.com</span>
-                        </div>
-                        <div class="user-status">
-                            <span class="status-badge trial">🆓 Пробный период</span>
-                            <span class="join-date">Зарегистрирован: 15.11.2024</span>
-                        </div>
+    // Демо-данные пользователей
+    const demoUsers = [
+        {
+            id: 1,
+            firstName: 'Иван Петров',
+            specialization: 'Невролог',
+            city: 'Москва',
+            email: 'ivan@example.com',
+            subscription: { status: 'trial', endDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) },
+            joinedAt: new Date('2024-01-15')
+        },
+        {
+            id: 2,
+            firstName: 'Анна Сидорова',
+            specialization: 'Ортопед',
+            city: 'Санкт-Петербург',
+            email: 'anna@example.com',
+            subscription: { status: 'active', endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+            joinedAt: new Date('2024-01-10')
+        }
+    ];
+
+    usersList.innerHTML = demoUsers.map(user => `
+        <div class="admin-content-item">
+            <div class="user-info">
+                <div class="user-avatar">👤</div>
+                <div class="user-details">
+                    <div class="user-name">${user.firstName}</div>
+                    <div class="user-meta">
+                        <span>🎯 ${user.specialization}</span>
+                        <span>🏙️ ${user.city}</span>
+                        <span>📧 ${user.email}</span>
+                    </div>
+                    <div class="user-status">
+                        <span class="status-badge ${user.subscription.status}">
+                            ${user.subscription.status === 'active' ? '✅ Активная' : user.subscription.status === 'trial' ? '🆓 Пробная' : '❌ Неактивная'}
+                        </span>
+                        <span class="join-date">Зарегистрирован: ${new Date(user.joinedAt).toLocaleDateString('ru-RU')}</span>
                     </div>
                 </div>
-                <div class="user-actions">
-                    <button class="btn btn-small" onclick="viewUser(123)">👁️</button>
-                    <button class="btn btn-small" onclick="messageUser(123)">✉️</button>
-                    <button class="btn btn-small btn-primary" onclick="makeAdmin(123)">👑</button>
-                </div>
             </div>
-        `;
-    }, 1000);
+            <div class="user-actions">
+                <button class="btn btn-small" onclick="viewUser(${user.id})">👁️</button>
+                <button class="btn btn-small" onclick="messageUser(${user.id})">✉️</button>
+                <button class="btn btn-small btn-primary" onclick="makeAdmin(${user.id})">👑</button>
+            </div>
+        </div>
+    `).join('');
 }
 
 async function loadAdmins() {
     const adminsList = document.getElementById('adminsList');
+    if (!adminsList) return;
+
     adminsList.innerHTML = '<div class="loading">Загрузка администраторов...</div>';
 
     try {
@@ -469,11 +489,10 @@ function updateAdminsList() {
 }
 
 async function addNewAdmin() {
-    const form = document.getElementById('addAdminForm');
-    const userId = parseInt(form.userId.value);
-
-    if (!userId) {
-        showNotification('❌ Введите ID пользователя', 'error');
+    const userId = prompt('Введите ID пользователя для назначения администратором:');
+    
+    if (!userId || isNaN(userId)) {
+        showNotification('❌ Введите корректный ID пользователя', 'error');
         return;
     }
 
@@ -483,14 +502,13 @@ async function addNewAdmin() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ userId })
+            body: JSON.stringify({ userId: parseInt(userId) })
         });
         
         const data = await response.json();
         
         if (data.success) {
             showNotification('✅ Администратор добавлен', 'success');
-            form.reset();
             loadAdmins();
         } else {
             throw new Error(data.error);
@@ -533,6 +551,18 @@ function goToMainApp() {
 }
 
 // Вспомогательные функции
+function getContentTypeName(type) {
+    const names = {
+        'courses': 'Курсы',
+        'podcasts': 'АНБ FM',
+        'streams': 'Эфиры',
+        'videos': 'Видео-шпаргалки',
+        'materials': 'Материалы',
+        'events': 'Мероприятия'
+    };
+    return names[type] || type;
+}
+
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -566,6 +596,13 @@ function showNotification(message, type = 'info') {
     setTimeout(() => {
         notification.remove();
     }, 3000);
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.remove();
+    }
 }
 
 // Заглушки для функций
