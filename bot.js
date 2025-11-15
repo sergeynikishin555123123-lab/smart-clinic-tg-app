@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 const WEBAPP_URL = process.env.WEBAPP_URL || `http://localhost:${PORT}`;
 
 // ЗАМЕНИТЕ НА ВАШ ТЕЛЕГРАМ ID!
-const ADMIN_IDS = [123456789]; 
+const ADMIN_IDS = [898508164]; 
 
 console.log('🚀 Starting Smart Clinic Bot...');
 
