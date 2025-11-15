@@ -525,4 +525,23 @@ body {
     .stats-grid {
         grid-template-columns: 1fr;
     }
+
+    /* Статусы подписки */
+.subscription.active {
+    color: #28a745;
+    font-weight: 600;
 }
+
+.subscription.inactive {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.subscription.trial {
+    color: #ffc107;
+    font-weight: 600;
+}
+    
+}
+
+
