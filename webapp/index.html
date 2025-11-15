@@ -33,7 +33,7 @@
                 title: 'Добро пожаловать в Академию АНБ!',
                 content: `
                     <div class="search">
-                        <input type="text" placeholder="Поиск..." class="search-input">
+                        <input type="text" placeholder="Поиск по курсам, материалам, эфирам..." class="search-input">
                     </div>
                     
                     <div class="grid">
@@ -54,15 +54,21 @@
                             <button class="filter">Статьи</button>
                             <button class="filter">Профессиональное развитие</button>
                             <button class="filter">Практические навыки</button>
+                            <button class="filter">Физиотерапия</button>
+                            <button class="filter">Реабилитация</button>
                         </div>
                         <div class="news-list">
                             <div class="news-item">
-                                <strong>Новый курс по физиотерапии</strong>
-                                <p>Доступен для всех подписчиков</p>
+                                <strong>Новый курс: "Мануальные техники в практике"</strong>
+                                <p>Доступен для всех подписчиков с 1 декабря</p>
                             </div>
                             <div class="news-item">
-                                <strong>Вебинар по мануальным техникам</strong>
-                                <p>28 ноября в 19:00</p>
+                                <strong>Вебинар по современным методам реабилитации</strong>
+                                <p>28 ноября в 19:00 • Спикер: Илья Чистяков</p>
+                            </div>
+                            <div class="news-item">
+                                <strong>Обновление раздела практических материалов</strong>
+                                <p>Добавлены новые МРТ-кейсы и чек-листы</p>
                             </div>
                         </div>
                     </div>
@@ -72,21 +78,37 @@
                 title: 'О сообществе',
                 content: `
                     <div class="grid">
-                        <div class="card">📜 Правила сообщества</div>
-                        <div class="card">❓ F.A.Q.</div>
-                        <div class="card">💳 Подписка</div>
-                        <div class="card">🔄 Как оформить подписку</div>
+                        <div class="card" data-section="rules">📜 Правила сообщества</div>
+                        <div class="card" data-section="faq">❓ F.A.Q.</div>
+                        <div class="card" data-section="subscription">💳 Подписка</div>
+                        <div class="card" data-section="howto">🔄 Как оформить подписку</div>
                     </div>
                     
                     <div class="faq">
                         <h3>Частые вопросы</h3>
+                        
                         <div class="faq-item">
-                            <strong>Как оформить подписку?</strong>
-                            <p>Подписку можно оформить в разделе «Профиль»</p>
+                            <strong>Как оформить, продлить или отменить подписку?</strong>
+                            <p>Подписку можно оформить или продлить в разделе «Личный кабинет». Там же доступна отмена — через кнопку «Изменить подписку».</p>
                         </div>
+                        
                         <div class="faq-item">
-                            <strong>Что входит в подписку?</strong>
-                            <p>Доступ ко всем курсам, эфирам и материалам</p>
+                            <strong>Что входит в подписку Академии?</strong>
+                            <p>Доступ к эфирам, разборам (в том числе в записи), практическим материалам, видео-шпаргалкам на разные темы, а также к чату специалистов и интерактивной карте офлайн-мероприятий с предзаписью и голосованиями за новые темы.</p>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <strong>Можно ли смотреть материалы без подписки?</strong>
+                            <p>Да, часть контента доступна в пробном периоде для ознакомления. Полный доступ и участие в развитии открываются при активной подписке.</p>
+                        </div>
+
+                        <div class="faq-item">
+                            <strong>Чем отличаются курсы, эфиры, разборы, видео-шпаргалки и практические материалы?</strong>
+                            <p><strong>Курсы</strong> — системное обучение Академии, доступное за отдельную плату. После прохождения выдаются сертификаты.<br>
+                            <strong>Эфиры</strong> — живые встречи, где специалисты разбирают актуальные темы.<br>
+                            <strong>Разборы</strong> — реальные кейсы врачей и личные истории профессионального роста.<br>
+                            <strong>Видео-шпаргалки</strong> — короткие видео с техниками и приёмами.<br>
+                            <strong>Практические материалы</strong> — полезные инструменты для работы: МРТ, клинические случаи и чек-листы.</p>
                         </div>
                     </div>
                 `
@@ -98,9 +120,9 @@
                         <div class="avatar">👤</div>
                         <div class="profile-info">
                             <div class="name" id="userName">Пользователь</div>
-                            <div class="status">Член Академии АНБ</div>
-                            <div class="subscription active">Подписка: активна</div>
-                            <button class="btn">Изменить подписку</button>
+                            <div class="status">Член Академии АНБ с <span id="joinDate">ноября 2024</span></div>
+                            <div class="subscription active" id="subscriptionStatus">Подписка: активна</div>
+                            <button class="btn" id="changeSubscription">Изменить подписку</button>
                         </div>
                     </div>
 
@@ -112,7 +134,7 @@
                                 <div class="step-info">
                                     <div class="step-title">Понимаю</div>
                                     <div class="step-progress">Прогресс: 100%</div>
-                                    <div class="step-hint">Начинаю замечать закономерности</div>
+                                    <div class="step-hint">Начинаю замечать закономерности и связи. Не просто слышу жалобы — вижу структуру боли.</div>
                                 </div>
                             </div>
                             <div class="step">
@@ -120,7 +142,7 @@
                                 <div class="step-info">
                                     <div class="step-title">Связываю</div>
                                     <div class="step-progress">Прогресс: 60%</div>
-                                    <div class="step-hint">Закономерности складываются в систему</div>
+                                    <div class="step-hint">Закономерности и связи складываются в единую картину. Боль приобретает смысл.</div>
                                 </div>
                             </div>
                             <div class="step">
@@ -128,9 +150,38 @@
                                 <div class="step-info">
                                     <div class="step-title">Применяю</div>
                                     <div class="step-progress">Прогресс: 20%</div>
-                                    <div class="step-hint">Использую знания на практике</div>
+                                    <div class="step-hint">При взгляде на единую картину - боль воспринимается как следствие. Работа направлена на устранение причины.</div>
                                 </div>
                             </div>
+                            <div class="step">
+                                <div class="step-number">4️⃣</div>
+                                <div class="step-info">
+                                    <div class="step-title">Систематизирую</div>
+                                    <div class="step-progress">Прогресс: 0%</div>
+                                    <div class="step-hint">Выстраиваю собственную логику работы. Знания становятся инструментом, а не набором методик.</div>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">5️⃣</div>
+                                <div class="step-info">
+                                    <div class="step-title">Делюсь</div>
+                                    <div class="step-progress">Прогресс: 0%</div>
+                                    <div class="step-hint">Опыт становится вкладом. Появляется желание обсуждать, помогать и развивать других.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px;">
+                        <div class="stat-card" style="background: white; padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                            <div style="font-size: 24px; margin-bottom: 8px;">📚</div>
+                            <div style="font-weight: 600; margin-bottom: 4px;">Пройдено курсов</div>
+                            <div style="font-size: 24px; color: #58b8e7; font-weight: 700;">2</div>
+                        </div>
+                        <div class="stat-card" style="background: white; padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                            <div style="font-size: 24px; margin-bottom: 8px;">🎯</div>
+                            <div style="font-weight: 600; margin-bottom: 4px;">Просмотрено материалов</div>
+                            <div style="font-size: 24px; color: #58b8e7; font-weight: 700;">15</div>
                         </div>
                     </div>
                 `
@@ -139,23 +190,37 @@
                 title: 'Чаты сообщества',
                 content: `
                     <div class="chats-list">
-                        <div class="chat-item">
+                        <div class="chat-item" data-chat="general">
                             <div class="chat-icon">💬</div>
                             <div class="chat-info">
                                 <div class="chat-name">Флудилка</div>
-                                <div class="chat-desc">Общение на любые темы</div>
+                                <div class="chat-desc">Общение на любые темы, знакомство с сообществом</div>
                             </div>
                         </div>
-                        <div class="chat-item">
+                        <div class="chat-item" data-chat="specialists">
                             <div class="chat-icon">👥</div>
                             <div class="chat-info">
                                 <div class="chat-name">Чат специалистов</div>
-                                <div class="chat-desc">Профессиональные обсуждения</div>
+                                <div class="chat-desc">Профессиональные обсуждения, обмен опытом</div>
                             </div>
                         </div>
-                        <div class="note">
-                            📝 Названия чатов ожидают согласования
+                        <div class="chat-item" data-chat="rehabilitation">
+                            <div class="chat-icon">🦵</div>
+                            <div class="chat-info">
+                                <div class="chat-name">Реабилитация</div>
+                                <div class="chat-desc">Обсуждение методов и техник реабилитации</div>
+                            </div>
                         </div>
+                        <div class="chat-item" data-chat="physiotherapy">
+                            <div class="chat-icon">💪</div>
+                            <div class="chat-info">
+                                <div class="chat-name">Физиотерапия</div>
+                                <div class="chat-desc">Вопросы физиотерапии и мануальных техник</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="note">
+                        📝 Чаты доступны только для пользователей с активной подпиской. Названия и тематика чатов могут быть скорректированы по согласованию с руководителем.
                     </div>
                 `
             },
@@ -163,25 +228,55 @@
                 title: 'Мои материалы',
                 content: `
                     <div class="tabs">
-                        <button class="tab active">Посмотреть позже</button>
-                        <button class="tab">Избранное</button>
-                        <button class="tab">Практические материалы</button>
+                        <button class="tab active" data-tab="watch-later">Посмотреть позже</button>
+                        <button class="tab" data-tab="favorites">Избранное</button>
+                        <button class="tab" data-tab="practice">Практические материалы</button>
                     </div>
-                    <div class="tab-content">
+                    
+                    <div class="tab-content" id="watch-later" style="display: block;">
                         <div class="materials-list">
                             <div class="material-item">
                                 <div class="material-icon">📹</div>
                                 <div class="material-info">
-                                    <div class="material-title">Разбор клинического случая</div>
-                                    <div class="material-date">Добавлено 2 дня назад</div>
+                                    <div class="material-title">Разбор клинического случая: Боль в пояснице</div>
+                                    <div class="material-date">Добавлено 2 дня назад • 45:24</div>
                                 </div>
                             </div>
                             <div class="material-item">
                                 <div class="material-icon">📚</div>
                                 <div class="material-info">
-                                    <div class="material-title">Курс по мануальной терапии</div>
-                                    <div class="material-date">Добавлено неделю назад</div>
+                                    <div class="material-title">Курс: Мануальная терапия в практике</div>
+                                    <div class="material-date">Добавлено неделю назад • 6 модулей</div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="favorites" style="display: none;">
+                        <div class="materials-list">
+                            <div class="material-item">
+                                <div class="material-icon">🎯</div>
+                                <div class="material-info">
+                                    <div class="material-title">Видео-шпаргалка: Техника миофасциального релиза</div>
+                                    <div class="material-date">В избранном • 08:15</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="practice" style="display: none;">
+                        <div class="materials-grid" style="display: grid; grid-template-columns: 1fr; gap: 16px;">
+                            <div class="card" data-material="mri">
+                                <div style="font-size: 18px; margin-bottom: 8px;">🩻</div>
+                                <div>МРТ разборы</div>
+                            </div>
+                            <div class="card" data-material="cases">
+                                <div style="font-size: 18px; margin-bottom: 8px;">📋</div>
+                                <div>Клинические случаи</div>
+                            </div>
+                            <div class="card" data-material="checklists">
+                                <div style="font-size: 18px; margin-bottom: 8px;">✅</div>
+                                <div>Чек-листы</div>
                             </div>
                         </div>
                     </div>
@@ -208,6 +303,12 @@
                 btn.classList.toggle('active', btn.dataset.page === page);
             });
 
+            // Скрываем все tab-content и показываем активный
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            document.querySelector('.tab.active')?.closest('.tab-content')?.style.display = 'block';
+
             // Добавляем обработчики событий
             addEventListeners();
         }
@@ -216,9 +317,9 @@
             // Обработчики для карточек
             document.querySelectorAll('.card').forEach(card => {
                 card.addEventListener('click', function() {
-                    const category = this.dataset.category;
+                    const category = this.dataset.category || this.dataset.section || this.dataset.material;
                     if (category) {
-                        alert(`Открываем раздел: ${this.textContent}`);
+                        showCategoryModal(category, this.textContent);
                     }
                 });
             });
@@ -228,6 +329,13 @@
                 tab.addEventListener('click', function() {
                     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
+                    
+                    // Показываем соответствующий контент
+                    const tabId = this.dataset.tab;
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.style.display = 'none';
+                    });
+                    document.getElementById(tabId).style.display = 'block';
                 });
             });
 
@@ -238,6 +346,43 @@
                     this.classList.add('active');
                 });
             });
+
+            // Обработчики для чатов
+            document.querySelectorAll('.chat-item').forEach(chat => {
+                chat.addEventListener('click', function() {
+                    const chatName = this.dataset.chat;
+                    showChatModal(chatName, this.querySelector('.chat-name').textContent);
+                });
+            });
+
+            // Кнопка изменения подписки
+            const changeSubBtn = document.getElementById('changeSubscription');
+            if (changeSubBtn) {
+                changeSubBtn.addEventListener('click', showSubscriptionModal);
+            }
+        }
+
+        function showCategoryModal(category, title) {
+            const modalContent = {
+                'courses': '📚 <strong>Курсы Академии</strong><br>Системное обучение с сертификатами',
+                'fm': '🎧 <strong>АНБ FM</strong><br>Аудио-подкасты и интервью',
+                'streams': '📹 <strong>Эфиры и Разборы</strong><br>Прямые эфиры и разборы кейсов',
+                'cheats': '🎯 <strong>Видео-шпаргалки</strong><br>Короткие обучающие видео',
+                'materials': '📋 <strong>Практические материалы</strong><br>Инструменты для работы',
+                'events': '🗺️ <strong>Карта мероприятий</strong><br>Онлайн и офлайн события',
+                'offers': '🔥 <strong>Ограниченное предложение</strong><br>Специальные условия',
+                'support': '💬 <strong>Поддержка</strong><br>Помощь и консультации'
+            };
+
+            alert(`🎯 ${title}\n\n${modalContent[category] || 'Раздел в разработке'}`);
+        }
+
+        function showChatModal(chatId, chatName) {
+            alert(`💬 Открываем чат: ${chatName}\n\nДоступ к чату предоставляется пользователям с активной подпиской.`);
+        }
+
+        function showSubscriptionModal() {
+            alert(`💳 Управление подпиской\n\nТекущий тариф: Премиум\nСледующее списание: 15 декабря 2024\n\nДля изменения тарифа обратитесь к координатору: @academy_anb`);
         }
 
         // Инициализация
@@ -255,8 +400,14 @@
             const user = Telegram.WebApp.initDataUnsafe.user;
             if (user) {
                 document.getElementById('userName').textContent = user.first_name || 'Пользователь';
+                if (user.id === 898508164) {
+                    document.getElementById('adminBadge').style.display = 'block';
+                }
             }
             Telegram.WebApp.expand();
+        } else {
+            // Для тестирования вне Telegram
+            document.getElementById('userName').textContent = 'Тестовый Пользователь';
         }
 
         console.log('✅ WebApp loaded successfully!');
