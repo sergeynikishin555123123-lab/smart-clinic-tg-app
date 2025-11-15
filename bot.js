@@ -18,87 +18,84 @@ console.log('🚀 Starting Smart Clinic Bot...');
 // ==================== БАЗА ДАННЫХ ====================
 const users = new Map();
 const userSurveys = new Map();
-const botConfig = {
-  buttons: {
-    navigation: { text: '📱 Навигация', reply: 'Открываю навигацию по Академии...' },
-    promotions: { text: '🎁 Акции', reply: 'Открываю актуальные предложения...' },
-    question: { text: '❓ Задать вопрос', reply: 'Форма для вопросов по обучению...' },
-    support: { text: '💬 Поддержка', reply: 'Контакты поддержки Академии...' },
-    profile: { text: '👤 Мой профиль', reply: 'Информация о вашем профиле...' },
-    renew: { text: '🔄 Продлить подписку', reply: 'Информация о продлении подписки...' }
-  }
+const botMessages = {
+    navigation: `🎯 <b>Навигация по Академии АНБ</b>\n\n📱 Для полного доступа ко всем функциям откройте наше приложение:\n\n• Курсы и обучение\n• Эфиры и разборы\n• Практические материалы\n• Сообщество специалистов\n• Личный кабинет и прогресс`,
+    
+    promotions: `🎁 <b>Акции и специальные предложения</b>\n\n🔥 <b>Пробный период</b>\n7 дней бесплатного доступа ко всем материалам\n\n💎 <b>Приведи друга</b>\nПолучи скидку 20% на подписку за каждого приглашенного коллегу\n\n🎯 <b>Пакет "Профи"</b>\n3 месяца обучения по цене 2\nЭкономия 600 рублей\n\n📈 <b>Корпоративная подписка</b>\nСпециальные условия для клиник и медицинских центров`,
+    
+    question: `❓ <b>Задать вопрос по обучению</b>\n\nДля вопросов по обучению заполните форму в нашем приложении:\n\n• Выберите тему вопроса\n• Укажите связанный курс (если есть)\n• Опишите проблему подробно\n• Прикрепите файлы при необходимости\n\n📞 Также вы можете обратиться напрямую к координатору: @academy_anb`,
+    
+    support: `💬 <b>Поддержка Академии АНБ</b>\n\n📞 Координатор проекта: @academy_anb\n⏰ Часы работы: ПН-ПТ с 11:00 до 19:00\n📧 Email: academy@anb.ru\n\n<b>Мы поможем с:</b>\n• Техническими вопросами\n• Оплатой и подписками\n• Доступом к материалам\n• Проблемами с аккаунтом\n• Любыми другими вопросами\n\n<b>Сообщить о нарушении:</b>\nЕсли вы получаете нежелательные сообщения (спам, реклама) или замечаете другие нарушения правил сообщества — сообщите нам, мы обязательно разберёмся.`,
+    
+    profile: `👤 <b>Информация о профиле</b>\n\nВ вашем профиле в приложении доступны:\n\n• Личные данные и специализация\n• Статус подписки и дата окончания\n• Прогресс по системе "Мой путь"\n• Просмотренные материалы\n• Сохраненные избранные элементы\n• Статистика активности\n\n💳 <b>Управление подпиской:</b>\nПодписку можно оформить, продлить или отменить в разделе «Личный кабинет» в приложении.`,
+    
+    renew: `🔄 <b>Продление подписки</b>\n\n<b>Доступные тарифы:</b>\n\n🟢 <b>1 месяц</b> - 2 900 руб.\n• Полный доступ ко всем материалам\n• Участие в эфирах\n• Доступ к чату специалистов\n\n🔵 <b>3 месяца</b> - 7 500 руб. (экономьте 600 руб.)\n• Все преимущества месячной подписки\n• Персональный сертификат\n• Приоритетная поддержка\n\n🟣 <b>12 месяцев</b> - 24 000 руб. (экономьте 10 800 руб.)\n• Максимальная экономия\n• Доступ к закрытым мероприятиям\n• Индивидуальные консультации\n\n💳 Для оформления подписки откройте приложение.`
 };
 
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 function getUser(id) {
-  if (!users.has(id)) {
-    users.set(id, {
-      id,
-      firstName: 'User',
-      username: '',
-      joinedAt: new Date(),
-      lastActivity: new Date(),
-      surveyCompleted: false,
-      specialization: '',
-      city: '',
-      email: '',
-      subscription: { 
-        status: 'inactive', 
-        type: 'none',
-        endDate: null 
-      },
-      progress: { 
-        level: 'Понимаю', 
-        steps: {
-          materialsWatched: 0,
-          eventsParticipated: 0,
-          materialsSaved: 0,
-          coursesBought: 0
-        }
-      },
-      favorites: {
-        courses: [],
-        podcasts: [],
-        streams: [],
-        videos: [],
-        materials: []
-      }
-    });
-  }
-  return users.get(id);
+    if (!users.has(id)) {
+        users.set(id, {
+            id,
+            firstName: 'User',
+            username: '',
+            joinedAt: new Date(),
+            lastActivity: new Date(),
+            surveyCompleted: false,
+            specialization: '',
+            city: '',
+            email: '',
+            subscription: { 
+                status: 'inactive', 
+                type: 'none',
+                endDate: null 
+            },
+            isAdmin: ADMIN_IDS.includes(id),
+            progress: { 
+                level: 'Понимаю', 
+                steps: {
+                    materialsWatched: 0,
+                    eventsParticipated: 0,
+                    materialsSaved: 0,
+                    coursesBought: 0
+                }
+            }
+        });
+    }
+    return users.get(id);
 }
 
 function isAdmin(userId) {
-  return ADMIN_IDS.includes(userId);
+    return ADMIN_IDS.includes(userId);
 }
 
 function completeSurvey(userId) {
-  const user = getUser(userId);
-  user.surveyCompleted = true;
-  user.subscription = {
-    status: 'trial',
-    type: 'trial_7days',
-    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-  };
+    const user = getUser(userId);
+    user.surveyCompleted = true;
+    user.subscription = {
+        status: 'trial',
+        type: 'trial_7days',
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    };
 }
 
 // ==================== ОПРОС ====================
 const surveySteps = [
-  {
-    question: "🎯 Ваша специализация:",
-    options: ["Невролог", "Ортопед", "Реабилитолог", "Физиотерапевт", "Мануальный терапевт", "Спортивный врач", "Другое"],
-    field: 'specialization'
-  },
-  {
-    question: "🏙️ Ваш город:",
-    options: ["Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург", "Казань", "Нижний Новгород", "Другой город"],
-    field: 'city'
-  },
-  {
-    question: "📧 Ваш e-mail для доступа к материалам:",
-    field: 'email',
-    isTextInput: true
-  }
+    {
+        question: "🎯 Ваша специализация:",
+        options: ["Невролог", "Ортопед", "Реабилитолог", "Физиотерапевт", "Мануальный терапевт", "Спортивный врач", "Другое"],
+        field: 'specialization'
+    },
+    {
+        question: "🏙️ Ваш город:",
+        options: ["Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург", "Казань", "Нижний Новгород", "Другой город"],
+        field: 'city'
+    },
+    {
+        question: "📧 Ваш e-mail для доступа к материалам:",
+        field: 'email',
+        isTextInput: true
+    }
 ];
 
 // ==================== ТЕЛЕГРАМ БОТ ====================
@@ -106,277 +103,264 @@ const bot = new Telegraf(BOT_TOKEN);
 
 // ==================== ОБРАБОТКА КОМАНД ====================
 bot.start(async (ctx) => {
-  const user = getUser(ctx.from.id);
-  user.firstName = ctx.from.first_name;
-  user.username = ctx.from.username;
+    const user = getUser(ctx.from.id);
+    user.firstName = ctx.from.first_name;
+    user.username = ctx.from.username;
+    user.isAdmin = isAdmin(ctx.from.id);
 
-  console.log(`👋 START: ${user.firstName} (${ctx.from.id})`);
+    console.log(`👋 START: ${user.firstName} (${ctx.from.id}) ${user.isAdmin ? '👑 ADMIN' : ''}`);
 
-  if (user.surveyCompleted) {
-    await showMainMenu(ctx);
-    return;
-  }
+    if (user.surveyCompleted) {
+        await showMainMenu(ctx);
+        return;
+    }
 
-  userSurveys.set(ctx.from.id, { step: 0, answers: {} });
-  await sendSurveyStep(ctx, ctx.from.id);
+    userSurveys.set(ctx.from.id, { step: 0, answers: {} });
+    await sendSurveyStep(ctx, ctx.from.id);
 });
 
 bot.command('menu', async (ctx) => {
-  await showMainMenu(ctx);
+    await showMainMenu(ctx);
 });
 
-bot.command('status', async (ctx) => {
-  const user = getUser(ctx.from.id);
-  const status = user.subscription.status === 'trial' ? 
-    `активна (пробный до ${user.subscription.endDate.toLocaleDateString('ru-RU')})` : 'не активна';
-  
-  await ctx.reply(
-    `📊 Статус подписки: ${status}\n🎯 Уровень: ${user.progress.level}\n📧 Email: ${user.email}`
-  );
-});
-
-bot.command('help', async (ctx) => {
-  await ctx.reply(
-    'ℹ️ Помощь по боту Академии АНБ\n\n' +
-    'Команды:\n/start - начать\n/menu - меню\n/status - статус\n/help - справка\n\n' +
-    'По всем вопросам: @academy_anb'
-  );
-});
-
-// Админ команда для управления кнопками бота
 bot.command('admin', async (ctx) => {
-  if (!isAdmin(ctx.from.id)) {
-    await ctx.reply('❌ Нет прав доступа');
-    return;
-  }
-
-  await ctx.reply('🔧 <b>Управление кнопками бота</b>\n\nИспользуйте WebApp для полного управления системой:', {
-    parse_mode: 'HTML',
-    reply_markup: {
-      inline_keyboard: [[
-        { text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin` } }
-      ]]
+    const user = getUser(ctx.from.id);
+    if (!user.isAdmin) {
+        await ctx.reply('❌ Нет прав доступа');
+        return;
     }
-  });
+
+    await ctx.reply('🔧 <b>Панель управления ботом</b>\n\nЗдесь вы можете редактировать сообщения, которые видят пользователи при нажатии кнопок.', {
+        parse_mode: 'HTML',
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: '✏️ Редактировать сообщения', callback_data: 'edit_messages' },
+                    { text: '📊 Статистика бота', callback_data: 'bot_stats' }
+                ],
+                [
+                    { text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin` } }
+                ]
+            ]
+        }
+    });
 });
 
 // ==================== ОБРАБОТКА СООБЩЕНИЙ ====================
 bot.on('text', async (ctx) => {
-  const userId = ctx.from.id;
-  const text = ctx.message.text;
-  const user = getUser(userId);
+    const userId = ctx.from.id;
+    const text = ctx.message.text;
+    const user = getUser(userId);
 
-  console.log(`📨 TEXT: ${user.firstName} - "${text}"`);
+    console.log(`📨 TEXT: ${user.firstName} - "${text}"`);
 
-  // Если пользователь в процессе опроса
-  const survey = userSurveys.get(userId);
-  if (survey) {
-    await handleSurvey(ctx, survey, text);
-    return;
-  }
+    // Если пользователь в процессе опроса
+    const survey = userSurveys.get(userId);
+    if (survey) {
+        await handleSurvey(ctx, survey, text);
+        return;
+    }
 
-  // Обработка основных кнопок меню
-  await handleMenuButton(ctx, text);
+    // Обработка основных кнопок меню
+    await handleMenuButton(ctx, text);
 });
 
 // ==================== ОПРОС ====================
 async function handleSurvey(ctx, survey, text) {
-  const userId = ctx.from.id;
-  const currentStep = surveySteps[survey.step];
+    const userId = ctx.from.id;
+    const currentStep = surveySteps[survey.step];
 
-  if (currentStep.isTextInput) {
-    if (currentStep.field === 'email' && !text.includes('@')) {
-      await ctx.reply('❌ Введите корректный email:');
-      return;
+    if (currentStep.isTextInput) {
+        if (currentStep.field === 'email' && !text.includes('@')) {
+            await ctx.reply('❌ Введите корректный email:');
+            return;
+        }
+        survey.answers[currentStep.field] = text;
+    } else {
+        if (text !== '🚫 Пропустить вопрос') {
+            survey.answers[currentStep.field] = text;
+        }
     }
-    survey.answers[currentStep.field] = text;
-  } else {
-    if (text !== '🚫 Пропустить вопрос') {
-      survey.answers[currentStep.field] = text;
+
+    survey.step++;
+
+    if (survey.step < surveySteps.length) {
+        await sendSurveyStep(ctx, userId);
+    } else {
+        await finishSurvey(ctx, userId, survey.answers);
     }
-  }
-
-  survey.step++;
-
-  if (survey.step < surveySteps.length) {
-    await sendSurveyStep(ctx, userId);
-  } else {
-    await finishSurvey(ctx, userId, survey.answers);
-  }
 }
 
 async function sendSurveyStep(ctx, userId) {
-  const survey = userSurveys.get(userId);
-  const step = surveySteps[survey.step];
+    const survey = userSurveys.get(userId);
+    const step = surveySteps[survey.step];
 
-  if (step.isTextInput) {
-    await ctx.reply(
-      `📝 ${step.question}\nВведите ваш ответ:`,
-      Markup.removeKeyboard()
-    );
-  } else {
-    const buttons = step.options.map(opt => [opt]);
-    buttons.push(['🚫 Пропустить вопрос']);
-    
-    await ctx.reply(
-      `📝 ${step.question}\nВыберите вариант:`,
-      Markup.keyboard(buttons).resize().oneTime()
-    );
-  }
+    if (step.isTextInput) {
+        await ctx.reply(
+            `📝 ${step.question}\nВведите ваш ответ:`,
+            Markup.removeKeyboard()
+        );
+    } else {
+        const buttons = step.options.map(opt => [opt]);
+        buttons.push(['🚫 Пропустить вопрос']);
+        
+        await ctx.reply(
+            `📝 ${step.question}\nВыберите вариант:`,
+            Markup.keyboard(buttons).resize().oneTime()
+        );
+    }
 }
 
 async function finishSurvey(ctx, userId, answers) {
-  const user = getUser(userId);
-  
-  user.specialization = answers.specialization || 'Не указано';
-  user.city = answers.city || 'Не указан';
-  user.email = answers.email || 'Не указан';
-  
-  completeSurvey(userId);
-  userSurveys.delete(userId);
+    const user = getUser(userId);
+    
+    user.specialization = answers.specialization || 'Не указано';
+    user.city = answers.city || 'Не указан';
+    user.email = answers.email || 'Не указан';
+    
+    completeSurvey(userId);
+    userSurveys.delete(userId);
 
-  await ctx.reply(
-    `🎉 Спасибо за опрос, ${user.firstName}!\n\n` +
-    `✅ Ваш профиль:\n` +
-    `🎯 Специализация: ${user.specialization}\n` +
-    `🏙️ Город: ${user.city}\n` +
-    `📧 Email: ${user.email}\n\n` +
-    `🎁 Пробный доступ на 7 дней активирован!`
-  );
+    await ctx.reply(
+        `🎉 Спасибо за опрос, ${user.firstName}!\n\n` +
+        `✅ Ваш профиль:\n` +
+        `🎯 Специализация: ${user.specialization}\n` +
+        `🏙️ Город: ${user.city}\n` +
+        `📧 Email: ${user.email}\n\n` +
+        `🎁 Пробный доступ на 7 дней активирован!\n\n` +
+        `Теперь вы можете пользоваться всеми возможностями Академии.`,
+        Markup.removeKeyboard()
+    );
 
-  await showMainMenu(ctx);
+    await showMainMenu(ctx);
 }
 
 // ==================== ОСНОВНЫЕ КНОПКИ МЕНЮ ====================
 async function handleMenuButton(ctx, text) {
-  const user = getUser(ctx.from.id);
-  user.lastActivity = new Date();
+    const user = getUser(ctx.from.id);
+    user.lastActivity = new Date();
 
-  console.log(`🔘 BUTTON: ${user.firstName} - "${text}"`);
+    console.log(`🔘 BUTTON: ${user.firstName} - "${text}"`);
 
-  const buttonConfig = botConfig.buttons;
+    switch (text) {
+        case '📱 Навигация':
+            await ctx.reply(botMessages.navigation, {
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
+                    ]]
+                }
+            });
+            break;
 
-  switch (text) {
-    case buttonConfig.navigation.text:
-      await ctx.reply(buttonConfig.navigation.reply, {
-        reply_markup: {
-          inline_keyboard: [[
-            { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
-          ]]
-        }
-      });
-      break;
+        case '🎁 Акции':
+            await ctx.reply(botMessages.promotions, {
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
+                    ]]
+                }
+            });
+            break;
 
-    case buttonConfig.promotions.text:
-      await ctx.reply(buttonConfig.promotions.reply, {
-        reply_markup: {
-          inline_keyboard: [[
-            { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
-          ]]
-        }
-      });
-      break;
+        case '❓ Задать вопрос':
+            await ctx.reply(botMessages.question, {
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
+                    ]]
+                }
+            });
+            break;
 
-    case buttonConfig.question.text:
-      await ctx.reply(
-        `${buttonConfig.question.reply}\n\n` +
-        'Опишите ваш вопрос:\n' +
-        '• Тема вопроса\n' + 
-        '• Связанный курс\n' +
-        '• Подробное описание\n\n' +
-        'Ответим в течение 24 часов.',
-        {
-          reply_markup: {
-            keyboard: [['🔙 Назад в меню']],
-            resize_keyboard: true
-          }
-        }
-      );
-      break;
+        case '💬 Поддержка':
+            await ctx.reply(botMessages.support, {
+                parse_mode: 'HTML'
+            });
+            break;
 
-    case buttonConfig.support.text:
-      await ctx.reply(
-        `${buttonConfig.support.reply}\n\n` +
-        '📞 Координатор: @academy_anb\n' +
-        '⏰ ПН-ПТ 11:00-19:00\n' +
-        '📧 academy@anb.ru'
-      );
-      break;
+        case '👤 Мой профиль':
+            await ctx.reply(botMessages.profile, {
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
+                    ]]
+                }
+            });
+            break;
 
-    case buttonConfig.profile.text:
-      const subStatus = user.subscription.status === 'trial' ? 
-        `🆓 Пробный (до ${user.subscription.endDate.toLocaleDateString('ru-RU')})` : '❌ Не активна';
-      
-      await ctx.reply(
-        `${buttonConfig.profile.reply}\n\n` +
-        `👨‍⚕️ Имя: ${user.firstName}\n` +
-        `🎯 Специализация: ${user.specialization}\n` +
-        `🏙️ Город: ${user.city}\n` +
-        `📧 Email: ${user.email}\n` +
-        `💳 Подписка: ${subStatus}\n` +
-        `🎯 Уровень: ${user.progress.level}`
-      );
-      break;
+        case '🔄 Продлить подписку':
+            await ctx.reply(botMessages.renew, {
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
+                    ]]
+                }
+            });
+            break;
 
-    case buttonConfig.renew.text:
-      await ctx.reply(
-        `${buttonConfig.renew.reply}\n\n` +
-        'Тарифы:\n\n' +
-        '🟢 1 месяц - 2 900 руб.\n' +
-        '🔵 3 месяца - 7 500 руб.\n' +
-        '🟣 12 месяцев - 24 000 руб.\n\n' +
-        'Оформление в приложении:',
-        {
-          reply_markup: {
-            inline_keyboard: [[
-              { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
-            ]]
-          }
-        }
-      );
-      break;
+        case '🔧 Управление ботом':
+            if (user.isAdmin) {
+                await ctx.reply('🔧 <b>Панель управления ботом</b>\n\nВыберите действие:', {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                { text: '✏️ Редактировать сообщения', callback_data: 'edit_messages' },
+                                { text: '📊 Статистика бота', callback_data: 'bot_stats' }
+                            ],
+                            [
+                                { text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin` } }
+                            ]
+                        ]
+                    }
+                });
+            }
+            break;
 
-    case '🔙 Назад в меню':
-      await showMainMenu(ctx);
-      break;
-
-    default:
-      await ctx.reply('🤔 Используйте кнопки меню для навигации');
-      await showMainMenu(ctx);
-      break;
-  }
+        default:
+            await ctx.reply('🤔 Используйте кнопки меню для навигации');
+            await showMainMenu(ctx);
+            break;
+    }
 }
 
 // Главное меню
 async function showMainMenu(ctx) {
-  const user = getUser(ctx.from.id);
-  
-  let message = `👋 Добро пожаловать, ${user.firstName}!\n\n`;
-  
-  if (user.subscription.status === 'trial') {
-    message += `🕒 Пробный доступ до: ${user.subscription.endDate.toLocaleDateString('ru-RU')}\n\n`;
-  }
-  
-  message += `Используйте кнопки для навигации:`;
-
-  const buttons = Object.values(botConfig.buttons).map(btn => btn.text);
-  const keyboard = [
-    [buttons[0], buttons[1]], // Навигация, Акции
-    [buttons[2], buttons[3]], // Вопрос, Поддержка
-    [buttons[4], buttons[5]]  // Профиль, Продлить
-  ];
-
-  // Добавляем админ-кнопку если пользователь админ
-  if (isAdmin(ctx.from.id)) {
-    keyboard.push(['🔧 Управление ботом']);
-  }
-
-  await ctx.reply(message, {
-    reply_markup: {
-      keyboard: keyboard,
-      resize_keyboard: true
+    const user = getUser(ctx.from.id);
+    
+    let message = `👋 Добро пожаловать в Академию АНБ, ${user.firstName}!\n\n`;
+    
+    if (user.subscription.status === 'trial') {
+        message += `🕒 Пробный доступ до: ${user.subscription.endDate.toLocaleDateString('ru-RU')}\n\n`;
+    } else if (user.isAdmin) {
+        message += `👑 Вы администратор системы\n\n`;
     }
-  });
+    
+    message += `Выберите раздел для получения информации:`;
+
+    const keyboard = [
+        ['📱 Навигация', '🎁 Акции'],
+        ['❓ Задать вопрос', '💬 Поддержка'],
+        ['👤 Мой профиль', '🔄 Продлить подписку']
+    ];
+
+    // Добавляем админ-кнопку если пользователь админ
+    if (user.isAdmin) {
+        keyboard.push(['🔧 Управление ботом']);
+    }
+
+    await ctx.reply(message, {
+        reply_markup: {
+            keyboard: keyboard,
+            resize_keyboard: true
+        }
+    });
 }
 
 // ==================== WEB APP SERVER ====================
@@ -386,74 +370,83 @@ app.use(express.static(join(__dirname, 'webapp')));
 
 // API для WebApp
 app.get('/api/user/:id', (req, res) => {
-  const userId = parseInt(req.params.id);
-  const user = users.get(userId);
-  
-  if (user) {
-    res.json({
-      success: true,
-      user: {
-        id: user.id,
-        firstName: user.firstName,
-        specialization: user.specialization,
-        city: user.city,
-        email: user.email,
-        subscription: user.subscription,
-        progress: user.progress,
-        favorites: user.favorites,
-        isAdmin: isAdmin(userId)
-      }
-    });
-  } else {
-    res.json({ success: false, error: 'User not found' });
-  }
+    const userId = parseInt(req.params.id);
+    const user = users.get(userId);
+    
+    if (user) {
+        // Для админов делаем подписку активной
+        if (user.isAdmin) {
+            user.subscription = {
+                status: 'active',
+                type: 'admin',
+                endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // +1 год
+            };
+        }
+        
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                firstName: user.firstName,
+                specialization: user.specialization,
+                city: user.city,
+                email: user.email,
+                subscription: user.subscription,
+                progress: user.progress,
+                isAdmin: user.isAdmin,
+                joinedAt: user.joinedAt
+            }
+        });
+    } else {
+        res.json({ success: false, error: 'User not found' });
+    }
 });
 
-app.get('/api/bot/config', (req, res) => {
-  res.json({ success: true, config: botConfig });
+app.get('/api/bot/messages', (req, res) => {
+    res.json({ success: true, messages: botMessages });
 });
 
-app.put('/api/bot/config', (req, res) => {
-  if (req.body.buttons) {
-    botConfig.buttons = { ...botConfig.buttons, ...req.body.buttons };
-  }
-  res.json({ success: true, config: botConfig });
+app.put('/api/bot/messages', (req, res) => {
+    if (req.body.messages) {
+        Object.assign(botMessages, req.body.messages);
+    }
+    res.json({ success: true, messages: botMessages });
 });
 
 app.get('/api/stats', (req, res) => {
-  const totalUsers = users.size;
-  const activeUsers = Array.from(users.values()).filter(u => 
-    u.subscription.status === 'trial' || u.subscription.status === 'active'
-  ).length;
-  const completedSurveys = Array.from(users.values()).filter(u => u.surveyCompleted).length;
-  
-  res.json({ 
-    success: true, 
-    stats: { totalUsers, activeUsers, completedSurveys } 
-  });
+    const totalUsers = users.size;
+    const activeUsers = Array.from(users.values()).filter(u => 
+        u.subscription.status === 'trial' || u.subscription.status === 'active'
+    ).length;
+    const completedSurveys = Array.from(users.values()).filter(u => u.surveyCompleted).length;
+    
+    res.json({ 
+        success: true, 
+        stats: { totalUsers, activeUsers, completedSurveys } 
+    });
 });
 
 app.get('*', (req, res) => {
-  res.sendFile(join(__dirname, 'webapp', 'index.html'));
+    res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
 
 // ==================== ЗАПУСК ====================
 async function startApp() {
-  try {
-    app.listen(PORT, () => {
-      console.log(`🌐 WebApp: http://localhost:${PORT}`);
-      console.log(`📱 Admin Panel: ${WEBAPP_URL}/admin`);
-    });
+    try {
+        app.listen(PORT, () => {
+            console.log(`🌐 WebApp: http://localhost:${PORT}`);
+            console.log(`📱 Admin Panel: ${WEBAPP_URL}/admin`);
+        });
 
-    await bot.launch();
-    console.log('✅ Bot started!');
-    console.log('🔧 Команды: /start, /menu, /status, /help, /admin');
-    console.log('👑 Админ ID:', ADMIN_IDS[0]);
+        await bot.launch();
+        console.log('✅ Bot started!');
+        console.log('🔧 Команды: /start, /menu, /admin');
+        console.log('👑 Админ ID:', ADMIN_IDS[0]);
 
-  } catch (error) {
-    console.error('❌ Failed:', error);
-    process.exit(1);
-  }
+    } catch (error) {
+        console.error('❌ Failed:', error);
+        process.exit(1);
+    }
 }
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
