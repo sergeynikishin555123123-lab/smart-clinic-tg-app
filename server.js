@@ -1,10 +1,8 @@
 // server.js
 import { Telegraf, Markup } from 'telegraf';
 import express from 'express';
-import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,7 +16,7 @@ const ADMIN_IDS = [898508164];
 
 console.log('🚀 Starting Smart Clinic Bot...');
 
-// ==================== БАЗА ДАННЫХ ====================
+// ==================== БАЗА ДАННЫХ В ПАМЯТИ ====================
 const users = new Map();
 const userSurveys = new Map();
 const admins = new Set(ADMIN_IDS);
@@ -30,12 +28,13 @@ const contentDB = {
             id: 1,
             title: "Мануальные техники в практике",
             description: "6 модулей по современным мануальным методикам",
-            fullDescription: "Комплексный курс, охватывающий основные мануальные техники, применяемые в неврологической практике.",
+            fullDescription: "Комплексный курс, охватывающий основные мануальные техники, применяемые в неврологической практике. Изучите диагностику и коррекцию функциональных нарушений.",
             price: 15000,
             duration: "12 часов",
             modules: 6,
             image: "/images/course-1.jpg",
-            created: new Date('2024-01-15')
+            created: new Date('2024-01-15'),
+            updated: new Date('2024-01-15')
         },
         {
             id: 2,
@@ -46,7 +45,8 @@ const contentDB = {
             duration: "10 часов",
             modules: 5,
             image: "/images/course-2.jpg",
-            created: new Date('2024-01-20')
+            created: new Date('2024-01-20'),
+            updated: new Date('2024-01-20')
         }
     ],
     podcasts: [
@@ -150,7 +150,7 @@ function getUser(id) {
                 type: 'none',
                 endDate: null 
             },
-            isAdmin: admins.has(id),
+            isAdmin: isAdmin(id),
             progress: { 
                 level: 'Понимаю', 
                 steps: {
@@ -220,7 +220,12 @@ bot.start(async (ctx) => {
     user.username = ctx.from.username;
     user.isAdmin = isAdmin(ctx.from.id);
 
-    console.log(`👋 START: ${user.firstName} (${ctx.from.id}) ${user.isAdmin ? '👑 ADMIN' : ''}`);
+    console.log('=== DEBUG ADMIN CHECK ===');
+    console.log('User ID:', ctx.from.id);
+    console.log('Admin IDs:', Array.from(admins));
+    console.log('Is admin:', user.isAdmin);
+    console.log('User object:', user);
+    console.log('=========================');
 
     if (user.surveyCompleted) {
         await showMainMenu(ctx);
@@ -512,6 +517,7 @@ app.get('/api/user/:id', (req, res) => {
     const user = users.get(userId);
     
     if (user) {
+        // Для админов делаем подписку активной
         if (user.isAdmin) {
             user.subscription = {
                 status: 'active',
@@ -551,6 +557,38 @@ app.get('/api/content/:type', (req, res) => {
 
 app.get('/api/content', (req, res) => {
     res.json({ success: true, data: contentDB });
+});
+
+// API для избранного
+app.post('/api/user/:id/favorites', express.json(), (req, res) => {
+    const userId = parseInt(req.params.id);
+    const { contentType, contentId, action } = req.body;
+    const user = users.get(userId);
+    
+    if (!user) {
+        return res.json({ success: false, error: 'User not found' });
+    }
+    
+    if (action === 'add') {
+        if (!user.favorites[contentType].includes(contentId)) {
+            user.favorites[contentType].push(contentId);
+        }
+    } else if (action === 'remove') {
+        user.favorites[contentType] = user.favorites[contentType].filter(id => id !== contentId);
+    }
+    
+    res.json({ success: true, favorites: user.favorites });
+});
+
+app.get('/api/user/:id/favorites', (req, res) => {
+    const userId = parseInt(req.params.id);
+    const user = users.get(userId);
+    
+    if (!user) {
+        return res.json({ success: false, error: 'User not found' });
+    }
+    
+    res.json({ success: true, favorites: user.favorites });
 });
 
 // API для проверки админ-прав
@@ -625,38 +663,6 @@ app.delete('/api/admins/:userId', (req, res) => {
     res.json({ success: true, data: { userId } });
 });
 
-// API для избранного
-app.post('/api/user/:id/favorites', express.json(), (req, res) => {
-    const userId = parseInt(req.params.id);
-    const { contentType, contentId, action } = req.body;
-    const user = users.get(userId);
-    
-    if (!user) {
-        return res.json({ success: false, error: 'User not found' });
-    }
-    
-    if (action === 'add') {
-        if (!user.favorites[contentType].includes(contentId)) {
-            user.favorites[contentType].push(contentId);
-        }
-    } else if (action === 'remove') {
-        user.favorites[contentType] = user.favorites[contentType].filter(id => id !== contentId);
-    }
-    
-    res.json({ success: true, favorites: user.favorites });
-});
-
-app.get('/api/user/:id/favorites', (req, res) => {
-    const userId = parseInt(req.params.id);
-    const user = users.get(userId);
-    
-    if (!user) {
-        return res.json({ success: false, error: 'User not found' });
-    }
-    
-    res.json({ success: true, favorites: user.favorites });
-});
-
 app.get('/api/bot/messages', (req, res) => {
     res.json({ success: true, messages: botMessages });
 });
@@ -675,9 +681,20 @@ app.get('/api/stats', (req, res) => {
     ).length;
     const completedSurveys = Array.from(users.values()).filter(u => u.surveyCompleted).length;
     
+    // Статистика по контенту
+    const contentStats = {};
+    Object.keys(contentDB).forEach(type => {
+        contentStats[type] = contentDB[type].length;
+    });
+    
     res.json({ 
         success: true, 
-        stats: { totalUsers, activeUsers, completedSurveys } 
+        stats: { 
+            totalUsers, 
+            activeUsers, 
+            completedSurveys,
+            content: contentStats
+        } 
     });
 });
 
@@ -704,6 +721,9 @@ app.post('/api/user/:id/subscription', express.json(), (req, res) => {
             type: plan,
             endDate: new Date(Date.now() + selectedPlan.months * 30 * 24 * 60 * 60 * 1000)
         };
+        
+        // Обновляем прогресс
+        user.progress.steps.coursesBought++;
     }
     
     res.json({ success: true, subscription: user.subscription });
@@ -714,36 +734,18 @@ app.get('*', (req, res) => {
 });
 
 // ==================== ЗАПУСК ====================
-bot.start(async (ctx) => {
-    const user = getUser(ctx.from.id);
-    user.firstName = ctx.from.first_name;
-    user.username = ctx.from.username;
-    user.isAdmin = isAdmin(ctx.from.id);
-
-    console.log('=== DEBUG ADMIN CHECK ===');
-    console.log('User ID:', ctx.from.id);
-    console.log('Admin IDs:', Array.from(admins));
-    console.log('Is admin:', user.isAdmin);
-    console.log('User object:', user);
-    console.log('=========================');
-
-    if (user.surveyCompleted) {
-        await showMainMenu(ctx);
-        return;
-    }
-
-    userSurveys.set(ctx.from.id, { step: 0, answers: {} });
-    await sendSurveyStep(ctx, ctx.from.id);
-});
-
 async function startApp() {
     try {
+        // Запускаем Express сервер
         app.listen(PORT, '0.0.0.0', () => {
             console.log(`🌐 WebApp сервер запущен на порту ${PORT}`);
             console.log(`📱 WebApp: ${WEBAPP_URL}`);
+            console.log(`📱 Admin Panel: ${WEBAPP_URL}/admin.html`);
             console.log(`👑 Админ ID: ${ADMIN_IDS[0]}`);
+            console.log(`✅ Приложение готово к работе!`);
         });
 
+        // Запускаем бота
         await bot.launch();
         console.log('✅ Telegram Bot запущен!');
         console.log('🔧 Команды: /start, /menu, /admin');
@@ -754,6 +756,7 @@ async function startApp() {
     }
 }
 
+// Обработка graceful shutdown
 process.once('SIGINT', () => {
     console.log('🛑 Останавливаем бота...');
     bot.stop('SIGINT');
@@ -766,4 +769,5 @@ process.once('SIGTERM', () => {
     process.exit(0);
 });
 
+// Запускаем приложение
 startApp();
