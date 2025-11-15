@@ -1,0 +1,10 @@
+{
+  "build": {
+    "command": "npm run build",
+    "output": "apps/bot/dist"
+  },
+  "run": {
+    "command": "npm start",
+    "port": 3000
+  }
+}
