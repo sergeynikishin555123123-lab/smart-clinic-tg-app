@@ -174,6 +174,9 @@ function getUser(id) {
 }
 
 function isAdmin(userId) {
+    console.log(`🔍 Проверка админских прав для пользователя ${userId}`);
+    console.log(`👑 Админ ID: ${Array.from(admins)}`);
+    console.log(`✅ Результат проверки: ${admins.has(userId)}`);
     return admins.has(userId);
 }
 
