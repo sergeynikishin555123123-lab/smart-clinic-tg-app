@@ -1,4 +1,4 @@
-// server.js - ОСНОВНОЙ ФАЙЛ БОТА
+// server.js
 import { Telegraf, Markup } from 'telegraf';
 import express from 'express';
 import multer from 'multer';
@@ -18,24 +18,118 @@ const ADMIN_IDS = [898508164];
 
 console.log('🚀 Starting Smart Clinic Bot...');
 
-// ==================== БАЗА ДАННЫХ В ПАМЯТИ ====================
+// ==================== БАЗА ДАННЫХ ====================
 const users = new Map();
 const userSurveys = new Map();
 const admins = new Set(ADMIN_IDS);
+
+// Демо-контент
+const contentDB = {
+    courses: [
+        {
+            id: 1,
+            title: "Мануальные техники в практике",
+            description: "6 модулей по современным мануальным методикам",
+            fullDescription: "Комплексный курс, охватывающий основные мануальные техники, применяемые в неврологической практике.",
+            price: 15000,
+            duration: "12 часов",
+            modules: 6,
+            image: "/images/course-1.jpg",
+            created: new Date('2024-01-15')
+        },
+        {
+            id: 2,
+            title: "Неврология для практикующих врачей",
+            description: "Основы неврологической диагностики и лечения",
+            fullDescription: "Фундаментальный курс по неврологии для врачей различных специальностей.",
+            price: 12000,
+            duration: "10 часов",
+            modules: 5,
+            image: "/images/course-2.jpg",
+            created: new Date('2024-01-20')
+        }
+    ],
+    podcasts: [
+        {
+            id: 1,
+            title: "АНБ FM: Основы неврологии",
+            description: "Подкаст о современных подходах в неврологии",
+            duration: "45:20",
+            audio: "/audio/podcast-1.mp3",
+            image: "/images/podcast-1.jpg",
+            created: new Date('2024-01-10')
+        }
+    ],
+    streams: [
+        {
+            id: 1,
+            title: "Разбор клинического случая: боль в пояснице",
+            description: "Подробный разбор с Ильей Чистяковым",
+            duration: "1:15:30",
+            video: "/videos/stream-1.mp4",
+            image: "/images/stream-1.jpg",
+            scheduled: new Date('2024-01-20T19:00:00'),
+            created: new Date('2024-01-18')
+        }
+    ],
+    videos: [
+        {
+            id: 1,
+            title: "Техника миофасциального релиза",
+            description: "Короткая видео-шпаргалка по технике МФР",
+            duration: "08:15",
+            video: "/videos/video-1.mp4",
+            image: "/images/video-1.jpg",
+            created: new Date('2024-01-05')
+        }
+    ],
+    materials: [
+        {
+            id: 1,
+            title: "МРТ разбор: грыжа позвоночника L4-L5",
+            description: "Детальный анализ МРТ снимков пациента с грыжей",
+            type: "mri",
+            file: "/materials/mri-1.pdf",
+            image: "/images/mri-preview-1.jpg",
+            created: new Date('2024-01-08')
+        },
+        {
+            id: 2,
+            title: "Клинический случай: мигрень",
+            description: "Разбор диагностики и лечения пациента с мигренью",
+            type: "case",
+            file: "/materials/case-1.pdf",
+            image: "/images/case-preview-1.jpg",
+            created: new Date('2024-01-12')
+        }
+    ],
+    events: [
+        {
+            id: 1,
+            title: "Онлайн-вебинар по современной реабилитации",
+            description: "Современные методы восстановительного лечения",
+            date: "2024-12-15",
+            type: "online",
+            location: "Zoom",
+            image: "/images/event-1.jpg",
+            created: new Date('2024-01-12')
+        }
+    ]
+};
 
 // Сообщения бота
 const botMessages = {
     navigation: `🎯 <b>Навигация по Академии АНБ</b>\n\n📱 Для полного доступа ко всем функциям откройте наше приложение:\n\n• Курсы и обучение\n• Эфиры и разборы\n• Практические материалы\n• Сообщество специалистов\n• Личный кабинет и прогресс`,
     
-    promotions: `🎁 <b>Акции и специальные предложения</b>\n\n🔥 <b>Пробный период</b>\n7 дней бесплатного доступа ко всем материалам\n\n💎 <b>Приведи друга</b>\nПолучи скидку 20% на подписку за каждого приглашенного коллегу\n\n🎯 <b>Пакет "Профи"</b>\n3 месяца обучения по цене 2\nЭкономия 600 рублей\n\n📈 <b>Корпоративная подписка</b>\nСпециальные условия для клиник и медицинских центров`,
+    promotions: `🎁 <b>Акции и специальные предложения</b>\n\n🔥 <b>Пробный период</b>\n7 дней бесплатного доступа ко всем материалам\n\n💎 <b>Приведи друга</b>\nПолучи скидку 20% на подписку за каждого приглашенного коллегу\n\n🎯 <b>Пакет "Профи"</b>\n3 месяца обучения по цене 2\nЭкономия 600 рублей`,
     
-    question: `❓ <b>Задать вопрос по обучению</b>\n\nДля вопросов по обучению заполните форму в нашем приложении:\n\n• Выберите тему вопроса\n• Укажите связанный курс (если есть)\n• Опишите проблему подробно\n• Прикрепите файлы при необходимости\n\n📞 Также вы можете обратиться напрямую к координатору: @academy_anb`,
+    question: `❓ <b>Задать вопрос по обучению</b>\n\nДля вопросов по обучению заполните форму в нашем приложении:\n\n• Выберите тему вопроса\n• Укажите связанный курс\n• Опишите проблему подробно\n\n📞 Координатор: @academy_anb`,
     
-    support: `💬 <b>Поддержка Академии АНБ</b>\n\n📞 Координатор проекта: @academy_anb\n⏰ Часы работы: ПН-ПТ с 11:00 до 19:00\n📧 Email: academy@anb.ru\n\n<b>Мы поможем с:</b>\n• Техническими вопросами\n• Оплатой и подписками\n• Доступом к материалам\n• Проблемами с аккаунтом\n• Любыми другими вопросами`,
+    support: `💬 <b>Поддержка Академии АНБ</b>\n\n📞 Координатор: @academy_anb\n⏰ ПН-ПТ с 11:00 до 19:00\n📧 academy@anb.ru`,
     
-    profile: `👤 <b>Информация о профиле</b>\n\nВ вашем профиле в приложении доступны:\n\n• Личные данные и специализация\n• Статус подписки и дата окончания\n• Прогресс по системе "Мой путь"\n• Просмотренные материалы\n• Сохраненные избранные элементы\n\n💳 <b>Управление подпиской:</b>\nПодписку можно оформить, продлить или отменить в разделе «Личный кабинет» в приложении.`,
+    profile: `👤 <b>Информация о профиле</b>\n\nВ вашем профиле доступны:\n\n• Личные данные и специализация\n• Статус подписки\n• Прогресс по системе "Мой путь"\n• Просмотренные материалы\n\n💳 Подписку можно оформить в разделе «Личный кабинет».`,
     
-    renew: `🔄 <b>Продление подписки</b>\n\n<b>Доступные тарифы:</b>\n\n🟢 <b>1 месяц</b> - 2 900 руб.\n• Полный доступ ко всем материалам\n• Участие в эфирах\n• Доступ к чату специалистов\n\n🔵 <b>3 месяца</b> - 7 500 руб.\n• Экономия 600 рублей\n• Персональный сертификат\n• Приоритетная поддержка\n\n💳 Для оформления подписки откройте приложение.`
+    renew: `🔄 <b>Продление подписки</b>\n\n<b>Тарифы:</b>\n\n🟢 <b>1 месяц</b> - 2 900 руб.\n🔵 <b>3 месяца</b> - 7 500 руб.\n🟣 <b>12 месяцев</b> - 24 000 руб.\n\n💳 Для оформления откройте приложение.`
 };
 
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
@@ -60,11 +154,19 @@ function getUser(id) {
             progress: { 
                 level: 'Понимаю', 
                 steps: {
-                    materialsWatched: 0,
-                    eventsParticipated: 0,
-                    materialsSaved: 0,
-                    coursesBought: 0
+                    materialsWatched: 5,
+                    eventsParticipated: 3,
+                    materialsSaved: 7,
+                    coursesBought: 1
                 }
+            },
+            favorites: {
+                courses: [],
+                podcasts: [],
+                streams: [],
+                videos: [],
+                materials: [],
+                watchLater: []
             }
         });
     }
@@ -136,16 +238,15 @@ bot.command('admin', async (ctx) => {
         return;
     }
 
-    await ctx.reply('🔧 <b>Панель управления ботом</b>\n\nЗдесь вы можете редактировать сообщения, которые видят пользователи при нажатии кнопок.', {
+    await ctx.reply('🔧 <b>Панель управления ботом</b>', {
         parse_mode: 'HTML',
         reply_markup: {
             inline_keyboard: [
                 [
-                    { text: '✏️ Редактировать сообщения', callback_data: 'edit_messages' },
                     { text: '📊 Статистика бота', callback_data: 'bot_stats' }
                 ],
                 [
-                    { text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin` } }
+                    { text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin.html` } }
                 ]
             ]
         }
@@ -160,14 +261,12 @@ bot.on('text', async (ctx) => {
 
     console.log(`📨 TEXT: ${user.firstName} - "${text}"`);
 
-    // Если пользователь в процессе опроса
     const survey = userSurveys.get(userId);
     if (survey) {
         await handleSurvey(ctx, survey, text);
         return;
     }
 
-    // Обработка основных кнопок меню
     await handleMenuButton(ctx, text);
 });
 
@@ -181,18 +280,6 @@ bot.on('callback_query', async (ctx) => {
     await ctx.answerCbQuery();
     
     switch (data) {
-        case 'edit_messages':
-            await ctx.editMessageText('✏️ <b>Редактирование сообщений</b>\n\nЭта функция будет доступна в админ-панели.', {
-                parse_mode: 'HTML',
-                reply_markup: {
-                    inline_keyboard: [
-                        [{ text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin` } }],
-                        [{ text: '🔙 Назад', callback_data: 'back_to_admin' }]
-                    ]
-                }
-            });
-            break;
-            
         case 'bot_stats':
             const totalUsers = users.size;
             const activeUsers = Array.from(users.values()).filter(u => 
@@ -205,32 +292,9 @@ bot.on('callback_query', async (ctx) => {
                 `✅ Активных подписок: <b>${activeUsers}</b>\n` +
                 `📝 Завершенных опросов: <b>${Array.from(users.values()).filter(u => u.surveyCompleted).length}</b>`,
                 {
-                    parse_mode: 'HTML',
-                    reply_markup: {
-                        inline_keyboard: [
-                            [{ text: '🔄 Обновить', callback_data: 'bot_stats' }],
-                            [{ text: '🔙 Назад', callback_data: 'back_to_admin' }]
-                        ]
-                    }
+                    parse_mode: 'HTML'
                 }
             );
-            break;
-            
-        case 'back_to_admin':
-            await ctx.editMessageText('🔧 <b>Панель управления ботом</b>\n\nВыберите действие:', {
-                parse_mode: 'HTML',
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            { text: '✏️ Редактировать сообщения', callback_data: 'edit_messages' },
-                            { text: '📊 Статистика бота', callback_data: 'bot_stats' }
-                        ],
-                        [
-                            { text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin` } }
-                        ]
-                    ]
-                }
-            });
             break;
     }
 });
@@ -376,16 +440,15 @@ async function handleMenuButton(ctx, text) {
 
         case '🔧 Управление ботом':
             if (user.isAdmin) {
-                await ctx.reply('🔧 <b>Панель управления ботом</b>\n\nВыберите действие:', {
+                await ctx.reply('🔧 <b>Панель управления ботом</b>', {
                     parse_mode: 'HTML',
                     reply_markup: {
                         inline_keyboard: [
                             [
-                                { text: '✏️ Редактировать сообщения', callback_data: 'edit_messages' },
                                 { text: '📊 Статистика бота', callback_data: 'bot_stats' }
                             ],
                             [
-                                { text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin` } }
+                                { text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin.html` } }
                             ]
                         ]
                     }
@@ -422,7 +485,6 @@ async function showMainMenu(ctx) {
         ['👤 Мой профиль', '🔄 Продлить подписку']
     ];
 
-    // Добавляем админ-кнопку если пользователь админ
     if (user.isAdmin) {
         keyboard.push(['🔧 Управление ботом']);
     }
@@ -446,12 +508,11 @@ app.get('/api/user/:id', (req, res) => {
     const user = users.get(userId);
     
     if (user) {
-        // Для админов делаем подписку активной
         if (user.isAdmin) {
             user.subscription = {
                 status: 'active',
                 type: 'admin',
-                endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // +1 год
+                endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
             };
         }
         
@@ -465,6 +526,7 @@ app.get('/api/user/:id', (req, res) => {
                 email: user.email,
                 subscription: user.subscription,
                 progress: user.progress,
+                favorites: user.favorites,
                 isAdmin: user.isAdmin,
                 joinedAt: user.joinedAt
             }
@@ -474,11 +536,56 @@ app.get('/api/user/:id', (req, res) => {
     }
 });
 
+app.get('/api/content/:type', (req, res) => {
+    const contentType = req.params.type;
+    if (contentDB[contentType]) {
+        res.json({ success: true, data: contentDB[contentType] });
+    } else {
+        res.status(404).json({ success: false, error: 'Content type not found' });
+    }
+});
+
+app.get('/api/content', (req, res) => {
+    res.json({ success: true, data: contentDB });
+});
+
+// API для избранного
+app.post('/api/user/:id/favorites', express.json(), (req, res) => {
+    const userId = parseInt(req.params.id);
+    const { contentType, contentId, action } = req.body;
+    const user = users.get(userId);
+    
+    if (!user) {
+        return res.json({ success: false, error: 'User not found' });
+    }
+    
+    if (action === 'add') {
+        if (!user.favorites[contentType].includes(contentId)) {
+            user.favorites[contentType].push(contentId);
+        }
+    } else if (action === 'remove') {
+        user.favorites[contentType] = user.favorites[contentType].filter(id => id !== contentId);
+    }
+    
+    res.json({ success: true, favorites: user.favorites });
+});
+
+app.get('/api/user/:id/favorites', (req, res) => {
+    const userId = parseInt(req.params.id);
+    const user = users.get(userId);
+    
+    if (!user) {
+        return res.json({ success: false, error: 'User not found' });
+    }
+    
+    res.json({ success: true, favorites: user.favorites });
+});
+
 app.get('/api/bot/messages', (req, res) => {
     res.json({ success: true, messages: botMessages });
 });
 
-app.put('/api/bot/messages', (req, res) => {
+app.put('/api/bot/messages', express.json(), (req, res) => {
     if (req.body.messages) {
         Object.assign(botMessages, req.body.messages);
     }
@@ -498,6 +605,34 @@ app.get('/api/stats', (req, res) => {
     });
 });
 
+// Обновление подписки
+app.post('/api/user/:id/subscription', express.json(), (req, res) => {
+    const userId = parseInt(req.params.id);
+    const { plan } = req.body;
+    const user = users.get(userId);
+    
+    if (!user) {
+        return res.json({ success: false, error: 'User not found' });
+    }
+    
+    const plans = {
+        '1_month': { months: 1, price: 2900 },
+        '3_months': { months: 3, price: 7500 },
+        '12_months': { months: 12, price: 24000 }
+    };
+    
+    const selectedPlan = plans[plan];
+    if (selectedPlan) {
+        user.subscription = {
+            status: 'active',
+            type: plan,
+            endDate: new Date(Date.now() + selectedPlan.months * 30 * 24 * 60 * 60 * 1000)
+        };
+    }
+    
+    res.json({ success: true, subscription: user.subscription });
+});
+
 app.get('*', (req, res) => {
     res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
@@ -505,17 +640,15 @@ app.get('*', (req, res) => {
 // ==================== ЗАПУСК ====================
 async function startApp() {
     try {
-        // Запускаем Express сервер
         app.listen(PORT, '0.0.0.0', () => {
             console.log(`🌐 WebApp сервер запущен на порту ${PORT}`);
             console.log(`📱 WebApp: ${WEBAPP_URL}`);
             console.log(`👑 Админ ID: ${ADMIN_IDS[0]}`);
         });
 
-        // Запускаем бота
         await bot.launch();
         console.log('✅ Telegram Bot запущен!');
-        console.log('🔧 Доступные команды: /start, /menu, /admin');
+        console.log('🔧 Команды: /start, /menu, /admin');
 
     } catch (error) {
         console.error('❌ Ошибка при запуске:', error);
@@ -523,7 +656,6 @@ async function startApp() {
     }
 }
 
-// Обработка graceful shutdown
 process.once('SIGINT', () => {
     console.log('🛑 Останавливаем бота...');
     bot.stop('SIGINT');
@@ -536,5 +668,4 @@ process.once('SIGTERM', () => {
     process.exit(0);
 });
 
-// Запускаем приложение
 startApp();
