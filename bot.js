@@ -1,14 +1,21 @@
 import { Telegraf } from 'telegraf';
 import express from 'express';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // ==================== КОНФИГУРАЦИЯ ====================
 const BOT_TOKEN = process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4';
-const WEBAPP_URL = process.env.WEBAPP_URL || 'https://your-webapp-url.com';
-const ADMIN_IDS = [123456789]; // ЗАМЕНИТЕ НА ВАШ ТЕЛЕГРАМ ID!
+const PORT = process.env.PORT || 3000;
+
+// ЗАМЕНИТЕ НА ВАШ ТЕЛЕГРАМ ID!
+const ADMIN_IDS = [898508164]; 
 
 console.log('🚀 Starting Smart Clinic Bot...');
 
-// ==================== БАЗА ДАННЫХ В ПАМЯТИ ====================
+// ==================== ПРОСТАЯ БАЗА ДАННЫХ В ПАМЯТИ ====================
 const users = new Map();
 const buttonConfigs = {
   navigation: { text: '📱 Навигация', reply: 'Открываю навигацию...' },
@@ -28,7 +35,9 @@ function getUser(id) {
   if (!users.has(id)) {
     users.set(id, {
       id,
-      createdAt: new Date(),
+      username: `user_${id}`,
+      firstName: 'User',
+      joinedAt: new Date(),
       lastActivity: new Date(),
       stats: { commands: 0, buttons: 0 }
     });
@@ -42,6 +51,20 @@ function updateUserActivity(userId) {
   user.stats.buttons++;
 }
 
+function getStats() {
+  const totalUsers = users.size;
+  const activeToday = Array.from(users.values()).filter(user => 
+    (new Date() - user.lastActivity) < 24 * 60 * 60 * 1000
+  ).length;
+  
+  return {
+    totalUsers,
+    activeToday,
+    totalCommands: Array.from(users.values()).reduce((sum, user) => sum + user.stats.commands, 0),
+    totalButtons: Array.from(users.values()).reduce((sum, user) => sum + user.stats.buttons, 0)
+  };
+}
+
 // ==================== ТЕЛЕГРАМ БОТ ====================
 const bot = new Telegraf(BOT_TOKEN);
 
@@ -49,6 +72,8 @@ const bot = new Telegraf(BOT_TOKEN);
 bot.start(async (ctx) => {
   const user = getUser(ctx.from.id);
   user.stats.commands++;
+  user.firstName = ctx.from.first_name;
+  user.username = ctx.from.username || `user_${ctx.from.id}`;
   
   console.log(`👤 User ${ctx.from.id} started bot`);
   
@@ -75,7 +100,7 @@ bot.hears('📱 Навигация', async (ctx) => {
       inline_keyboard: [[
         {
           text: '📱 Открыть приложение',
-          web_app: { url: WEBAPP_URL }
+          web_app: { url: `http://localhost:${PORT}` }
         }
       ]]
     }
@@ -124,17 +149,14 @@ bot.command('admin', async (ctx) => {
 bot.hears('📊 Статистика', async (ctx) => {
   if (!isAdmin(ctx.from.id)) return;
   
-  const totalUsers = users.size;
-  const activeToday = Array.from(users.values()).filter(user => 
-    (new Date() - user.lastActivity) < 24 * 60 * 60 * 1000
-  ).length;
-
+  const stats = getStats();
+  
   await ctx.reply(
     `📊 Статистика бота:\n\n` +
-    `👥 Всего пользователей: ${totalUsers}\n` +
-    `✅ Активных за 24ч: ${activeToday}\n` +
-    `📱 Команд выполнено: ${Array.from(users.values()).reduce((sum, user) => sum + user.stats.commands, 0)}\n` +
-    `🎯 Нажатий кнопок: ${Array.from(users.values()).reduce((sum, user) => sum + user.stats.buttons, 0)}`
+    `👥 Всего пользователей: ${stats.totalUsers}\n` +
+    `✅ Активных за 24ч: ${stats.activeToday}\n` +
+    `📱 Команд выполнено: ${stats.totalCommands}\n` +
+    `🎯 Нажатий кнопок: ${stats.totalButtons}`
   );
 });
 
@@ -214,10 +236,13 @@ bot.action('cancel_broadcast', async (ctx) => {
 bot.hears('👥 Пользователи', async (ctx) => {
   if (!isAdmin(ctx.from.id)) return;
   
-  const userList = Array.from(users.values())
-    .slice(-10)
-    .map(user => `👤 ${user.id} (${new Date(user.createdAt).toLocaleDateString()})`)
-    .join('\n');
+  const recentUsers = Array.from(users.values())
+    .sort((a, b) => b.joinedAt - a.joinedAt)
+    .slice(0, 10);
+  
+  const userList = recentUsers
+    .map(user => `👤 ${user.firstName} (${user.username})\n📅 ${user.joinedAt.toLocaleDateString()}`)
+    .join('\n\n');
 
   await ctx.reply(
     `👥 Последние пользователи:\n\n${userList || 'Пока нет пользователей'}\n\n` +
@@ -244,6 +269,9 @@ bot.on('text', async (ctx) => {
   const text = ctx.message.text;
   const session = userSessions.get(userId);
 
+  // Пропускаем команды
+  if (text.startsWith('/')) return;
+
   if (session?.editing && isAdmin(userId)) {
     const buttonType = session.editing;
     buttonConfigs[buttonType].reply = text;
@@ -254,56 +282,76 @@ bot.on('text', async (ctx) => {
 
   if (session?.broadcasting && isAdmin(userId)) {
     let sent = 0;
-    for (const [id, user] of users) {
+    const userList = Array.from(users.keys());
+    
+    for (const userId of userList) {
       try {
-        await bot.telegram.sendMessage(id, `📢 Рассылка:\n\n${text}`);
+        await bot.telegram.sendMessage(userId, `📢 Рассылка от администратора:\n\n${text}`);
         sent++;
       } catch (error) {
-        console.log(`❌ Не удалось отправить пользователю ${id}`);
+        console.log(`❌ Не удалось отправить пользователю ${userId}`);
       }
     }
+    
     userSessions.delete(userId);
-    await ctx.reply(`✅ Рассылка отправлена ${sent} пользователям!`);
+    await ctx.reply(`✅ Рассылка отправлена ${sent} пользователям из ${userList.length}!`);
     return;
   }
 
   // Обычные сообщения
-  if (!text.startsWith('/')) {
-    await ctx.reply('🤗 Используйте кнопки меню для навигации');
-  }
+  await ctx.reply('🤗 Используйте кнопки меню для навигации');
 });
 
 // ==================== WEB APP SERVER ====================
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-app.use(express.static('webapp'));
+// Раздаем статические файлы из папки webapp
+app.use(express.static(join(__dirname, 'webapp')));
 
+// API для статистики
 app.get('/api/stats', (req, res) => {
-  res.json({
-    users: users.size,
-    buttons: Array.from(users.values()).reduce((sum, user) => sum + user.stats.buttons, 0),
-    commands: Array.from(users.values()).reduce((sum, user) => sum + user.stats.commands, 0)
-  });
+  res.json(getStats());
 });
 
-app.listen(PORT, () => {
-  console.log(`🌐 WebApp server running on port ${PORT}`);
+// Все остальные запросы на index.html
+app.get('*', (req, res) => {
+  res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
 
-// ==================== ЗАПУСК БОТА ====================
-bot.launch()
-  .then(() => {
+// ==================== ЗАПУСК ====================
+async function startApp() {
+  try {
+    // Запускаем веб-сервер
+    app.listen(PORT, () => {
+      console.log(`🌐 WebApp server running on port ${PORT}`);
+    });
+
+    // Запускаем бота
+    await bot.launch();
     console.log('✅ Bot started successfully!');
     console.log('🔧 Admin commands: /admin');
-    console.log('📊 WebApp stats: http://localhost:3000/api/stats');
+    console.log('📊 WebApp: http://localhost:' + PORT);
+    console.log('📊 API Stats: http://localhost:' + PORT + '/api/stats');
     console.log(`⚠️  Don't forget to set your Telegram ID: ${ADMIN_IDS}`);
-  })
-  .catch(error => {
-    console.error('❌ Failed to start bot:', error);
+
+  } catch (error) {
+    console.error('❌ Failed to start app:', error);
     process.exit(1);
-  });
+  }
+}
 
 // Graceful shutdown
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+process.once('SIGINT', () => {
+  console.log('🛑 Shutting down gracefully...');
+  bot.stop('SIGINT');
+  process.exit(0);
+});
+
+process.once('SIGTERM', () => {
+  console.log('🛑 Shutting down gracefully...');
+  bot.stop('SIGTERM');
+  process.exit(0);
+});
+
+// Запускаем приложение
+startApp();
