@@ -552,6 +552,78 @@ app.get('/api/content', (req, res) => {
     res.json({ success: true, data: contentDB });
 });
 
+// API для проверки админ-прав
+app.get('/api/check-admin/:id', (req, res) => {
+    const userId = parseInt(req.params.id);
+    const isAdminUser = isAdmin(userId);
+    
+    console.log(`🔍 API проверка админа: ${userId} -> ${isAdminUser}`);
+    
+    res.json({ 
+        success: true, 
+        isAdmin: isAdminUser 
+    });
+});
+
+// API для получения списка админов
+app.get('/api/admins', (req, res) => {
+    const adminUsers = Array.from(admins).map(adminId => {
+        const user = users.get(adminId);
+        return user ? {
+            id: user.id,
+            firstName: user.firstName,
+            username: user.username,
+            joinedAt: user.joinedAt
+        } : { id: adminId };
+    });
+    
+    res.json({ success: true, data: adminUsers });
+});
+
+// API для добавления админа
+app.post('/api/admins', express.json(), (req, res) => {
+    const { userId } = req.body;
+    
+    if (!userId) {
+        return res.status(400).json({ success: false, error: 'User ID is required' });
+    }
+
+    const userIdNum = parseInt(userId);
+    admins.add(userIdNum);
+    
+    // Обновляем пользователя если он существует
+    const user = users.get(userIdNum);
+    if (user) {
+        user.isAdmin = true;
+    }
+
+    console.log(`✅ Добавлен админ: ${userIdNum}`);
+    
+    res.json({ success: true, data: { userId: userIdNum } });
+});
+
+// API для удаления админа
+app.delete('/api/admins/:userId', (req, res) => {
+    const userId = parseInt(req.params.userId);
+    
+    // Не позволяем удалить самого себя если это главный админ
+    if (userId === ADMIN_IDS[0]) {
+        return res.status(400).json({ success: false, error: 'Cannot remove main admin' });
+    }
+
+    admins.delete(userId);
+    
+    // Обновляем пользователя если он существует
+    const user = users.get(userId);
+    if (user) {
+        user.isAdmin = false;
+    }
+
+    console.log(`🗑️ Удален админ: ${userId}`);
+    
+    res.json({ success: true, data: { userId } });
+});
+
 // API для избранного
 app.post('/api/user/:id/favorites', express.json(), (req, res) => {
     const userId = parseInt(req.params.id);
