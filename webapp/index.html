@@ -19,8 +19,8 @@
 
         <nav class="nav">
             <button class="nav-btn active" data-page="home">🏠 Домой</button>
-            <button class="nav-btn" data-page="community">👥 Сообщество</button>
-            <button class="nav-btn" data-page="chats">💬 Чаты</button>
+            <button class="nav-btn" data-page="courses">📚 Курсы</button>
+            <button class="nav-btn" data-page="content">🎬 Контент</button>
             <button class="nav-btn" data-page="materials">📚 Материалы</button>
             <button class="nav-btn" data-page="profile">👤 Профиль</button>
         </nav>
@@ -49,16 +49,16 @@
 
                     <div class="news">
                         <h3>📰 Лента новостей</h3>
-                        <div class="filters" id="newsFilters">
-                            <button class="filter active" data-filter="all">Все</button>
-                            <button class="filter" data-filter="articles">Статьи</button>
-                            <button class="filter" data-filter="development">Профессиональное развитие</button>
-                            <button class="filter" data-filter="skills">Практические навыки</button>
+                        <div class="filters">
+                            <button class="filter active">Все</button>
+                            <button class="filter">Статьи</button>
+                            <button class="filter">Профессиональное развитие</button>
+                            <button class="filter">Практические навыки</button>
                         </div>
-                        <div class="news-list" id="newsList">
+                        <div class="news-list">
                             <div class="news-item">
                                 <strong>Новый курс: "Мануальные техники в практике"</strong>
-                                <p>Доступен для всех подписчиков с 1 декабря • 6 модулей</p>
+                                <p>Доступен для всех подписчиков • 6 модулей</p>
                             </div>
                             <div class="news-item">
                                 <strong>Вебинар по современным методам реабилитации</strong>
@@ -68,39 +68,73 @@
                     </div>
                 `
             },
-            community: {
-                title: 'О сообществе',
+            courses: {
+                title: '📚 Курсы Академии',
                 content: `
-                    <div class="grid">
-                        <div class="card" onclick="openSection('rules')">📜 Правила сообщества</div>
-                        <div class="card" onclick="openSection('faq')">❓ F.A.Q.</div>
-                        <div class="card" onclick="openSection('subscription')">💳 Подписка</div>
-                        <div class="card" onclick="openSection('howto')">🔄 Как оформить подписку</div>
+                    <div class="content-list" id="coursesList">
+                        <div class="loading">Загрузка курсов...</div>
+                    </div>
+                `
+            },
+            content: {
+                title: '🎬 Медиа-контент',
+                content: `
+                    <div class="tabs">
+                        <button class="tab active" onclick="switchContentTab('podcasts')">🎧 АНБ FM</button>
+                        <button class="tab" onclick="switchContentTab('streams')">📹 Эфиры</button>
+                        <button class="tab" onclick="switchContentTab('videos')">🎯 Шпаргалки</button>
                     </div>
                     
-                    <div class="faq">
-                        <h3>Частые вопросы</h3>
-                        
-                        <div class="faq-item">
-                            <strong>Как оформить, продлить или отменить подписку?</strong>
-                            <p>Подписку можно оформить или продлить в разделе «Личный кабинет». Там же доступна отмена — через кнопку «Изменить подписку».</p>
+                    <div class="tab-content active" id="podcasts">
+                        <div class="content-list" id="podcastsList">
+                            <div class="loading">Загрузка подкастов...</div>
                         </div>
-                        
-                        <div class="faq-item">
-                            <strong>Что входит в подписку Академии?</strong>
-                            <p>Доступ к эфирам, разборам, практическим материалам, видео-шпаргалкам, чату специалистов и карте мероприятий.</p>
+                    </div>
+                    
+                    <div class="tab-content" id="streams">
+                        <div class="content-list" id="streamsList">
+                            <div class="loading">Загрузка эфиров...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="videos">
+                        <div class="content-list" id="videosList">
+                            <div class="loading">Загрузка видео-шпаргалок...</div>
                         </div>
                     </div>
                 `
             },
+            materials: {
+                title: '📚 Практические материалы',
+                content: `
+                    <div class="materials-grid">
+                        <div class="card" onclick="openMaterials('mri')">
+                            <div class="card-icon">🩻</div>
+                            <div>МРТ разборы</div>
+                        </div>
+                        <div class="card" onclick="openMaterials('cases')">
+                            <div class="card-icon">📋</div>
+                            <div>Клинические случаи</div>
+                        </div>
+                        <div class="card" onclick="openMaterials('checklists')">
+                            <div class="card-icon">✅</div>
+                            <div>Чек-листы</div>
+                        </div>
+                    </div>
+                    
+                    <div class="materials-list" id="materialsList">
+                        <div class="loading">Загрузка материалов...</div>
+                    </div>
+                `
+            },
             profile: {
-                title: 'Личный кабинет',
+                title: '👤 Личный кабинет',
                 content: `
                     <div class="profile-header">
                         <div class="avatar">👤</div>
                         <div class="profile-info">
                             <div class="name" id="userName">Пользователь</div>
-                            <div class="status">Член Академии АНБ с <span id="joinDate">ноября 2024</span></div>
+                            <div class="status">Член Академии АНБ с <span id="joinDate">${new Date().toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'})}</span></div>
                             <div class="subscription" id="subscriptionStatus">Подписка: не активна</div>
                             <button class="btn" onclick="changeSubscription()">Изменить подписку</button>
                         </div>
@@ -125,6 +159,14 @@
                                     <div class="step-hint">Закономерности складываются в единую картину</div>
                                 </div>
                             </div>
+                            <div class="step">
+                                <div class="step-number">3️⃣</div>
+                                <div class="step-info">
+                                    <div class="step-title">Применяю</div>
+                                    <div class="step-progress">Прогресс: 20%</div>
+                                    <div class="step-hint">Использую знания на практике</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -132,87 +174,22 @@
                         <div class="stat-card">
                             <div class="stat-icon">📚</div>
                             <div class="stat-title">Пройдено курсов</div>
-                            <div class="stat-value">2</div>
+                            <div class="stat-value" id="coursesCompleted">0</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon">🎯</div>
                             <div class="stat-title">Просмотрено материалов</div>
-                            <div class="stat-value">15</div>
+                            <div class="stat-value" id="materialsWatched">0</div>
                         </div>
-                    </div>
-                `
-            },
-            chats: {
-                title: 'Чаты сообщества',
-                content: `
-                    <div class="chats-list">
-                        <div class="chat-item" onclick="openChat('general')">
-                            <div class="chat-icon">💬</div>
-                            <div class="chat-info">
-                                <div class="chat-name">Флудилка</div>
-                                <div class="chat-desc">Общение на любые темы</div>
-                            </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-title">Мероприятий</div>
+                            <div class="stat-value" id="eventsAttended">0</div>
                         </div>
-                        <div class="chat-item" onclick="openChat('specialists')">
-                            <div class="chat-icon">👥</div>
-                            <div class="chat-info">
-                                <div class="chat-name">Чат специалистов</div>
-                                <div class="chat-desc">Профессиональные обсуждения</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="note">
-                        📝 Чаты доступны только для пользователей с активной подпиской
-                    </div>
-                `
-            },
-            materials: {
-                title: 'Мои материалы',
-                content: `
-                    <div class="tabs">
-                        <button class="tab active" onclick="switchTab('watch-later')">Посмотреть позже</button>
-                        <button class="tab" onclick="switchTab('favorites')">Избранное</button>
-                        <button class="tab" onclick="switchTab('practice')">Практические материалы</button>
-                    </div>
-                    
-                    <div class="tab-content active" id="watch-later">
-                        <div class="materials-list">
-                            <div class="material-item">
-                                <div class="material-icon">📹</div>
-                                <div class="material-info">
-                                    <div class="material-title">Разбор клинического случая: Боль в пояснице</div>
-                                    <div class="material-date">Добавлено 2 дня назад • 45:24</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="tab-content" id="favorites">
-                        <div class="materials-list">
-                            <div class="material-item">
-                                <div class="material-icon">🎯</div>
-                                <div class="material-info">
-                                    <div class="material-title">Видео-шпаргалка: Техника миофасциального релиза</div>
-                                    <div class="material-date">В избранном • 08:15</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="tab-content" id="practice">
-                        <div class="materials-grid">
-                            <div class="card" onclick="openSection('mri')">
-                                <div class="card-icon">🩻</div>
-                                <div>МРТ разборы</div>
-                            </div>
-                            <div class="card" onclick="openSection('cases')">
-                                <div class="card-icon">📋</div>
-                                <div>Клинические случаи</div>
-                            </div>
-                            <div class="card" onclick="openSection('checklists')">
-                                <div class="card-icon">✅</div>
-                                <div>Чек-листы</div>
-                            </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">💾</div>
+                            <div class="stat-title">Сохранено</div>
+                            <div class="stat-value" id="materialsSaved">0</div>
                         </div>
                     </div>
                 `
@@ -222,6 +199,7 @@
         // ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
         let currentPage = 'home';
         let currentUser = null;
+        let allContent = {};
 
         function renderPage(page) {
             currentPage = page;
@@ -238,29 +216,106 @@
                 btn.classList.toggle('active', btn.dataset.page === page);
             });
 
+            // Загружаем контент для страницы
+            if (page === 'courses') loadCourses();
+            if (page === 'content') loadContent();
+            if (page === 'materials') loadMaterials();
+            if (page === 'profile') updateProfileStats();
+
             console.log('✅ Страница:', page);
         }
 
-        function openSection(section) {
-            const sections = {
-                'courses': '📚 Курсы',
-                'fm': '🎧 АНБ FM', 
-                'streams': '📹 Эфиры и Разборы',
-                'cheats': '🎯 Видео-шпаргалки'
+        async function loadCourses() {
+            try {
+                const response = await fetch('/api/content/courses');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const coursesList = document.getElementById('coursesList');
+                    coursesList.innerHTML = data.data.map(course => `
+                        <div class="content-item">
+                            <div class="content-icon">${course.image || '📚'}</div>
+                            <div class="content-info">
+                                <div class="content-title">${course.title}</div>
+                                <div class="content-description">${course.description}</div>
+                                <div class="content-meta">
+                                    <span class="duration">${course.duration}</span>
+                                    <span class="price">${course.price ? course.price + ' руб.' : 'Бесплатно'}</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-small" onclick="enrollCourse(${course.id})">Записаться</button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки курсов:', error);
+            }
+        }
+
+        async function loadContent() {
+            await loadPodcasts();
+        }
+
+        async function loadPodcasts() {
+            try {
+                const response = await fetch('/api/content/podcasts');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const podcastsList = document.getElementById('podcastsList');
+                    podcastsList.innerHTML = data.data.map(podcast => `
+                        <div class="content-item">
+                            <div class="content-icon">${podcast.audio || '🎧'}</div>
+                            <div class="content-info">
+                                <div class="content-title">${podcast.title}</div>
+                                <div class="content-description">${podcast.description}</div>
+                                <div class="content-meta">
+                                    <span class="duration">${podcast.duration}</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-small" onclick="playContent('podcast', ${podcast.id})">Слушать</button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки подкастов:', error);
+            }
+        }
+
+        async function loadMaterials() {
+            try {
+                const response = await fetch('/api/content/materials');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const materialsList = document.getElementById('materialsList');
+                    materialsList.innerHTML = data.data.map(material => `
+                        <div class="material-item">
+                            <div class="material-icon">${material.file || '📄'}</div>
+                            <div class="material-info">
+                                <div class="material-title">${material.title}</div>
+                                <div class="material-description">${material.description}</div>
+                                <div class="material-type">${getMaterialType(material.type)}</div>
+                            </div>
+                            <button class="btn btn-small" onclick="openMaterial(${material.id})">Открыть</button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки материалов:', error);
+            }
+        }
+
+        function getMaterialType(type) {
+            const types = {
+                'mri': 'МРТ разбор',
+                'case': 'Клинический случай',
+                'checklist': 'Чек-лист'
             };
-            
-            alert(`🎯 Открываем: ${sections[section] || section}\n\nРаздел в разработке!`);
+            return types[type] || 'Материал';
         }
 
-        function openChat(chatId) {
-            alert(`💬 ${chatId === 'general' ? 'Флудилка' : 'Чат специалистов'}\n\nДля доступа нужна активная подписка.`);
-        }
-
-        function changeSubscription() {
-            alert(`💳 Управление подпиской\n\nТекущий тариф: ${currentUser?.subscription?.status === 'trial' ? 'Пробный' : 'Не активен'}\n\nДля изменения обратитесь к координатору.`);
-        }
-
-        function switchTab(tabId) {
+        function switchContentTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
@@ -271,8 +326,117 @@
             const targetTab = document.getElementById(tabId);
             if (targetTab) {
                 targetTab.classList.add('active');
+                
+                if (tabId === 'streams') loadStreams();
+                if (tabId === 'videos') loadVideos();
             }
             event.target.classList.add('active');
+        }
+
+        async function loadStreams() {
+            try {
+                const response = await fetch('/api/content/streams');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const streamsList = document.getElementById('streamsList');
+                    streamsList.innerHTML = data.data.map(stream => `
+                        <div class="content-item">
+                            <div class="content-icon">${stream.video || '📹'}</div>
+                            <div class="content-info">
+                                <div class="content-title">${stream.title}</div>
+                                <div class="content-description">${stream.description}</div>
+                                <div class="content-meta">
+                                    <span class="duration">${stream.duration}</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-small" onclick="playContent('stream', ${stream.id})">Смотреть</button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки эфиров:', error);
+            }
+        }
+
+        async function loadVideos() {
+            try {
+                const response = await fetch('/api/content/videos');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const videosList = document.getElementById('videosList');
+                    videosList.innerHTML = data.data.map(video => `
+                        <div class="content-item">
+                            <div class="content-icon">${video.video || '🎯'}</div>
+                            <div class="content-info">
+                                <div class="content-title">${video.title}</div>
+                                <div class="content-description">${video.description}</div>
+                                <div class="content-meta">
+                                    <span class="duration">${video.duration}</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-small" onclick="playContent('video', ${video.id})">Смотреть</button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки видео:', error);
+            }
+        }
+
+        function openSection(section) {
+            const sections = {
+                'courses': '📚 Курсы',
+                'fm': '🎧 АНБ FM', 
+                'streams': '📹 Эфиры и Разборы',
+                'cheats': '🎯 Видео-шпаргалки',
+                'practice': '📋 Практические материалы',
+                'events': '🗺️ Карта мероприятий',
+                'offers': '🔥 Ограниченное предложение',
+                'support': '💬 Поддержка'
+            };
+            
+            alert(`🎯 Открываем: ${sections[section] || section}`);
+        }
+
+        function openMaterials(type) {
+            const types = {
+                'mri': 'МРТ разборы',
+                'cases': 'Клинические случаи',
+                'checklists': 'Чек-листы'
+            };
+            alert(`📋 Открываем: ${types[type] || type}`);
+        }
+
+        function enrollCourse(courseId) {
+            alert(`🎓 Запись на курс ID: ${courseId}\n\nФункция оплаты будет реализована в следующем обновлении.`);
+        }
+
+        function playContent(type, contentId) {
+            const types = {
+                'podcast': 'Подкаст',
+                'stream': 'Эфир',
+                'video': 'Видео-шпаргалка'
+            };
+            alert(`▶️ Воспроизведение: ${types[type]} ID: ${contentId}`);
+        }
+
+        function openMaterial(materialId) {
+            alert(`📄 Открытие материала ID: ${materialId}`);
+        }
+
+        function changeSubscription() {
+            alert(`💳 Управление подпиской\n\nТекущий статус: ${currentUser?.subscription?.status === 'trial' ? 'Пробный период' : 'Не активна'}\n\nДля изменения тарифа обратитесь к координатору.`);
+        }
+
+        function updateProfileStats() {
+            if (!currentUser) return;
+            
+            document.getElementById('coursesCompleted').textContent = currentUser.progress.steps.coursesBought || 0;
+            document.getElementById('materialsWatched').textContent = currentUser.progress.steps.materialsWatched || 0;
+            document.getElementById('eventsAttended').textContent = currentUser.progress.steps.eventsParticipated || 0;
+            document.getElementById('materialsSaved').textContent = currentUser.progress.steps.materialsSaved || 0;
         }
 
         // ==================== ИНТЕГРАЦИЯ С БОТОМ ====================
@@ -297,7 +461,8 @@
                     if (tgUser) {
                         currentUser = {
                             firstName: tgUser.first_name || 'Пользователь',
-                            subscription: { status: 'inactive' }
+                            subscription: { status: 'inactive' },
+                            progress: { steps: {} }
                         };
                         updateUIWithUserData();
                     }
@@ -340,20 +505,6 @@
                     renderPage(this.dataset.page);
                 });
             });
-
-            document.addEventListener('click', function(e) {
-                if (e.target.classList.contains('filter')) {
-                    document.querySelectorAll('.filter').forEach(f => f.classList.remove('active'));
-                    e.target.classList.add('active');
-                }
-            });
-
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) {
-                searchInput.addEventListener('input', function(e) {
-                    console.log('Поиск:', e.target.value);
-                });
-            }
 
             renderPage('home');
             loadUserData();
