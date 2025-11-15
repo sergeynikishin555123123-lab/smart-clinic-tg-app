@@ -1,154 +1,125 @@
-import { Telegraf, session, Scenes } from 'telegraf';
+import { Telegraf } from 'telegraf';
 import { PrismaClient } from '@prisma/client';
-import { message } from 'telegraf/filters';
+
+// Простая проверка переменных окружения
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const DATABASE_URL = process.env.DATABASE_URL;
+
+if (!BOT_TOKEN) {
+  console.error('❌ BOT_TOKEN is required');
+  process.exit(1);
+}
+
+if (!DATABASE_URL) {
+  console.error('❌ DATABASE_URL is required');
+  process.exit(1);
+}
+
+console.log('🚀 Starting bot with configuration:');
+console.log('   Database:', DATABASE_URL ? 'Configured' : 'Missing');
+console.log('   Bot Token:', BOT_TOKEN ? 'Configured' : 'Missing');
 
 const prisma = new PrismaClient();
+const bot = new Telegraf(BOT_TOKEN);
 
-// Проверяем наличие необходимых переменных окружения
-if (!process.env.BOT_TOKEN) {
-  throw new Error('BOT_TOKEN must be provided!');
-}
-
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL must be provided!');
-}
-
-const bot = new Telegraf(process.env.BOT_TOKEN);
-
-// Middleware для работы с базой данных
-bot.use(async (ctx, next) => {
-  ctx.prisma = prisma;
-  await next();
-});
-
-// Обработчик команды /start
+// Простой обработчик старта
 bot.start(async (ctx) => {
-  const telegramId = BigInt(ctx.from.id);
+  console.log('👤 User started bot:', ctx.from.id);
   
   try {
-    // Проверяем, есть ли пользователь в базе
+    const telegramId = BigInt(ctx.from.id);
+    
+    // Проверяем или создаем пользователя
     let user = await prisma.user.findUnique({
       where: { telegramId }
     });
 
-    // Если пользователя нет - создаем
     if (!user) {
       user = await prisma.user.create({
         data: {
           telegramId,
-          username: ctx.from.username,
+          username: ctx.from.username || 'unknown',
           firstName: ctx.from.first_name,
-          lastName: ctx.from.last_name,
+          lastName: ctx.from.last_name || '',
         }
       });
-      
-      // Приветственное сообщение для нового пользователя
-      await ctx.reply(
-        `👋 Добро пожаловать в Академию АНБ, ${ctx.from.first_name}!\n\n` +
-        `Я ваш помощник в мире профессионального развития. Здесь вы найдете:\n` +
-        `• Курсы и обучающие материалы\n` +
-        `• Эфиры и разборы случаев\n` +
-        `• Практические инструменты для работы\n` +
-        `• Сообщество единомышленников\n\n` +
-        `Используйте кнопки ниже для навигации:`,
-        {
-          reply_markup: {
-            keyboard: [
-              ['📱 Навигация', '🎁 Акции'],
-              ['❓ Задать вопрос', '🔄 Продлить подписку'],
-              ['📢 Анонсы', '💬 Поддержка']
-            ],
-            resize_keyboard: true
-          }
-        }
-      );
-    } else {
-      // Пользователь уже существует
-      await ctx.reply(
-        `С возвращением, ${ctx.from.first_name}! 🎉\n\n` +
-        `Чем могу помочь?`,
-        {
-          reply_markup: {
-            keyboard: [
-              ['📱 Навигация', '🎁 Акции'],
-              ['❓ Задать вопрос', '🔄 Продлить подписку'],
-              ['📢 Анонсы', '💬 Поддержка']
-            ],
-            resize_keyboard: true
-          }
-        }
-      );
+      console.log('✅ New user created:', user.id);
     }
+
+    await ctx.reply(
+      `👋 Добро пожаловать в Академию АНБ, ${ctx.from.first_name}!\n\n` +
+      `Я ваш помощник в мире профессионального развития.`,
+      {
+        reply_markup: {
+          keyboard: [
+            ['📱 Навигация', '🎁 Акции'],
+            ['❓ Задать вопрос', '💬 Поддержка']
+          ],
+          resize_keyboard: true
+        }
+      }
+    );
+
   } catch (error) {
-    console.error('Error in start command:', error);
-    await ctx.reply('Произошла ошибка при запуске бота. Пожалуйста, попробуйте позже.');
+    console.error('❌ Error in start command:', error);
+    await ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
   }
 });
 
-// Обработчик кнопки "Навигация"
+// Обработчик кнопки Навигация
 bot.hears('📱 Навигация', async (ctx) => {
   await ctx.reply('Открываю навигацию...', {
     reply_markup: {
       inline_keyboard: [[
         {
           text: '📱 Открыть приложение',
-          web_app: { url: process.env.WEBAPP_URL || 'https://your-webapp-url.com' }
+          web_app: { url: 'https://sergeynikishin555123123-lab-smart-clinic-tg-app-a472.twc1.net' }
         }
       ]]
     }
   });
 });
 
-// Обработчик кнопки "Акции"
+// Обработчик других кнопок
 bot.hears('🎁 Акции', async (ctx) => {
-  await ctx.reply('Раздел акций находится в разработке. Скоро здесь появятся специальные предложения! 🎁');
+  await ctx.reply('Раздел акций в разработке 🎁');
 });
 
-// Обработчик кнопки "Задать вопрос"
 bot.hears('❓ Задать вопрос', async (ctx) => {
-  await ctx.reply('Чтобы задать вопрос по обучению, пожалуйста, используйте форму в приложении (раздел "Навигация") или напишите напрямую @academy_anb');
+  await ctx.reply('Напишите @academy_anb для помощи');
 });
 
-// Обработчик кнопки "Продлить подписку"
-bot.hears('🔄 Продлить подписку', async (ctx) => {
-  await ctx.reply('Раздел продления подписки находится в разработке. Скоро здесь можно будет управлять вашей подпиской!');
-});
-
-// Обработчик кнопки "Анонсы"
-bot.hears('📢 Анонсы', async (ctx) => {
-  await ctx.reply('Раздел анонсов находится в разработке. Скоро здесь появятся уведомления о предстоящих событиях!');
-});
-
-// Обработчик кнопки "Поддержка"
 bot.hears('💬 Поддержка', async (ctx) => {
-  await ctx.reply('По всем вопросам обращайтесь к координатору академии: @academy_anb\n\nЧасы работы: ПН-ПТ с 11:00 до 19:00');
+  await ctx.reply('Координатор: @academy_anb\nЧасы работы: ПН-ПТ 11:00-19:00');
 });
 
-// Обработчик текстовых сообщений
-bot.on(message('text'), async (ctx) => {
+// Обработчик любых текстовых сообщений
+bot.on('text', async (ctx) => {
   await ctx.reply('Используйте кнопки меню для навигации 🤗');
 });
 
 // Обработка ошибок
 bot.catch((err, ctx) => {
-  console.error(`Error for ${ctx.updateType}:`, err);
+  console.error(`❌ Error for ${ctx.updateType}:`, err);
 });
+
+// Graceful shutdown
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
 // Запуск бота
 async function startBot() {
   try {
-    console.log('Starting bot...');
-    
-    // Запускаем бота
+    console.log('🔧 Connecting to database...');
+    await prisma.$connect();
+    console.log('✅ Database connected');
+
+    console.log('🤖 Starting bot...');
     await bot.launch();
-    console.log('Bot started successfully!');
-    
-    // Graceful shutdown
-    process.once('SIGINT', () => bot.stop('SIGINT'));
-    process.once('SIGTERM', () => bot.stop('SIGTERM'));
-    
+    console.log('✅ Bot started successfully!');
+
   } catch (error) {
-    console.error('Failed to start bot:', error);
+    console.error('❌ Failed to start bot:', error);
     process.exit(1);
   }
 }
