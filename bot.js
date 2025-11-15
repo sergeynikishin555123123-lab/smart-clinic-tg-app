@@ -12,9 +12,11 @@ const PORT = process.env.PORT || 3000;
 const WEBAPP_URL = process.env.WEBAPP_URL || `http://localhost:${PORT}`;
 
 // ЗАМЕНИТЕ НА ВАШ ТЕЛЕГРАМ ID!
-const ADMIN_IDS = [898508164]; 
+// Чтобы узнать свой ID: напишите @userinfobot в Telegram
+const ADMIN_IDS = [123456789]; 
 
 console.log('🚀 Starting Smart Clinic Bot...');
+console.log('🔧 Admin IDs:', ADMIN_IDS);
 
 // ==================== БАЗА ДАННЫХ В ПАМЯТИ ====================
 const users = new Map();
@@ -41,7 +43,9 @@ const userSessions = new Map();
 
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 function isAdmin(userId) {
-  return ADMIN_IDS.includes(userId);
+  const isAdmin = ADMIN_IDS.includes(userId);
+  console.log(`🔐 Checking admin rights for ${userId}: ${isAdmin}`);
+  return isAdmin;
 }
 
 function getUser(id) {
@@ -209,6 +213,8 @@ bot.command('status', async (ctx) => {
 bot.command('admin', async (ctx) => {
   const userId = ctx.from.id;
   
+  console.log(`🔧 User ${userId} trying to access admin panel`);
+  
   if (!isAdmin(userId)) {
     await ctx.reply('❌ У вас нет прав доступа к админ-панели');
     console.log(`❌ Admin access denied for user ${userId}`);
@@ -230,7 +236,11 @@ bot.command('admin', async (ctx) => {
 });
 
 bot.hears('📊 Статистика', async (ctx) => {
-  if (!isAdmin(ctx.from.id)) return;
+  const userId = ctx.from.id;
+  if (!isAdmin(userId)) {
+    await ctx.reply('❌ Нет прав доступа');
+    return;
+  }
   
   const stats = getStats();
   
@@ -246,7 +256,11 @@ bot.hears('📊 Статистика', async (ctx) => {
 });
 
 bot.hears('✏️ Редактировать кнопки', async (ctx) => {
-  if (!isAdmin(ctx.from.id)) return;
+  const userId = ctx.from.id;
+  if (!isAdmin(userId)) {
+    await ctx.reply('❌ Нет прав доступа');
+    return;
+  }
 
   let message = '📋 Выберите кнопку для редактирования:\n\n';
   Object.entries(buttonConfigs).forEach(([key, config]) => {
@@ -269,14 +283,16 @@ bot.hears('✏️ Редактировать кнопки', async (ctx) => {
   });
 });
 
+// Обработка callback кнопок
 bot.action(/edit_(.+)/, async (ctx) => {
-  if (!isAdmin(ctx.from.id)) {
+  const userId = ctx.from.id;
+  if (!isAdmin(userId)) {
     await ctx.answerCbQuery('❌ Нет прав доступа');
     return;
   }
 
   const buttonType = ctx.match[1];
-  userSessions.set(ctx.from.id, { editing: buttonType });
+  userSessions.set(userId, { editing: buttonType });
 
   await ctx.editMessageText(
     `✏️ Редактирование кнопки: ${buttonConfigs[buttonType].text}\n\n` +
@@ -293,15 +309,20 @@ bot.action(/edit_(.+)/, async (ctx) => {
 });
 
 bot.action('cancel_edit', async (ctx) => {
-  userSessions.delete(ctx.from.id);
+  const userId = ctx.from.id;
+  userSessions.delete(userId);
   await ctx.editMessageText('❌ Редактирование отменено');
   await ctx.answerCbQuery();
 });
 
 bot.hears('📢 Сделать рассылку', async (ctx) => {
-  if (!isAdmin(ctx.from.id)) return;
+  const userId = ctx.from.id;
+  if (!isAdmin(userId)) {
+    await ctx.reply('❌ Нет прав доступа');
+    return;
+  }
   
-  userSessions.set(ctx.from.id, { broadcasting: true });
+  userSessions.set(userId, { broadcasting: true });
   await ctx.reply(
     '📢 Создание рассылки\n\nОтправьте сообщение для рассылки всем пользователям:',
     {
@@ -313,13 +334,18 @@ bot.hears('📢 Сделать рассылку', async (ctx) => {
 });
 
 bot.action('cancel_broadcast', async (ctx) => {
-  userSessions.delete(ctx.from.id);
+  const userId = ctx.from.id;
+  userSessions.delete(userId);
   await ctx.editMessageText('❌ Рассылка отменена');
   await ctx.answerCbQuery();
 });
 
 bot.hears('👥 Пользователи', async (ctx) => {
-  if (!isAdmin(ctx.from.id)) return;
+  const userId = ctx.from.id;
+  if (!isAdmin(userId)) {
+    await ctx.reply('❌ Нет прав доступа');
+    return;
+  }
   
   const recentUsers = Array.from(users.values())
     .sort((a, b) => b.joinedAt - a.joinedAt)
@@ -339,7 +365,8 @@ bot.hears('👥 Пользователи', async (ctx) => {
 });
 
 bot.hears('🔙 В главное меню', async (ctx) => {
-  userSessions.delete(ctx.from.id);
+  const userId = ctx.from.id;
+  userSessions.delete(userId);
   await ctx.reply('Возвращаемся в главное меню...', {
     reply_markup: {
       keyboard: [
@@ -349,6 +376,63 @@ bot.hears('🔙 В главное меню', async (ctx) => {
       resize_keyboard: true
     }
   });
+});
+
+// ==================== ОБРАБОТКА СООБЩЕНИЙ ====================
+bot.on('text', async (ctx) => {
+  const userId = ctx.from.id;
+  const text = ctx.message.text;
+  const session = userSessions.get(userId);
+
+  // Пропускаем команды
+  if (text.startsWith('/')) return;
+
+  if (session?.editing && isAdmin(userId)) {
+    const buttonType = session.editing;
+    const oldReply = buttonConfigs[buttonType].reply;
+    buttonConfigs[buttonType].reply = text;
+    userSessions.delete(userId);
+    
+    await ctx.reply(
+      `✅ Ответ для "${buttonConfigs[buttonType].text}" обновлен!\n\n` +
+      `📝 Было: ${oldReply}\n` +
+      `📝 Стало: ${text}`
+    );
+    return;
+  }
+
+  if (session?.broadcasting && isAdmin(userId)) {
+    let sent = 0;
+    const userList = Array.from(users.keys());
+    
+    await ctx.reply(`🔄 Начинаю рассылку для ${userList.length} пользователей...`);
+    
+    for (const userId of userList) {
+      try {
+        await bot.telegram.sendMessage(userId, 
+          `📢 Рассылка от Академии АНБ:\n\n${text}\n\n` +
+          `С уважением,\nКоманда Академии АНБ`
+        );
+        sent++;
+        
+        // Небольшая задержка чтобы не превысить лимиты Telegram
+        if (sent % 10 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error) {
+        console.log(`❌ Не удалось отправить пользователю ${userId}`);
+      }
+    }
+    
+    userSessions.delete(userId);
+    await ctx.reply(`✅ Рассылка завершена!\nОтправлено: ${sent} пользователям\nНе удалось: ${userList.length - sent}`);
+    return;
+  }
+
+  // Обычные сообщения
+  if (!text.startsWith('/')) {
+    await ctx.reply('🤗 Используйте кнопки меню для навигации');
+  }
 });
 
 // ==================== ОБРАБОТКА WEBAPP ДАННЫХ ====================
@@ -402,57 +486,6 @@ bot.on('web_app_data', async (ctx) => {
   }
 });
 
-// ==================== ОБРАБОТКА СООБЩЕНИЙ ====================
-bot.on('text', async (ctx) => {
-  const userId = ctx.from.id;
-  const text = ctx.message.text;
-  const session = userSessions.get(userId);
-
-  // Пропускаем команды
-  if (text.startsWith('/')) return;
-
-  if (session?.editing && isAdmin(userId)) {
-    const buttonType = session.editing;
-    buttonConfigs[buttonType].reply = text;
-    userSessions.delete(userId);
-    await ctx.reply(`✅ Ответ для "${buttonConfigs[buttonType].text}" обновлен!`);
-    return;
-  }
-
-  if (session?.broadcasting && isAdmin(userId)) {
-    let sent = 0;
-    const userList = Array.from(users.keys());
-    
-    await ctx.reply(`🔄 Начинаю рассылку для ${userList.length} пользователей...`);
-    
-    for (const userId of userList) {
-      try {
-        await bot.telegram.sendMessage(userId, 
-          `📢 Рассылка от Академии АНБ:\n\n${text}\n\n` +
-          `С уважением,\nКоманда Академии АНБ`
-        );
-        sent++;
-        
-        // Небольшая задержка чтобы не превысить лимиты Telegram
-        if (sent % 10 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      } catch (error) {
-        console.log(`❌ Не удалось отправить пользователю ${userId}`);
-      }
-    }
-    
-    userSessions.delete(userId);
-    await ctx.reply(`✅ Рассылка завершена!\nОтправлено: ${sent} пользователям\nНе удалось: ${userList.length - sent}`);
-    return;
-  }
-
-  // Обычные сообщения
-  if (!text.startsWith('/')) {
-    await ctx.reply('🤗 Используйте кнопки меню для навигации');
-  }
-});
-
 // ==================== ОБРАБОТКА ОШИБОК ====================
 bot.catch((err, ctx) => {
   console.error(`❌ Error for ${ctx.updateType}:`, err);
@@ -482,22 +515,6 @@ app.get('/api/user/:id', (req, res) => {
   });
 });
 
-// API для обновления прогресса
-app.post('/api/progress/:id', express.json(), (req, res) => {
-  const user = getUser(parseInt(req.params.id));
-  const { step, progress } = req.body;
-  
-  if (step && progress !== undefined) {
-    user.progress.steps[step].progress = progress;
-    if (progress >= 100) {
-      user.progress.steps[step].completed = true;
-    }
-    res.json({ success: true, progress: user.progress });
-  } else {
-    res.status(400).json({ success: false, error: 'Invalid data' });
-  }
-});
-
 // Все остальные запросы на index.html
 app.get('*', (req, res) => {
   res.sendFile(join(__dirname, 'webapp', 'index.html'));
@@ -520,6 +537,7 @@ async function startApp() {
     console.log('📊 Available commands: /start, /help, /menu, /status');
     console.log(`⚠️  ВАЖНО: Замените ADMIN_IDS на ваш Telegram ID!`);
     console.log(`📝 Текущие админы: ${ADMIN_IDS}`);
+    console.log(`🔧 Для тестирования админ-панели используйте команду: /admin`);
 
   } catch (error) {
     console.error('❌ Failed to start app:', error);
