@@ -68,19 +68,8 @@ const pages = {
                         <button class="filter-btn" data-filter="rehab">Реабилитация</button>
                     </div>
                 </div>
-                <div class="news-list">
-                    <div class="news-item">
-                        <div class="news-category">Профессиональное развитие</div>
-                        <div class="news-title">Новый курс: "Мануальные техники в практике"</div>
-                        <div class="news-date">15 декабря 2024 • 6 модулей</div>
-                        <div class="news-excerpt">Комплексный курс по современным мануальным методикам в неврологической практике</div>
-                    </div>
-                    <div class="news-item">
-                        <div class="news-category">Вебинар</div>
-                        <div class="news-title">Современные методы реабилитации пациентов с болевыми синдромами</div>
-                        <div class="news-date">28 ноября 2024 • 19:00</div>
-                        <div class="news-excerpt">Прямой эфир с Ильей Чистяковым - разбор клинических случаев и ответы на вопросы</div>
-                    </div>
+                <div class="news-list" id="newsList">
+                    <div class="loading">Загрузка новостей...</div>
                 </div>
             </div>
         `
@@ -153,15 +142,8 @@ const pages = {
 
             <div class="faq-section">
                 <h3>❓ Частые вопросы</h3>
-                <div class="faq-list">
-                    <div class="faq-item">
-                        <div class="faq-question">Как оформить, продлить или отменить подписку?</div>
-                        <div class="faq-answer">Подписку можно оформить или продлить в разделе «Личный кабинет». Там же доступна отмена — через кнопку «Изменить подписку».</div>
-                    </div>
-                    <div class="faq-item">
-                        <div class="faq-question">Что входит в подписку Академии?</div>
-                        <div class="faq-answer">Доступ к эфирам, разборам (в том числе в записи), практическим материалам, видео-шпаргалкам на разные темы, а также к чату специалистов и интерактивной карте офлайн-мероприятий с предзаписью и голосованиями за новые темы.</div>
-                    </div>
+                <div class="faq-list" id="faqList">
+                    <div class="loading">Загрузка FAQ...</div>
                 </div>
             </div>
         `
@@ -180,20 +162,14 @@ const pages = {
                 <div class="material-section active" id="watch-later">
                     <h3>Материалы для просмотра</h3>
                     <div class="materials-list" id="watchLaterList">
-                        <div class="empty-state">
-                            <div class="empty-icon">📥</div>
-                            <div class="empty-text">Здесь будут материалы, которые вы отложили на потом</div>
-                        </div>
+                        <div class="loading">Загрузка отложенных материалов...</div>
                     </div>
                 </div>
 
                 <div class="material-section" id="favorites">
                     <h3>Избранные материалы</h3>
                     <div class="materials-list" id="favoritesList">
-                        <div class="empty-state">
-                            <div class="empty-icon">⭐</div>
-                            <div class="empty-text">Добавляйте материалы в избранное, нажимая на звездочку</div>
-                        </div>
+                        <div class="loading">Загрузка избранного...</div>
                     </div>
                 </div>
 
@@ -203,18 +179,21 @@ const pages = {
                         <div class="practice-card" onclick="openMaterials('mri')">
                             <div class="practice-icon">🩻</div>
                             <div class="practice-title">МРТ разборы</div>
-                            <div class="practice-count">24 материала</div>
+                            <div class="practice-count" id="mriCount">0 материалов</div>
                         </div>
                         <div class="practice-card" onclick="openMaterials('cases')">
                             <div class="practice-icon">📋</div>
                             <div class="practice-title">Клинические случаи</div>
-                            <div class="practice-count">18 кейсов</div>
+                            <div class="practice-count" id="casesCount">0 кейсов</div>
                         </div>
                         <div class="practice-card" onclick="openMaterials('checklists')">
                             <div class="practice-icon">✅</div>
                             <div class="practice-title">Чек-листы</div>
-                            <div class="practice-count">12 чек-листов</div>
+                            <div class="practice-count" id="checklistsCount">0 чек-листов</div>
                         </div>
+                    </div>
+                    <div class="materials-list" id="practiceMaterialsList">
+                        <div class="loading">Загрузка практических материалов...</div>
                     </div>
                 </div>
             </div>
@@ -230,7 +209,7 @@ const pages = {
                     <div class="profile-info">
                         <div class="profile-name" id="userName">Пользователь</div>
                         <div class="profile-status">Член Академии АНБ с <span id="joinDate">${new Date().toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'})}</span></div>
-                        <div class="profile-badge">Активный участник эфиров и разборов</div>
+                        <div class="profile-badge" id="profileBadge">Активный участник эфиров и разборов</div>
                     </div>
                 </div>
                 
@@ -245,50 +224,8 @@ const pages = {
 
             <div class="journey-section">
                 <h3>🎯 Мой путь развития</h3>
-                <div class="journey-progress">
-                    <div class="journey-step active">
-                        <div class="step-marker">1</div>
-                        <div class="step-content">
-                            <div class="step-title">Понимаю</div>
-                            <div class="step-description">Начинаю замечать закономерности и связи. Не просто слышу жалобы — вижу структуру боли.</div>
-                            <div class="step-progress">
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 100%"></div>
-                                </div>
-                                <div class="progress-text">9 из 9</div>
-                            </div>
-                            <div class="step-hint">Чтобы перейти к следующему этапу — продолжайте участвовать в эфирах и сохраняйте всё, что откликается, в «Мои материалы».</div>
-                        </div>
-                    </div>
-
-                    <div class="journey-step">
-                        <div class="step-marker">2</div>
-                        <div class="step-content">
-                            <div class="step-title">Связываю</div>
-                            <div class="step-description">Закономерности и связи складываются в единую картину. Боль приобретает смысл.</div>
-                            <div class="step-progress">
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 60%"></div>
-                                </div>
-                                <div class="progress-text">15 из 25</div>
-                            </div>
-                            <div class="step-hint">Чтобы перейти к следующему этапу — участвуйте в разборах и ищите взаимосвязи между изученными материалами.</div>
-                        </div>
-                    </div>
-
-                    <div class="journey-step">
-                        <div class="step-marker">3</div>
-                        <div class="step-content">
-                            <div class="step-title">Применяю</div>
-                            <div class="step-description">При взгляде на единую картину - боль воспринимается как следствие. Работа направлена на устранение причины.</div>
-                            <div class="step-progress">
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 20%"></div>
-                                </div>
-                                <div class="progress-text">5 из 23</div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="journey-progress" id="journeyProgress">
+                    <div class="loading">Загрузка прогресса...</div>
                 </div>
             </div>
 
@@ -333,6 +270,14 @@ const pages = {
 let currentPage = 'home';
 let currentUser = null;
 let allContent = {};
+let userFavorites = {
+    courses: [],
+    podcasts: [],
+    streams: [],
+    videos: [],
+    materials: [],
+    watchLater: []
+};
 
 // ==================== ОСНОВНЫЕ ФУНКЦИИ ПРИЛОЖЕНИЯ ====================
 function renderPage(page) {
@@ -359,68 +304,59 @@ function renderPage(page) {
 function initializePage(page) {
     switch (page) {
         case 'home':
+            loadNews();
             initHomePage();
             break;
         case 'catalog':
             loadCatalogContent();
             break;
         case 'community':
+            loadFAQ();
             initCommunityPage();
             break;
         case 'favorites':
+            loadFavorites();
             initFavoritesPage();
             break;
         case 'profile':
             updateProfileStats();
+            loadJourneyProgress();
             break;
     }
 }
 
-function initHomePage() {
-    // Инициализация фильтров новостей
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            filterNews(this.dataset.filter);
-        });
-    });
+// ==================== ЗАГРУЗКА ДАННЫХ ====================
+async function loadNews() {
+    try {
+        // Имитация загрузки новостей
+        setTimeout(() => {
+            const newsList = document.getElementById('newsList');
+            newsList.innerHTML = `
+                <div class="news-item">
+                    <div class="news-category">Профессиональное развитие</div>
+                    <div class="news-title">Новый курс: "Мануальные техники в практике"</div>
+                    <div class="news-date">15 декабря 2024 • 6 модулей</div>
+                    <div class="news-excerpt">Комплексный курс по современным мануальным методикам в неврологической практике. Изучите техники работы с пациентами с болевыми синдромами.</div>
+                </div>
+                <div class="news-item">
+                    <div class="news-category">Вебинар</div>
+                    <div class="news-title">Современные методы реабилитации пациентов с болевыми синдромами</div>
+                    <div class="news-date">28 ноября 2024 • 19:00</div>
+                    <div class="news-excerpt">Прямой эфир с Ильей Чистяковым - разбор клинических случаев и ответы на вопросы. Обсудим современные подходы к реабилитации.</div>
+                </div>
+                <div class="news-item">
+                    <div class="news-category">Обновление</div>
+                    <div class="news-title">Добавлены новые МРТ-разборы и клинические случаи</div>
+                    <div class="news-date">20 ноября 2024</div>
+                    <div class="news-excerpt">В разделе практических материалов появились новые кейсы по диагностике и лечению пациентов с неврологическими нарушениями.</div>
+                </div>
+            `;
+        }, 1000);
+    } catch (error) {
+        console.error('Ошибка загрузки новостей:', error);
+    }
 }
 
-function initCommunityPage() {
-    // Инициализация FAQ
-    document.querySelectorAll('.faq-question').forEach(question => {
-        question.addEventListener('click', function() {
-            const answer = this.nextElementSibling;
-            answer.style.display = answer.style.display === 'block' ? 'none' : 'block';
-        });
-    });
-}
-
-function initFavoritesPage() {
-    // Инициализация вкладок материалов
-    document.querySelectorAll('.material-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            const tabId = this.dataset.tab;
-            
-            // Обновляем активные вкладки
-            document.querySelectorAll('.material-tab').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Показываем соответствующий контент
-            document.querySelectorAll('.material-section').forEach(section => {
-                section.classList.remove('active');
-            });
-            document.getElementById(tabId).classList.add('active');
-            
-            // Загружаем данные для вкладки
-            if (tabId === 'watch-later') loadWatchLater();
-            if (tabId === 'favorites') loadFavorites();
-        });
-    });
-}
-
-// ==================== ФУНКЦИИ КОНТЕНТА ====================
 async function loadCatalogContent() {
     try {
         const response = await fetch('/api/content');
@@ -430,23 +366,206 @@ async function loadCatalogContent() {
             allContent = data.data;
             renderCatalogContent();
             initCatalogFilters();
+        } else {
+            throw new Error('Failed to load content');
         }
     } catch (error) {
         console.error('Ошибка загрузки контента:', error);
-        document.getElementById('contentGrid').innerHTML = '<div class="error">Ошибка загрузки контента</div>';
+        document.getElementById('contentGrid').innerHTML = `
+            <div class="error">
+                <div class="error-icon">⚠️</div>
+                <div class="error-text">Не удалось загрузить контент. Пожалуйста, попробуйте позже.</div>
+                <button class="btn btn-primary" onclick="loadCatalogContent()">Повторить попытку</button>
+            </div>
+        `;
     }
 }
 
+async function loadFAQ() {
+    try {
+        // Имитация загрузки FAQ
+        setTimeout(() => {
+            const faqList = document.getElementById('faqList');
+            faqList.innerHTML = `
+                <div class="faq-item">
+                    <div class="faq-question">Как оформить, продлить или отменить подписку?</div>
+                    <div class="faq-answer">Подписку можно оформить или продлить в разделе «Личный кабинет». Там же доступна отмена — через кнопку «Изменить подписку».</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">Что входит в подписку Академии?</div>
+                    <div class="faq-answer">Доступ к эфирам, разборам (в том числе в записи), практическим материалам, видео-шпаргалкам на разные темы, а также к чату специалистов и интерактивной карте офлайн-мероприятий с предзаписью и голосованиями за новые темы.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">Можно ли смотреть материалы без подписки?</div>
+                    <div class="faq-answer">Да, часть контента доступна в пробном периоде для ознакомления. Полный доступ и участие в развитии открываются при активной подписке.</div>
+                </div>
+            `;
+        }, 1000);
+    } catch (error) {
+        console.error('Ошибка загрузки FAQ:', error);
+    }
+}
+
+async function loadFavorites() {
+    try {
+        // Загрузка избранного
+        const watchLaterList = document.getElementById('watchLaterList');
+        const favoritesList = document.getElementById('favoritesList');
+        
+        if (userFavorites.watchLater.length === 0) {
+            watchLaterList.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📥</div>
+                    <div class="empty-text">Здесь будут материалы, которые вы отложили на потом</div>
+                    <div class="empty-hint">Нажимайте "Посмотреть позже" на карточках контента</div>
+                </div>
+            `;
+        } else {
+            watchLaterList.innerHTML = userFavorites.watchLater.map(item => `
+                <div class="material-item">
+                    <div class="material-icon">${getContentIcon(item.type)}</div>
+                    <div class="material-info">
+                        <div class="material-title">${item.title}</div>
+                        <div class="material-description">${item.description}</div>
+                        <div class="material-date">Добавлено ${formatDate(item.addedAt)}</div>
+                    </div>
+                    <button class="btn btn-small" onclick="openContent('${item.type}', ${item.id})">Открыть</button>
+                </div>
+            `).join('');
+        }
+
+        if (userFavorites.courses.length === 0 && userFavorites.podcasts.length === 0 && 
+            userFavorites.streams.length === 0 && userFavorites.videos.length === 0 && 
+            userFavorites.materials.length === 0) {
+            favoritesList.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">⭐</div>
+                    <div class="empty-text">Добавляйте материалы в избранное, нажимая на звездочку</div>
+                    <div class="empty-hint">Ваши избранные материалы появятся здесь</div>
+                </div>
+            `;
+        }
+
+        // Загрузка практических материалов
+        await loadPracticeMaterials();
+
+    } catch (error) {
+        console.error('Ошибка загрузки избранного:', error);
+    }
+}
+
+async function loadPracticeMaterials() {
+    try {
+        const response = await fetch('/api/content/materials');
+        const data = await response.json();
+        
+        if (data.success) {
+            const materials = data.data;
+            
+            // Обновляем счетчики
+            document.getElementById('mriCount').textContent = `${materials.filter(m => m.type === 'mri').length} материалов`;
+            document.getElementById('casesCount').textContent = `${materials.filter(m => m.type === 'case').length} кейсов`;
+            document.getElementById('checklistsCount').textContent = `${materials.filter(m => m.type === 'checklist').length} чек-листов`;
+            
+            // Показываем материалы
+            const practiceList = document.getElementById('practiceMaterialsList');
+            practiceList.innerHTML = materials.map(material => `
+                <div class="material-item">
+                    <div class="material-icon">${getContentIcon('materials')}</div>
+                    <div class="material-info">
+                        <div class="material-title">${material.title}</div>
+                        <div class="material-description">${material.description}</div>
+                        <div class="material-type">${getMaterialType(material.type)} • ${material.duration || ''}</div>
+                    </div>
+                    <div class="material-actions">
+                        <button class="icon-btn" onclick="toggleFavorite('materials', ${material.id})">⭐</button>
+                        <button class="btn btn-small" onclick="openContent('materials', ${material.id})">Открыть</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки практических материалов:', error);
+    }
+}
+
+async function loadJourneyProgress() {
+    try {
+        if (!currentUser) return;
+        
+        const journeyProgress = document.getElementById('journeyProgress');
+        const levels = [
+            {
+                level: 'Понимаю',
+                title: 'Понимаю',
+                description: 'Начинаю замечать закономерности и связи. Не просто слышу жалобы — вижу структуру боли.',
+                progress: 100,
+                total: 9,
+                current: 9,
+                hint: 'Чтобы перейти к следующему этапу — продолжайте участвовать в эфирах и сохраняйте всё, что откликается, в «Мои материалы».',
+                active: true
+            },
+            {
+                level: 'Связываю', 
+                title: 'Связываю',
+                description: 'Закономерности и связи складываются в единую картину. Боль приобретает смысл.',
+                progress: 60,
+                total: 25,
+                current: 15,
+                hint: 'Чтобы перейти к следующему этапу — участвуйте в разборах и ищите взаимосвязи между изученными материалами.',
+                active: false
+            },
+            {
+                level: 'Применяю',
+                title: 'Применяю',
+                description: 'При взгляде на единую картину - боль воспринимается как следствие. Работа направлена на устранение причины.',
+                progress: 20,
+                total: 23,
+                current: 5,
+                hint: 'Чтобы перейти к следующему этапу — выберите тему, в которой хотите углубиться, и пройдите обучение в Академии.',
+                active: false
+            }
+        ];
+
+        journeyProgress.innerHTML = levels.map(level => `
+            <div class="journey-step ${level.active ? 'active' : ''}">
+                <div class="step-marker">${levels.indexOf(level) + 1}</div>
+                <div class="step-content">
+                    <div class="step-title">${level.title}</div>
+                    <div class="step-description">${level.description}</div>
+                    <div class="step-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${level.progress}%"></div>
+                        </div>
+                        <div class="progress-text">${level.current} из ${level.total}</div>
+                    </div>
+                    ${level.hint ? `<div class="step-hint">${level.hint}</div>` : ''}
+                </div>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error('Ошибка загрузки прогресса:', error);
+    }
+}
+
+// ==================== РЕНДЕРИНГ КОНТЕНТА ====================
 function renderCatalogContent() {
     const contentGrid = document.getElementById('contentGrid');
-    let allItems = [];
+    
+    if (!allContent || Object.keys(allContent).length === 0) {
+        contentGrid.innerHTML = '<div class="empty-state">Контент пока не добавлен</div>';
+        return;
+    }
 
-    // Собираем все элементы контента
+    let allItems = [];
     Object.keys(allContent).forEach(type => {
-        allContent[type].forEach(item => {
-            item.contentType = type;
-            allItems.push(item);
-        });
+        if (allContent[type] && Array.isArray(allContent[type])) {
+            allContent[type].forEach(item => {
+                item.contentType = type;
+                allItems.push(item);
+            });
+        }
     });
 
     if (allItems.length === 0) {
@@ -458,18 +577,23 @@ function renderCatalogContent() {
         <div class="content-card" data-type="${item.contentType}">
             <div class="content-card-header">
                 <div class="content-icon">${getContentIcon(item.contentType)}</div>
-                <button class="favorite-btn" onclick="toggleFavorite('${item.contentType}', ${item.id})">☆</button>
+                <button class="favorite-btn ${isFavorite(item.contentType, item.id) ? 'active' : ''}" 
+                        onclick="toggleFavorite('${item.contentType}', ${item.id})">
+                    ${isFavorite(item.contentType, item.id) ? '★' : '☆'}
+                </button>
             </div>
             <div class="content-card-body">
                 <div class="content-title">${item.title}</div>
-                <div class="content-description">${item.description || ''}</div>
+                <div class="content-description">${item.description || 'Описание отсутствует'}</div>
                 <div class="content-meta">
                     ${item.duration ? `<span class="meta-item">⏱️ ${item.duration}</span>` : ''}
                     ${item.price ? `<span class="meta-item">💰 ${item.price} руб.</span>` : ''}
                     ${!item.price ? `<span class="meta-item free">🆓 Бесплатно</span>` : ''}
+                    ${item.views ? `<span class="meta-item">👁️ ${item.views}</span>` : ''}
                 </div>
             </div>
             <div class="content-card-actions">
+                <button class="btn btn-outline" onclick="addToWatchLater('${item.contentType}', ${item.id})">📥 Позже</button>
                 <button class="btn btn-small" onclick="openContent('${item.contentType}', ${item.id})">
                     ${getActionButtonText(item.contentType)}
                 </button>
@@ -478,6 +602,7 @@ function renderCatalogContent() {
     `).join('');
 }
 
+// ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 function getContentIcon(contentType) {
     const icons = {
         'courses': '📚',
@@ -502,54 +627,293 @@ function getActionButtonText(contentType) {
     return actions[contentType] || 'Открыть';
 }
 
-function initCatalogFilters() {
-    const searchInput = document.getElementById('catalogSearch');
-    const typeFilter = document.getElementById('contentTypeFilter');
-    const contentTabs = document.querySelectorAll('.content-tab');
+function getMaterialType(type) {
+    const types = {
+        'mri': 'МРТ разбор',
+        'case': 'Клинический случай',
+        'checklist': 'Чек-лист'
+    };
+    return types[type] || 'Материал';
+}
 
-    // Поиск
-    searchInput.addEventListener('input', function() {
-        filterCatalogContent();
-    });
+function isFavorite(contentType, contentId) {
+    return userFavorites[contentType]?.includes(contentId) || false;
+}
 
-    // Фильтр по типу
-    typeFilter.addEventListener('change', function() {
-        filterCatalogContent();
-    });
+function formatDate(date) {
+    return new Date(date).toLocaleDateString('ru-RU');
+}
 
-    // Вкладки
-    contentTabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-            contentTabs.forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            filterCatalogContent();
+// ==================== ФУНКЦИОНАЛ ИЗБРАННОГО ====================
+function toggleFavorite(contentType, contentId) {
+    if (!currentUser) {
+        showNotification('⚠️ Необходимо войти в систему');
+        return;
+    }
+
+    if (!userFavorites[contentType]) {
+        userFavorites[contentType] = [];
+    }
+
+    const index = userFavorites[contentType].indexOf(contentId);
+    if (index > -1) {
+        userFavorites[contentType].splice(index, 1);
+        showNotification('❌ Удалено из избранного');
+    } else {
+        userFavorites[contentType].push(contentId);
+        showNotification('⭐ Добавлено в избранное');
+    }
+
+    // Обновляем отображение если мы на странице каталога
+    if (currentPage === 'catalog') {
+        renderCatalogContent();
+    }
+}
+
+function addToWatchLater(contentType, contentId) {
+    if (!currentUser) {
+        showNotification('⚠️ Необходимо войти в систему');
+        return;
+    }
+
+    const content = allContent[contentType]?.find(item => item.id === contentId);
+    if (content) {
+        userFavorites.watchLater.push({
+            ...content,
+            type: contentType,
+            addedAt: new Date()
+        });
+        showNotification('📥 Добавлено в "Посмотреть позже"');
+    }
+}
+
+// ==================== ФУНКЦИИ ИНТЕРФЕЙСА ====================
+function showNotification(message) {
+    // Создаем уведомление
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #58b8e7;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+function openContent(contentType, contentId) {
+    if (!currentUser) {
+        showNotification('⚠️ Необходимо войти в систему');
+        return;
+    }
+
+    const content = allContent[contentType]?.find(item => item.id === contentId);
+    if (!content) {
+        showNotification('❌ Контент не найден');
+        return;
+    }
+
+    // Показываем модальное окно с контентом
+    const modalHTML = `
+        <div class="modal" id="contentModal">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h3>${content.title}</h3>
+                    <button class="close-btn" onclick="closeModal('contentModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="content-preview">
+                        <div class="preview-header">
+                            <div class="content-icon-large">${getContentIcon(contentType)}</div>
+                            <div class="preview-info">
+                                <div class="preview-title">${content.title}</div>
+                                <div class="preview-description">${content.description || ''}</div>
+                                <div class="preview-meta">
+                                    ${content.duration ? `<span>⏱️ ${content.duration}</span>` : ''}
+                                    ${content.price ? `<span>💰 ${content.price} руб.</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="content-actions-full">
+                            <button class="btn btn-primary" onclick="startContent('${contentType}', ${contentId})">
+                                ${getActionButtonText(contentType)}
+                            </button>
+                            <button class="btn btn-outline" onclick="toggleFavorite('${contentType}', ${contentId})">
+                                ${isFavorite(contentType, contentId) ? '★ В избранном' : '☆ В избранное'}
+                            </button>
+                        </div>
+                        
+                        ${content.fullDescription ? `
+                            <div class="content-full-description">
+                                <h4>Описание</h4>
+                                <p>${content.fullDescription}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function startContent(contentType, contentId) {
+    const actions = {
+        'courses': '🎓 Начинаем курс...',
+        'podcasts': '🎧 Запускаем подкаст...',
+        'streams': '📹 Начинаем трансляцию...',
+        'videos': '🎯 Воспроизводим видео...',
+        'materials': '📄 Открываем материал...',
+        'events': '🗺️ Переходим к мероприятию...'
+    };
+    
+    showNotification(actions[contentType] || '🎯 Открываем контент...');
+    closeModal('contentModal');
+    
+    // Обновляем прогресс пользователя
+    if (currentUser) {
+        currentUser.progress.steps.materialsWatched++;
+        updateProfileStats();
+    }
+}
+
+function changeSubscription() {
+    if (!currentUser) return;
+    
+    const modalHTML = `
+        <div class="modal" id="subscriptionModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>💳 Управление подпиской</h3>
+                    <button class="close-btn" onclick="closeModal('subscriptionModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="current-subscription">
+                        <h4>Текущий статус</h4>
+                        <div class="subscription-status-large ${currentUser.subscription.status}">
+                            <div class="status-icon">${currentUser.subscription.status === 'active' ? '✅' : currentUser.subscription.status === 'trial' ? '🆓' : '❌'}</div>
+                            <div class="status-info">
+                                <div class="status-title">${getSubscriptionStatusText(currentUser.subscription.status)}</div>
+                                ${currentUser.subscription.endDate ? `
+                                    <div class="status-date">до ${new Date(currentUser.subscription.endDate).toLocaleDateString('ru-RU')}</div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="subscription-plans">
+                        <h4>Доступные тарифы</h4>
+                        <div class="plan-card">
+                            <div class="plan-header">
+                                <div class="plan-name">1 месяц</div>
+                                <div class="plan-price">2 900 ₽</div>
+                            </div>
+                            <ul class="plan-features">
+                                <li>✅ Полный доступ к курсам</li>
+                                <li>✅ Участие в эфирах</li>
+                                <li>✅ Практические материалы</li>
+                                <li>✅ Чат специалистов</li>
+                            </ul>
+                            <button class="btn btn-primary" onclick="selectPlan(1)">Выбрать</button>
+                        </div>
+                        
+                        <div class="plan-card popular">
+                            <div class="plan-badge">Выгодно</div>
+                            <div class="plan-header">
+                                <div class="plan-name">3 месяца</div>
+                                <div class="plan-price">7 500 ₽</div>
+                                <div class="plan-save">Экономия 600 ₽</div>
+                            </div>
+                            <ul class="plan-features">
+                                <li>✅ Полный доступ к курсам</li>
+                                <li>✅ Участие в эфирах</li>
+                                <li>✅ Практические материалы</li>
+                                <li>✅ Чат специалистов</li>
+                                <li>✅ Персональный сертификат</li>
+                            </ul>
+                            <button class="btn btn-primary" onclick="selectPlan(3)">Выбрать</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function getSubscriptionStatusText(status) {
+    const statuses = {
+        'active': 'Подписка активна',
+        'trial': 'Пробный период',
+        'inactive': 'Подписка не активна'
+    };
+    return statuses[status] || status;
+}
+
+function selectPlan(months) {
+    showNotification(`🎉 Выбран тариф на ${months} месяца`);
+    closeModal('subscriptionModal');
+    
+    // Обновляем статус подписки
+    if (currentUser) {
+        currentUser.subscription = {
+            status: 'active',
+            type: `plan_${months}_months`,
+            endDate: new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000)
+        };
+        updateUIWithUserData();
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// ==================== ИНИЦИАЛИЗАЦИЯ ====================
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация навигации
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            renderPage(this.dataset.page);
         });
     });
-}
 
-function filterCatalogContent() {
-    const searchTerm = document.getElementById('catalogSearch').value.toLowerCase();
-    const contentType = document.getElementById('contentTypeFilter').value;
-    const activeTab = document.querySelector('.content-tab.active').dataset.tab;
+    // Загрузка пользователя
+    loadUserData();
 
-    document.querySelectorAll('.content-card').forEach(card => {
-        const title = card.querySelector('.content-title').textContent.toLowerCase();
-        const description = card.querySelector('.content-description').textContent.toLowerCase();
-        const cardType = card.dataset.type;
+    // Интеграция с Telegram
+    if (window.Telegram && Telegram.WebApp) {
+        Telegram.WebApp.expand();
+        Telegram.WebApp.ready();
+        
+        // Настройка интерфейса Telegram
+        Telegram.WebApp.setHeaderColor('#58b8e7');
+        Telegram.WebApp.setBackgroundColor('#ffffff');
+    }
 
-        const matchesSearch = title.includes(searchTerm) || description.includes(searchTerm);
-        const matchesType = contentType === 'all' || cardType === contentType;
-        const matchesTab = filterByTab(card, activeTab);
+    renderPage('home');
+    console.log('✅ WebApp загружен!');
+});
 
-        card.style.display = matchesSearch && matchesType && matchesTab ? 'block' : 'none';
-    });
-}
-
-function filterByTab(card, tab) {
-    // Здесь можно добавить логику фильтрации по вкладкам
-    // Например, популярные, новинки, бесплатные
-    return true; // Временная реализация
-}
+// Остальные функции остаются без изменений...
+// [Функции loadUserData, updateUIWithUserData, updateProfileStats и другие вспомогательные функции]
 
 // ==================== ФУНКЦИИ ПОЛЬЗОВАТЕЛЯ ====================
 async function loadUserData() {
