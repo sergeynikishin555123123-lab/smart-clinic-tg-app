@@ -1,10 +1,11 @@
 {
-  "name": "smart-clinic-app",
+  "name": "smart-clinic-tg-app",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "start": "node bot.js",
-    "dev": "node bot.js"
+    "dev": "node bot.js",
+    "build": "echo 'Build completed' && exit 0"
   },
   "dependencies": {
     "telegraf": "^4.16.3",
