@@ -112,6 +112,8 @@ bot.start(async (ctx) => {
   user.firstName = ctx.from.first_name;
   user.username = ctx.from.username;
 
+  console.log(`👋 Новый пользователь: ${ctx.from.first_name} (ID: ${ctx.from.id})`);
+
   // Если опрос уже пройден - показываем главное меню
   if (user.surveyCompleted) {
     await showMainMenu(ctx);
@@ -154,43 +156,72 @@ async function sendSurveyStep(ctx, userId) {
   }
 }
 
-// Обработка ответов на опрос
-bot.hears([
+// Обработка ответов на опрос (только для пользователей в процессе опроса)
+const surveyOptions = [
   "Невролог", "Ортопед", "Реабилитолог", "Физиотерапевт", 
   "Мануальный терапевт", "Спортивный врач", "Другое",
   "Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург",
   "Казань", "Нижний Новгород", "Другой город",
   "🚫 Пропустить вопрос"
-], async (ctx) => {
-  const userId = ctx.from.id;
-  const survey = userSurveys.get(userId);
-  
-  if (!survey || survey.step >= surveySteps.length) return;
+];
 
-  const currentStep = surveySteps[survey.step];
-  
-  // Сохраняем ответ (кроме "пропустить")
-  if (ctx.message.text !== '🚫 Пропустить вопрос') {
-    survey.answers[currentStep.field] = ctx.message.text;
-  }
+// Специальный обработчик для опроса
+surveyOptions.forEach(option => {
+  bot.hears(option, async (ctx) => {
+    const userId = ctx.from.id;
+    const survey = userSurveys.get(userId);
+    
+    // Проверяем, что пользователь действительно в процессе опроса
+    if (!survey || survey.step >= surveySteps.length) {
+      // Если не в опросе, игнорируем и показываем главное меню
+      await showMainMenu(ctx);
+      return;
+    }
 
-  // Переходим к следующему шагу
-  survey.step++;
-  
-  if (survey.step < surveySteps.length) {
-    await sendSurveyStep(ctx, userId);
-  } else {
-    // Опрос завершен
-    await completeSurveyAndShowMenu(ctx, userId, survey.answers);
-  }
+    const currentStep = surveySteps[survey.step];
+    
+    console.log(`📝 Ответ на опрос: ${ctx.message.text} для шага ${survey.step}`);
+
+    // Сохраняем ответ (кроме "пропустить")
+    if (ctx.message.text !== '🚫 Пропустить вопрос') {
+      survey.answers[currentStep.field] = ctx.message.text;
+    }
+
+    // Переходим к следующему шагу
+    survey.step++;
+    
+    if (survey.step < surveySteps.length) {
+      await sendSurveyStep(ctx, userId);
+    } else {
+      // Опрос завершен
+      await completeSurveyAndShowMenu(ctx, userId, survey.answers);
+    }
+  });
 });
 
-// Обработка текстовых ответов (email)
+// Обработка текстовых ответов (email) - только для пользователей в опросе
 bot.on('text', async (ctx) => {
   const userId = ctx.from.id;
   const survey = userSurveys.get(userId);
+  const messageText = ctx.message.text;
   
-  if (!survey || survey.step >= surveySteps.length) return;
+  // Пропускаем команды
+  if (messageText.startsWith('/')) return;
+  
+  // Пропускаем если это опросные кнопки (они обрабатываются выше)
+  if (surveyOptions.includes(messageText)) return;
+  
+  // Пропускаем если это основные кнопки меню
+  const mainMenuButtons = ['📱 Навигация', '🎁 Акции', '❓ Задать вопрос', '💬 Поддержка', '👤 Мой профиль', '🔄 Продлить подписку', '🔙 Назад в меню'];
+  if (mainMenuButtons.includes(messageText)) return;
+
+  // Проверяем, что пользователь в процессе опроса и это шаг с текстовым вводом
+  if (!survey || survey.step >= surveySteps.length) {
+    // Если не в опросе и не известная команда - показываем меню
+    await ctx.reply('🤔 Используйте кнопки меню для навигации');
+    await showMainMenu(ctx);
+    return;
+  }
 
   const currentStep = surveySteps[survey.step];
   
@@ -250,7 +281,11 @@ async function showMainMenu(ctx) {
     menuMessage += `⚡ <b>Вы администратор системы</b>\n\n`;
   }
   
-  menuMessage += `🕒 Пробный доступ до: ${user.subscription.endDate ? user.subscription.endDate.toLocaleDateString('ru-RU') : 'не активен'}\n\n`;
+  if (user.subscription.status === 'trial' && user.subscription.endDate) {
+    const endDate = user.subscription.endDate.toLocaleDateString('ru-RU');
+    menuMessage += `🕒 Пробный доступ до: ${endDate}\n\n`;
+  }
+  
   menuMessage += `Используйте кнопки для навигации:`;
 
   await ctx.reply(menuMessage, {
@@ -270,6 +305,9 @@ async function showMainMenu(ctx) {
 bot.hears('📱 Навигация', async (ctx) => {
   const user = getUser(ctx.from.id);
   user.stats.buttons++;
+  user.lastActivity = new Date();
+  
+  console.log(`📱 Пользователь ${user.firstName} открыл навигацию`);
   
   await ctx.reply('🎯 Открываю навигацию по Академии...', {
     reply_markup: {
@@ -283,6 +321,9 @@ bot.hears('📱 Навигация', async (ctx) => {
 bot.hears('🎁 Акции', async (ctx) => {
   const user = getUser(ctx.from.id);
   user.stats.buttons++;
+  user.lastActivity = new Date();
+  
+  console.log(`🎁 Пользователь ${user.firstName} открыл акции`);
   
   await ctx.reply(
     '🎁 <b>Текущие акции и предложения</b>\n\n' +
@@ -290,13 +331,23 @@ bot.hears('🎁 Акции', async (ctx) => {
     '💎 <b>Приведи друга</b> - получи скидку 20% на подписку\n' +
     '🎯 <b>Пакет "Профи"</b> - 3 месяца по цене 2\n\n' +
     'Подробности в приложении →',
-    { parse_mode: 'HTML' }
+    { 
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [[
+          { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
+        ]]
+      }
+    }
   );
 });
 
 bot.hears('❓ Задать вопрос', async (ctx) => {
   const user = getUser(ctx.from.id);
   user.stats.buttons++;
+  user.lastActivity = new Date();
+  
+  console.log(`❓ Пользователь ${user.firstName} открыл форму вопроса`);
   
   await ctx.reply(
     '❓ <b>Задать вопрос по обучению</b>\n\n' +
@@ -318,6 +369,9 @@ bot.hears('❓ Задать вопрос', async (ctx) => {
 bot.hears('💬 Поддержка', async (ctx) => {
   const user = getUser(ctx.from.id);
   user.stats.buttons++;
+  user.lastActivity = new Date();
+  
+  console.log(`💬 Пользователь ${user.firstName} открыл поддержку`);
   
   await ctx.reply(
     '💬 <b>Поддержка Академии АНБ</b>\n\n' +
@@ -336,6 +390,9 @@ bot.hears('💬 Поддержка', async (ctx) => {
 bot.hears('👤 Мой профиль', async (ctx) => {
   const user = getUser(ctx.from.id);
   user.stats.buttons++;
+  user.lastActivity = new Date();
+  
+  console.log(`👤 Пользователь ${user.firstName} открыл профиль`);
   
   const subscriptionStatus = user.subscription.status === 'trial' ? 
     `🆓 Пробный (до ${user.subscription.endDate.toLocaleDateString('ru-RU')})` : 
@@ -360,6 +417,9 @@ bot.hears('👤 Мой профиль', async (ctx) => {
 bot.hears('🔄 Продлить подписку', async (ctx) => {
   const user = getUser(ctx.from.id);
   user.stats.buttons++;
+  user.lastActivity = new Date();
+  
+  console.log(`💳 Пользователь ${user.firstName} открыл продление подписки`);
   
   await ctx.reply(
     '💳 <b>Продление подписки</b>\n\n' +
@@ -380,6 +440,11 @@ bot.hears('🔄 Продлить подписку', async (ctx) => {
 });
 
 bot.hears('🔙 Назад в меню', async (ctx) => {
+  const user = getUser(ctx.from.id);
+  user.lastActivity = new Date();
+  
+  console.log(`🔙 Пользователь ${user.firstName} вернулся в меню`);
+  
   await showMainMenu(ctx);
 });
 
@@ -421,6 +486,28 @@ bot.command('help', async (ctx) => {
   );
 });
 
+// Обработка неизвестных сообщений
+bot.on('text', async (ctx) => {
+  const userId = ctx.from.id;
+  const messageText = ctx.message.text;
+  
+  // Пропускаем если это команда
+  if (messageText.startsWith('/')) return;
+  
+  // Пропускаем если пользователь в процессе опроса
+  const survey = userSurveys.get(userId);
+  if (survey) return;
+  
+  // Пропускаем известные кнопки меню
+  const knownButtons = ['📱 Навигация', '🎁 Акции', '❓ Задать вопрос', '💬 Поддержка', '👤 Мой профиль', '🔄 Продлить подписку', '🔙 Назад в меню'];
+  if (knownButtons.includes(messageText)) return;
+  
+  // Для неизвестных сообщений показываем меню
+  console.log(`❓ Неизвестное сообщение от ${ctx.from.first_name}: ${messageText}`);
+  await ctx.reply('🤔 Используйте кнопки меню для навигации');
+  await showMainMenu(ctx);
+});
+
 // ==================== WEB APP SERVER ====================
 const app = express();
 app.use(express.json());
@@ -443,7 +530,8 @@ app.get('/api/user/:id', (req, res) => {
         email: user.email,
         subscription: user.subscription,
         progress: user.progress,
-        surveyCompleted: user.surveyCompleted
+        surveyCompleted: user.surveyCompleted,
+        joinedAt: user.joinedAt
       }
     });
   } else {
@@ -463,6 +551,17 @@ app.get('/api/content/:type', (req, res) => {
 
 app.get('/api/content', (req, res) => {
   res.json({ success: true, data: contentDB });
+});
+
+// API для статистики (для админа)
+app.get('/api/stats', (req, res) => {
+  const stats = {
+    totalUsers: users.size,
+    usersWithSurvey: Array.from(users.values()).filter(u => u.surveyCompleted).length,
+    activeSubscriptions: Array.from(users.values()).filter(u => u.subscription.status === 'trial' || u.subscription.status === 'active').length,
+    recentActivity: Array.from(users.values()).filter(u => Date.now() - u.lastActivity < 24 * 60 * 60 * 1000).length
+  };
+  res.json({ success: true, stats });
 });
 
 app.get('*', (req, res) => {
