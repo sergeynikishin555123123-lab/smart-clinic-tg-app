@@ -478,4 +478,88 @@ body {
     .stats-grid {
         grid-template-columns: 1fr;
     }
+
+/* Новые стили для контента */
+.content-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.content-item {
+    display: flex;
+    gap: 16px;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 2px solid #e3f2fd;
+    align-items: center;
+}
+
+.content-icon {
+    font-size: 32px;
+}
+
+.content-info {
+    flex: 1;
+}
+
+.content-title {
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #2c3e50;
+    font-size: 16px;
+}
+
+.content-description {
+    color: #6c757d;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.content-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: #58b8e7;
+}
+
+.duration, .price {
+    font-weight: 600;
+}
+
+.btn-small {
+    background: #58b8e7;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+    font-size: 16px;
+}
+
+.material-description {
+    color: #6c757d;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.material-type {
+    background: #e3f2fd;
+    color: #58b8e7;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
 }
