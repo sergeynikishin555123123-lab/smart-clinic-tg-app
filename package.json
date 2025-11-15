@@ -1,21 +1,28 @@
 {
-  "name": "smartclinic-bot",
+  "name": "smart-clinic-tg-app",
   "version": "1.0.0",
-  "description": "Telegram bot + WebApp for Smart Clinic",
-  "main": "index.js",
+  "description": "Telegram bot + WebApp for ANB Smart Clinic",
+  "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "build": "npm install"
+    "build": "npm run build:bot && npm run build:webapp",
+    "build:bot": "cd apps/bot && tsc",
+    "build:webapp": "cd apps/webapp && npm run build",
+    "dev:bot": "cd apps/bot && nodemon --exec ts-node src/index.ts",
+    "dev:webapp": "cd apps/webapp && npm run dev",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "nodemon": "^3.0.0",
+    "prisma": "^5.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
   },
   "dependencies": {
-    "telegraf": "^4.16.3",
-    "express": "^4.18.2",
-    "pg": "^8.12.0",
-    "dotenv": "^16.4.5",
-    "node-cron": "^3.0.3"
-  },
-  "engines": {
-    "node": "22.x"
+    "@prisma/client": "^5.0.0",
+    "telegraf": "^4.16.0",
+    "express": "^4.18.0"
   }
 }
