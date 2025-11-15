@@ -11,8 +11,7 @@ const BOT_TOKEN = process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoN
 const PORT = process.env.PORT || 3000;
 const WEBAPP_URL = process.env.WEBAPP_URL || `http://localhost:${PORT}`;
 
-// ЗАМЕНИТЕ НА ВАШ ТЕЛЕГРАМ ID!
-// Чтобы узнать свой ID: напишите @userinfobot в Telegram
+// ВАШ ТЕЛЕГРАМ ID
 const ADMIN_IDS = [898508164]; 
 
 console.log('🚀 Starting Smart Clinic Bot...');
@@ -43,9 +42,8 @@ const userSessions = new Map();
 
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 function isAdmin(userId) {
-  const isAdmin = ADMIN_IDS.includes(userId);
-  console.log(`🔐 Checking admin rights for ${userId}: ${isAdmin}`);
-  return isAdmin;
+  console.log(`🔐 Checking admin rights: ${userId} in [${ADMIN_IDS}] -> ${ADMIN_IDS.includes(userId)}`);
+  return ADMIN_IDS.includes(userId);
 }
 
 function getUser(id) {
@@ -116,20 +114,24 @@ bot.start(async (ctx) => {
   
   console.log(`👤 User ${ctx.from.id} started bot`);
   
-  await ctx.reply(
-    `👋 Добро пожаловать в Академию АНБ, ${ctx.from.first_name}!\n\n` +
-    `Я ваш помощник в мире профессионального развития.\n\n` +
-    `Используйте кнопки ниже для навигации:`,
-    {
-      reply_markup: {
-        keyboard: [
-          ['📱 Навигация', '🎁 Акции'],
-          ['❓ Задать вопрос', '💬 Поддержка']
-        ],
-        resize_keyboard: true
-      }
+  let welcomeMessage = `👋 Добро пожаловать в Академию АНБ, ${ctx.from.first_name}!\n\n`;
+  
+  // Проверяем админские права
+  if (isAdmin(ctx.from.id)) {
+    welcomeMessage += `⚡ Вы администратор системы\n`;
+  }
+  
+  welcomeMessage += `Я ваш помощник в мире профессионального развития.\n\nИспользуйте кнопки ниже для навигации:`;
+  
+  await ctx.reply(welcomeMessage, {
+    reply_markup: {
+      keyboard: [
+        ['📱 Навигация', '🎁 Акции'],
+        ['❓ Задать вопрос', '💬 Поддержка']
+      ],
+      resize_keyboard: true
     }
-  );
+  });
 });
 
 bot.hears('📱 Навигация', async (ctx) => {
@@ -163,16 +165,15 @@ bot.hears('💬 Поддержка', async (ctx) => {
 
 // ==================== КОМАНДЫ БОТА ====================
 bot.help(async (ctx) => {
-  await ctx.reply(
-    `🤖 Помощь по боту Академии АНБ\n\n` +
-    `Основные команды:\n` +
-    `/start - начать работу\n` +
-    `/help - показать справку\n` +
-    `/menu - показать меню\n` +
-    `/status - статус подписки\n` +
-    `/admin - панель администратора\n\n` +
-    `Используйте кнопки для навигации!`
-  );
+  let helpText = `🤖 Помощь по боту Академии АНБ\n\nОсновные команды:\n/start - начать работу\n/help - показать справку\n/menu - показать меню\n/status - статус подписки`;
+  
+  if (isAdmin(ctx.from.id)) {
+    helpText += `\n/admin - панель администратора`;
+  }
+  
+  helpText += `\n\nИспользуйте кнопки для навигации!`;
+  
+  await ctx.reply(helpText);
 });
 
 bot.command('menu', async (ctx) => {
@@ -196,24 +197,22 @@ bot.command('status', async (ctx) => {
     subscriptionText = `✅ Активна (${user.subscription.type})`;
   }
   
-  await ctx.reply(
-    `📊 Ваш статус:\n\n` +
-    `👤 Пользователь: ${user.firstName}\n` +
-    `💳 Подписка: ${subscriptionText}\n` +
-    `🎯 Уровень: ${user.progress.level}\n` +
-    `📅 Зарегистрирован: ${user.joinedAt.toLocaleDateString()}\n` +
-    `🎯 Активность: ${user.stats.buttons} действий\n\n` +
-    `📈 Общая статистика:\n` +
-    `👥 Пользователей: ${stats.totalUsers}\n` +
-    `✅ Активных сегодня: ${stats.activeToday}`
-  );
+  let statusMessage = `📊 Ваш статус:\n\n👤 Пользователь: ${user.firstName}\n💳 Подписка: ${subscriptionText}\n🎯 Уровень: ${user.progress.level}\n📅 Зарегистрирован: ${user.joinedAt.toLocaleDateString()}\n🎯 Активность: ${user.stats.buttons} действий`;
+  
+  if (isAdmin(ctx.from.id)) {
+    statusMessage += `\n\n⚡ Вы администратор системы`;
+  }
+  
+  statusMessage += `\n\n📈 Общая статистика:\n👥 Пользователей: ${stats.totalUsers}\n✅ Активных сегодня: ${stats.activeToday}`;
+  
+  await ctx.reply(statusMessage);
 });
 
 // ==================== АДМИН-ПАНЕЛЬ ====================
 bot.command('admin', async (ctx) => {
   const userId = ctx.from.id;
   
-  console.log(`🔧 User ${userId} trying to access admin panel`);
+  console.log(`🔧 User ${userId} (${ctx.from.first_name}) trying to access admin panel`);
   
   if (!isAdmin(userId)) {
     await ctx.reply('❌ У вас нет прав доступа к админ-панели');
@@ -535,8 +534,7 @@ async function startApp() {
     console.log('✅ Bot started successfully!');
     console.log('🔧 Admin commands: /admin');
     console.log('📊 Available commands: /start, /help, /menu, /status');
-    console.log(`⚠️  ВАЖНО: Замените ADMIN_IDS на ваш Telegram ID!`);
-    console.log(`📝 Текущие админы: ${ADMIN_IDS}`);
+    console.log(`⚡ Admin ID configured: ${ADMIN_IDS}`);
     console.log(`🔧 Для тестирования админ-панели используйте команду: /admin`);
 
   } catch (error) {
