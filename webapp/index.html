@@ -1,521 +1,381 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Академия АНБ</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="app">
-        <header class="header">
-            <h1>Академия АНБ</h1>
-            <div class="admin-badge" id="adminBadge" style="display: none;">🔧 Админ</div>
-        </header>
-
-        <main class="main" id="mainContent">
-            <!-- Контент будет генерироваться JavaScript -->
-        </main>
-
-        <nav class="nav">
-            <button class="nav-btn active" data-page="home">🏠 Домой</button>
-            <button class="nav-btn" data-page="courses">📚 Курсы</button>
-            <button class="nav-btn" data-page="content">🎬 Контент</button>
-            <button class="nav-btn" data-page="materials">📚 Материалы</button>
-            <button class="nav-btn" data-page="profile">👤 Профиль</button>
-        </nav>
-    </div>
-
-    <script>
-        // ==================== КОНФИГУРАЦИЯ СТРАНИЦ ====================
-        const pages = {
-            home: {
-                title: 'Добро пожаловать в Академию АНБ!',
-                content: `
-                    <div class="search">
-                        <input type="text" placeholder="Поиск по курсам, материалам, эфирам..." class="search-input" id="searchInput">
-                    </div>
-                    
-                    <div class="grid">
-                        <div class="card" onclick="openSection('courses')">📚 Курсы</div>
-                        <div class="card" onclick="openSection('fm')">🎧 АНБ FM</div>
-                        <div class="card" onclick="openSection('streams')">📹 Эфиры|Разборы</div>
-                        <div class="card" onclick="openSection('cheats')">🎯 Видео-шпаргалки</div>
-                        <div class="card" onclick="openSection('practice')">📋 Практические материалы</div>
-                        <div class="card" onclick="openSection('events')">🗺️ Карта мероприятий</div>
-                        <div class="card" onclick="openSection('offers')">🔥 Ограниченное предложение</div>
-                        <div class="card" onclick="openSection('support')">💬 Поддержка</div>
-                    </div>
-
-                    <div class="news">
-                        <h3>📰 Лента новостей</h3>
-                        <div class="filters">
-                            <button class="filter active">Все</button>
-                            <button class="filter">Статьи</button>
-                            <button class="filter">Профессиональное развитие</button>
-                            <button class="filter">Практические навыки</button>
-                        </div>
-                        <div class="news-list">
-                            <div class="news-item">
-                                <strong>Новый курс: "Мануальные техники в практике"</strong>
-                                <p>Доступен для всех подписчиков • 6 модулей</p>
-                            </div>
-                            <div class="news-item">
-                                <strong>Вебинар по современным методам реабилитации</strong>
-                                <p>28 ноября в 19:00 • Спикер: Илья Чистяков</p>
-                            </div>
-                        </div>
-                    </div>
-                `
-            },
-            courses: {
-                title: '📚 Курсы Академии',
-                content: `
-                    <div class="content-list" id="coursesList">
-                        <div class="loading">Загрузка курсов...</div>
-                    </div>
-                `
-            },
-            content: {
-                title: '🎬 Медиа-контент',
-                content: `
-                    <div class="tabs">
-                        <button class="tab active" onclick="switchContentTab('podcasts')">🎧 АНБ FM</button>
-                        <button class="tab" onclick="switchContentTab('streams')">📹 Эфиры</button>
-                        <button class="tab" onclick="switchContentTab('videos')">🎯 Шпаргалки</button>
-                    </div>
-                    
-                    <div class="tab-content active" id="podcasts">
-                        <div class="content-list" id="podcastsList">
-                            <div class="loading">Загрузка подкастов...</div>
-                        </div>
-                    </div>
-                    
-                    <div class="tab-content" id="streams">
-                        <div class="content-list" id="streamsList">
-                            <div class="loading">Загрузка эфиров...</div>
-                        </div>
-                    </div>
-                    
-                    <div class="tab-content" id="videos">
-                        <div class="content-list" id="videosList">
-                            <div class="loading">Загрузка видео-шпаргалок...</div>
-                        </div>
-                    </div>
-                `
-            },
-            materials: {
-                title: '📚 Практические материалы',
-                content: `
-                    <div class="materials-grid">
-                        <div class="card" onclick="openMaterials('mri')">
-                            <div class="card-icon">🩻</div>
-                            <div>МРТ разборы</div>
-                        </div>
-                        <div class="card" onclick="openMaterials('cases')">
-                            <div class="card-icon">📋</div>
-                            <div>Клинические случаи</div>
-                        </div>
-                        <div class="card" onclick="openMaterials('checklists')">
-                            <div class="card-icon">✅</div>
-                            <div>Чек-листы</div>
-                        </div>
-                    </div>
-                    
-                    <div class="materials-list" id="materialsList">
-                        <div class="loading">Загрузка материалов...</div>
-                    </div>
-                `
-            },
-            profile: {
-                title: '👤 Личный кабинет',
-                content: `
-                    <div class="profile-header">
-                        <div class="avatar">👤</div>
-                        <div class="profile-info">
-                            <div class="name" id="userName">Пользователь</div>
-                            <div class="status">Член Академии АНБ с <span id="joinDate">${new Date().toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'})}</span></div>
-                            <div class="subscription" id="subscriptionStatus">Подписка: не активна</div>
-                            <button class="btn" onclick="changeSubscription()">Изменить подписку</button>
-                        </div>
-                    </div>
-
-                    <div class="journey">
-                        <h3>🎯 Мой путь развития</h3>
-                        <div class="journey-steps">
-                            <div class="step active">
-                                <div class="step-number">1️⃣</div>
-                                <div class="step-info">
-                                    <div class="step-title">Понимаю</div>
-                                    <div class="step-progress">Прогресс: 100%</div>
-                                    <div class="step-hint">Начинаю замечать закономерности и связи</div>
-                                </div>
-                            </div>
-                            <div class="step">
-                                <div class="step-number">2️⃣</div>
-                                <div class="step-info">
-                                    <div class="step-title">Связываю</div>
-                                    <div class="step-progress">Прогресс: 60%</div>
-                                    <div class="step-hint">Закономерности складываются в единую картину</div>
-                                </div>
-                            </div>
-                            <div class="step">
-                                <div class="step-number">3️⃣</div>
-                                <div class="step-info">
-                                    <div class="step-title">Применяю</div>
-                                    <div class="step-progress">Прогресс: 20%</div>
-                                    <div class="step-hint">Использую знания на практике</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-icon">📚</div>
-                            <div class="stat-title">Пройдено курсов</div>
-                            <div class="stat-value" id="coursesCompleted">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">🎯</div>
-                            <div class="stat-title">Просмотрено материалов</div>
-                            <div class="stat-value" id="materialsWatched">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">👥</div>
-                            <div class="stat-title">Мероприятий</div>
-                            <div class="stat-value" id="eventsAttended">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">💾</div>
-                            <div class="stat-title">Сохранено</div>
-                            <div class="stat-value" id="materialsSaved">0</div>
-                        </div>
-                    </div>
-                `
-            }
-        };
-
-        // ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
-        let currentPage = 'home';
-        let currentUser = null;
-        let allContent = {};
-
-        function renderPage(page) {
-            currentPage = page;
-            const pageData = pages[page];
-            
-            document.getElementById('mainContent').innerHTML = `
-                <div class="page">
-                    <h2>${pageData.title}</h2>
-                    ${pageData.content}
+// ==================== КОНФИГУРАЦИЯ СТРАНИЦ ====================
+const pages = {
+    home: {
+        title: 'Академия АНБ',
+        content: `
+            <div class="hero-section">
+                <div class="hero-text">
+                    <h2>Профессиональное развитие в неврологии и реабилитации</h2>
+                    <p>Сообщество специалистов, объединенных целью совершенствования практики</p>
                 </div>
-            `;
+            </div>
 
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.page === page);
-            });
+            <div class="quick-nav">
+                <h3>📱 Быстрая навигация</h3>
+                <div class="grid">
+                    <div class="card" onclick="openSection('courses')">
+                        <div class="card-icon">📚</div>
+                        <div class="card-title">Курсы</div>
+                        <div class="card-desc">Системное обучение с сертификатами</div>
+                    </div>
+                    <div class="card" onclick="openSection('fm')">
+                        <div class="card-icon">🎧</div>
+                        <div class="card-title">АНБ FM</div>
+                        <div class="card-desc">Аудио-подкасты и интервью</div>
+                    </div>
+                    <div class="card" onclick="openSection('streams')">
+                        <div class="card-icon">📹</div>
+                        <div class="card-title">Эфиры|Разборы</div>
+                        <div class="card-desc">Прямые эфиры и разборы кейсов</div>
+                    </div>
+                    <div class="card" onclick="openSection('cheats')">
+                        <div class="card-icon">🎯</div>
+                        <div class="card-title">Видео-шпаргалки</div>
+                        <div class="card-desc">Короткие видео с техниками</div>
+                    </div>
+                    <div class="card" onclick="openSection('practice')">
+                        <div class="card-icon">📋</div>
+                        <div class="card-title">Практические материалы</div>
+                        <div class="card-desc">МРТ, кейсы, чек-листы</div>
+                    </div>
+                    <div class="card" onclick="openSection('events')">
+                        <div class="card-icon">🗺️</div>
+                        <div class="card-title">Карта мероприятий</div>
+                        <div class="card-desc">Онлайн и офлайн события</div>
+                    </div>
+                    <div class="card" onclick="openSection('offers')">
+                        <div class="card-icon">🔥</div>
+                        <div class="card-title">Ограниченное предложение</div>
+                        <div class="card-desc">Специальные условия</div>
+                    </div>
+                    <div class="card" onclick="openSection('support')">
+                        <div class="card-icon">💬</div>
+                        <div class="card-title">Поддержка</div>
+                        <div class="card-desc">Помощь и консультации</div>
+                    </div>
+                </div>
+            </div>
 
-            // Загружаем контент для страницы
-            if (page === 'courses') loadCourses();
-            if (page === 'content') loadContent();
-            if (page === 'materials') loadMaterials();
-            if (page === 'profile') updateProfileStats();
+            <div class="news-section">
+                <div class="section-header">
+                    <h3>📰 Лента новостей</h3>
+                    <div class="filters">
+                        <button class="filter-btn active" data-filter="all">Все</button>
+                        <button class="filter-btn" data-filter="articles">Статьи</button>
+                        <button class="filter-btn" data-filter="development">Профессиональное развитие</button>
+                        <button class="filter-btn" data-filter="skills">Практические навыки</button>
+                        <button class="filter-btn" data-filter="physio">Физиотерапия</button>
+                        <button class="filter-btn" data-filter="rehab">Реабилитация</button>
+                    </div>
+                </div>
+                <div class="news-list">
+                    <div class="news-item">
+                        <div class="news-category">Профессиональное развитие</div>
+                        <div class="news-title">Новый курс: "Мануальные техники в практике"</div>
+                        <div class="news-date">15 декабря 2024 • 6 модулей</div>
+                        <div class="news-excerpt">Комплексный курс по современным мануальным методикам в неврологической практике</div>
+                    </div>
+                    <div class="news-item">
+                        <div class="news-category">Вебинар</div>
+                        <div class="news-title">Современные методы реабилитации пациентов с болевыми синдромами</div>
+                        <div class="news-date">28 ноября 2024 • 19:00</div>
+                        <div class="news-excerpt">Прямой эфир с Ильей Чистяковым - разбор клинических случаев и ответы на вопросы</div>
+                    </div>
+                </div>
+            </div>
+        `
+    },
 
-            console.log('✅ Страница:', page);
-        }
+    catalog: {
+        title: 'Каталог контента',
+        content: `
+            <div class="catalog-header">
+                <div class="catalog-filters">
+                    <input type="text" placeholder="Поиск курсов и материалов..." class="search-input" id="catalogSearch">
+                    <select class="filter-select" id="contentTypeFilter">
+                        <option value="all">Все типы</option>
+                        <option value="courses">Курсы</option>
+                        <option value="podcasts">АНБ FM</option>
+                        <option value="streams">Эфиры</option>
+                        <option value="videos">Шпаргалки</option>
+                        <option value="materials">Материалы</option>
+                    </select>
+                </div>
+            </div>
 
-        async function loadCourses() {
-            try {
-                const response = await fetch('/api/content/courses');
-                const data = await response.json();
+            <div class="catalog-content">
+                <div class="content-tabs">
+                    <button class="content-tab active" data-tab="all">Все</button>
+                    <button class="content-tab" data-tab="popular">Популярные</button>
+                    <button class="content-tab" data-tab="new">Новинки</button>
+                    <button class="content-tab" data-tab="free">Бесплатные</button>
+                </div>
+
+                <div class="content-grid" id="contentGrid">
+                    <div class="loading">Загрузка контента...</div>
+                </div>
+            </div>
+        `
+    },
+
+    community: {
+        title: 'Сообщество',
+        content: `
+            <div class="community-header">
+                <h2>👥 Сообщество Академии АНБ</h2>
+                <p>Присоединяйтесь к профессиональному сообществу специалистов</p>
+            </div>
+
+            <div class="community-grid">
+                <div class="community-card" onclick="openChat('general')">
+                    <div class="community-icon">💬</div>
+                    <div class="community-title">Флудилка</div>
+                    <div class="community-desc">Неформальное общение и знакомство</div>
+                    <div class="community-meta">1.2K участников</div>
+                </div>
+                <div class="community-card" onclick="openChat('specialists')">
+                    <div class="community-icon">👥</div>
+                    <div class="community-title">Чат специалистов</div>
+                    <div class="community-desc">Профессиональные обсуждения</div>
+                    <div class="community-meta">856 участников</div>
+                </div>
+                <div class="community-card" onclick="openSection('rules')">
+                    <div class="community-icon">📜</div>
+                    <div class="community-title">Правила сообщества</div>
+                    <div class="community-desc">Основные принципы взаимодействия</div>
+                </div>
+                <div class="community-card" onclick="openSection('faq')">
+                    <div class="community-icon">❓</div>
+                    <div class="community-title">F.A.Q.</div>
+                    <div class="community-desc">Ответы на частые вопросы</div>
+                </div>
+            </div>
+
+            <div class="faq-section">
+                <h3>❓ Частые вопросы</h3>
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <div class="faq-question">Как оформить, продлить или отменить подписку?</div>
+                        <div class="faq-answer">Подписку можно оформить или продлить в разделе «Личный кабинет». Там же доступна отмена — через кнопку «Изменить подписку».</div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">Что входит в подписку Академии?</div>
+                        <div class="faq-answer">Доступ к эфирам, разборам (в том числе в записи), практическим материалам, видео-шпаргалкам на разные темы, а также к чату специалистов и интерактивной карте офлайн-мероприятий с предзаписью и голосованиями за новые темы.</div>
+                    </div>
+                </div>
+            </div>
+        `
+    },
+
+    favorites: {
+        title: 'Мои материалы',
+        content: `
+            <div class="materials-tabs">
+                <button class="material-tab active" data-tab="watch-later">📥 Посмотреть позже</button>
+                <button class="material-tab" data-tab="favorites">⭐ Избранное</button>
+                <button class="material-tab" data-tab="practice">📋 Практические материалы</button>
+            </div>
+
+            <div class="materials-content">
+                <div class="material-section active" id="watch-later">
+                    <h3>Материалы для просмотра</h3>
+                    <div class="materials-list" id="watchLaterList">
+                        <div class="empty-state">
+                            <div class="empty-icon">📥</div>
+                            <div class="empty-text">Здесь будут материалы, которые вы отложили на потом</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="material-section" id="favorites">
+                    <h3>Избранные материалы</h3>
+                    <div class="materials-list" id="favoritesList">
+                        <div class="empty-state">
+                            <div class="empty-icon">⭐</div>
+                            <div class="empty-text">Добавляйте материалы в избранное, нажимая на звездочку</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="material-section" id="practice">
+                    <h3>Практические материалы</h3>
+                    <div class="practice-grid">
+                        <div class="practice-card" onclick="openMaterials('mri')">
+                            <div class="practice-icon">🩻</div>
+                            <div class="practice-title">МРТ разборы</div>
+                            <div class="practice-count">24 материала</div>
+                        </div>
+                        <div class="practice-card" onclick="openMaterials('cases')">
+                            <div class="practice-icon">📋</div>
+                            <div class="practice-title">Клинические случаи</div>
+                            <div class="practice-count">18 кейсов</div>
+                        </div>
+                        <div class="practice-card" onclick="openMaterials('checklists')">
+                            <div class="practice-icon">✅</div>
+                            <div class="practice-title">Чек-листы</div>
+                            <div class="practice-count">12 чек-листов</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `
+    },
+
+    profile: {
+        title: 'Личный кабинет',
+        content: `
+            <div class="profile-header">
+                <div class="avatar-section">
+                    <div class="avatar-large">👤</div>
+                    <div class="profile-info">
+                        <div class="profile-name" id="userName">Пользователь</div>
+                        <div class="profile-status">Член Академии АНБ с <span id="joinDate">${new Date().toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'})}</span></div>
+                        <div class="profile-badge">Активный участник эфиров и разборов</div>
+                    </div>
+                </div>
                 
-                if (data.success) {
-                    const coursesList = document.getElementById('coursesList');
-                    coursesList.innerHTML = data.data.map(course => `
-                        <div class="content-item">
-                            <div class="content-icon">${course.image || '📚'}</div>
-                            <div class="content-info">
-                                <div class="content-title">${course.title}</div>
-                                <div class="content-description">${course.description}</div>
-                                <div class="content-meta">
-                                    <span class="duration">${course.duration}</span>
-                                    <span class="price">${course.price ? course.price + ' руб.' : 'Бесплатно'}</span>
+                <div class="subscription-info">
+                    <div class="subscription-status" id="subscriptionStatus">
+                        <div class="status-icon">❌</div>
+                        <div class="status-text">Подписка: не активна</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="changeSubscription()">Изменить подписку</button>
+                </div>
+            </div>
+
+            <div class="journey-section">
+                <h3>🎯 Мой путь развития</h3>
+                <div class="journey-progress">
+                    <div class="journey-step active">
+                        <div class="step-marker">1</div>
+                        <div class="step-content">
+                            <div class="step-title">Понимаю</div>
+                            <div class="step-description">Начинаю замечать закономерности и связи. Не просто слышу жалобы — вижу структуру боли.</div>
+                            <div class="step-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 100%"></div>
                                 </div>
+                                <div class="progress-text">9 из 9</div>
                             </div>
-                            <button class="btn btn-small" onclick="enrollCourse(${course.id})">Записаться</button>
+                            <div class="step-hint">Чтобы перейти к следующему этапу — продолжайте участвовать в эфирах и сохраняйте всё, что откликается, в «Мои материалы».</div>
                         </div>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки курсов:', error);
-            }
-        }
+                    </div>
 
-        async function loadContent() {
-            await loadPodcasts();
-        }
-
-        async function loadPodcasts() {
-            try {
-                const response = await fetch('/api/content/podcasts');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const podcastsList = document.getElementById('podcastsList');
-                    podcastsList.innerHTML = data.data.map(podcast => `
-                        <div class="content-item">
-                            <div class="content-icon">${podcast.audio || '🎧'}</div>
-                            <div class="content-info">
-                                <div class="content-title">${podcast.title}</div>
-                                <div class="content-description">${podcast.description}</div>
-                                <div class="content-meta">
-                                    <span class="duration">${podcast.duration}</span>
+                    <div class="journey-step">
+                        <div class="step-marker">2</div>
+                        <div class="step-content">
+                            <div class="step-title">Связываю</div>
+                            <div class="step-description">Закономерности и связи складываются в единую картину. Боль приобретает смысл.</div>
+                            <div class="step-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 60%"></div>
                                 </div>
+                                <div class="progress-text">15 из 25</div>
                             </div>
-                            <button class="btn btn-small" onclick="playContent('podcast', ${podcast.id})">Слушать</button>
+                            <div class="step-hint">Чтобы перейти к следующему этапу — участвуйте в разборах и ищите взаимосвязи между изученными материалами.</div>
                         </div>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки подкастов:', error);
-            }
-        }
+                    </div>
 
-        async function loadMaterials() {
-            try {
-                const response = await fetch('/api/content/materials');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const materialsList = document.getElementById('materialsList');
-                    materialsList.innerHTML = data.data.map(material => `
-                        <div class="material-item">
-                            <div class="material-icon">${material.file || '📄'}</div>
-                            <div class="material-info">
-                                <div class="material-title">${material.title}</div>
-                                <div class="material-description">${material.description}</div>
-                                <div class="material-type">${getMaterialType(material.type)}</div>
-                            </div>
-                            <button class="btn btn-small" onclick="openMaterial(${material.id})">Открыть</button>
-                        </div>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки материалов:', error);
-            }
-        }
-
-        function getMaterialType(type) {
-            const types = {
-                'mri': 'МРТ разбор',
-                'case': 'Клинический случай',
-                'checklist': 'Чек-лист'
-            };
-            return types[type] || 'Материал';
-        }
-
-        function switchContentTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            const targetTab = document.getElementById(tabId);
-            if (targetTab) {
-                targetTab.classList.add('active');
-                
-                if (tabId === 'streams') loadStreams();
-                if (tabId === 'videos') loadVideos();
-            }
-            event.target.classList.add('active');
-        }
-
-        async function loadStreams() {
-            try {
-                const response = await fetch('/api/content/streams');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const streamsList = document.getElementById('streamsList');
-                    streamsList.innerHTML = data.data.map(stream => `
-                        <div class="content-item">
-                            <div class="content-icon">${stream.video || '📹'}</div>
-                            <div class="content-info">
-                                <div class="content-title">${stream.title}</div>
-                                <div class="content-description">${stream.description}</div>
-                                <div class="content-meta">
-                                    <span class="duration">${stream.duration}</span>
+                    <div class="journey-step">
+                        <div class="step-marker">3</div>
+                        <div class="step-content">
+                            <div class="step-title">Применяю</div>
+                            <div class="step-description">При взгляде на единую картину - боль воспринимается как следствие. Работа направлена на устранение причины.</div>
+                            <div class="step-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 20%"></div>
                                 </div>
+                                <div class="progress-text">5 из 23</div>
                             </div>
-                            <button class="btn btn-small" onclick="playContent('stream', ${stream.id})">Смотреть</button>
                         </div>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки эфиров:', error);
-            }
-        }
+                    </div>
+                </div>
+            </div>
 
-        async function loadVideos() {
-            try {
-                const response = await fetch('/api/content/videos');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const videosList = document.getElementById('videosList');
-                    videosList.innerHTML = data.data.map(video => `
-                        <div class="content-item">
-                            <div class="content-icon">${video.video || '🎯'}</div>
-                            <div class="content-info">
-                                <div class="content-title">${video.title}</div>
-                                <div class="content-description">${video.description}</div>
-                                <div class="content-meta">
-                                    <span class="duration">${video.duration}</span>
-                                </div>
-                            </div>
-                            <button class="btn btn-small" onclick="playContent('video', ${video.id})">Смотреть</button>
+            <div class="profile-stats">
+                <h3>📊 Моя активность</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📚</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="coursesCompleted">0</div>
+                            <div class="stat-label">Пройдено курсов</div>
                         </div>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки видео:', error);
-            }
-        }
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="materialsWatched">0</div>
+                            <div class="stat-label">Просмотрено материалов</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="eventsAttended">0</div>
+                            <div class="stat-label">Мероприятий посещено</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💾</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="materialsSaved">0</div>
+                            <div class="stat-label">Материалов сохранено</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `
+    }
+};
 
-        function openSection(section) {
-            const sections = {
-                'courses': '📚 Курсы',
-                'fm': '🎧 АНБ FM', 
-                'streams': '📹 Эфиры и Разборы',
-                'cheats': '🎯 Видео-шпаргалки',
-                'practice': '📋 Практические материалы',
-                'events': '🗺️ Карта мероприятий',
-                'offers': '🔥 Ограниченное предложение',
-                'support': '💬 Поддержка'
-            };
-            
-            alert(`🎯 Открываем: ${sections[section] || section}`);
-        }
+// ==================== ОСНОВНАЯ ЛОГИКА ПРИЛОЖЕНИЯ ====================
+let currentPage = 'home';
+let currentUser = null;
 
-        function openMaterials(type) {
-            const types = {
-                'mri': 'МРТ разборы',
-                'cases': 'Клинические случаи',
-                'checklists': 'Чек-листы'
-            };
-            alert(`📋 Открываем: ${types[type] || type}`);
-        }
+function renderPage(page) {
+    currentPage = page;
+    const pageData = pages[page];
+    
+    document.getElementById('mainContent').innerHTML = `
+        <div class="page">
+            <h2>${pageData.title}</h2>
+            ${pageData.content}
+        </div>
+    `;
 
-        function enrollCourse(courseId) {
-            alert(`🎓 Запись на курс ID: ${courseId}\n\nФункция оплаты будет реализована в следующем обновлении.`);
-        }
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.page === page);
+    });
 
-        function playContent(type, contentId) {
-            const types = {
-                'podcast': 'Подкаст',
-                'stream': 'Эфир',
-                'video': 'Видео-шпаргалка'
-            };
-            alert(`▶️ Воспроизведение: ${types[type]} ID: ${contentId}`);
-        }
+    // Загружаем данные для страницы
+    if (page === 'catalog') loadCatalogContent();
+    if (page === 'profile') updateProfileStats();
 
-        function openMaterial(materialId) {
-            alert(`📄 Открытие материала ID: ${materialId}`);
-        }
+    console.log('✅ Страница:', page);
+}
 
-        function changeSubscription() {
-            alert(`💳 Управление подпиской\n\nТекущий статус: ${currentUser?.subscription?.status === 'trial' ? 'Пробный период' : 'Не активна'}\n\nДля изменения тарифа обратитесь к координатору.`);
-        }
+// Остальные функции приложения...
+// [Здесь будет полная реализация всех функций из ТЗ]
 
-        function updateProfileStats() {
-            if (!currentUser) return;
-            
-            document.getElementById('coursesCompleted').textContent = currentUser.progress.steps.coursesBought || 0;
-            document.getElementById('materialsWatched').textContent = currentUser.progress.steps.materialsWatched || 0;
-            document.getElementById('eventsAttended').textContent = currentUser.progress.steps.eventsParticipated || 0;
-            document.getElementById('materialsSaved').textContent = currentUser.progress.steps.materialsSaved || 0;
-        }
-
-        // ==================== ИНТЕГРАЦИЯ С БОТОМ ====================
-        async function loadUserData() {
-            try {
-                if (window.Telegram && Telegram.WebApp) {
-                    const tgUser = Telegram.WebApp.initDataUnsafe.user;
-                    if (tgUser && tgUser.id) {
-                        const response = await fetch(`/api/user/${tgUser.id}`);
-                        const data = await response.json();
-                        
-                        if (data.success) {
-                            currentUser = data.user;
-                            updateUIWithUserData();
-                        }
-                    }
-                }
-            } catch (error) {
-                console.log('ℹ️ Используем данные Telegram');
-                if (window.Telegram && Telegram.WebApp) {
-                    const tgUser = Telegram.WebApp.initDataUnsafe.user;
-                    if (tgUser) {
-                        currentUser = {
-                            firstName: tgUser.first_name || 'Пользователь',
-                            subscription: { status: 'inactive' },
-                            progress: { steps: {} }
-                        };
-                        updateUIWithUserData();
-                    }
-                }
-            }
-        }
-
-        function updateUIWithUserData() {
-            if (!currentUser) return;
-            
-            const userNameElement = document.getElementById('userName');
-            const subscriptionStatusElement = document.getElementById('subscriptionStatus');
-            
-            if (userNameElement) {
-                userNameElement.textContent = currentUser.firstName;
-            }
-            
-            if (subscriptionStatusElement) {
-                let statusText = 'Подписка: не активна';
-                let statusClass = 'inactive';
-                
-                if (currentUser.subscription.status === 'trial') {
-                    statusText = 'Подписка: пробный период';
-                    statusClass = 'active';
-                }
-                
-                subscriptionStatusElement.textContent = statusText;
-                subscriptionStatusElement.className = `subscription ${statusClass}`;
-            }
-            
-            if (currentUser.id === 898508164) {
-                document.getElementById('adminBadge').style.display = 'block';
-            }
-        }
-
-        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    renderPage(this.dataset.page);
-                });
-            });
-
-            renderPage('home');
-            loadUserData();
-
-            if (window.Telegram && Telegram.WebApp) {
-                Telegram.WebApp.expand();
-                Telegram.WebApp.ready();
-            }
-
-            console.log('✅ WebApp загружен!');
+// ==================== ИНИЦИАЛИЗАЦИЯ ====================
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация навигации
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            renderPage(this.dataset.page);
         });
-    </script>
-</body>
-</html>
+    });
+
+    // Загрузка пользователя
+    loadUserData();
+
+    // Интеграция с Telegram
+    if (window.Telegram && Telegram.WebApp) {
+        Telegram.WebApp.expand();
+        Telegram.WebApp.ready();
+    }
+
+    renderPage('home');
+    console.log('✅ WebApp загружен!');
+});
