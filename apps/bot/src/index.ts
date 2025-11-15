@@ -42,7 +42,7 @@ let buttonConfigs: Record<string, { text: string; reply: string }> = {
 };
 
 // Список админов - ЗАМЕНИТЕ НА ВАШ REAL TELEGRAM ID
-const ADMIN_IDS = [123456789]; // TODO: ЗАМЕНИТЕ на ваш реальный ID!
+const ADMIN_IDS = [898508164]; // TODO: ЗАМЕНИТЕ на ваш реальный ID!
 
 // Функция проверки прав админа
 function isAdmin(userId: number): boolean {
