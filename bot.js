@@ -1,4 +1,4 @@
-import { Telegraf } from 'telegraf';
+import { Telegraf, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -15,8 +15,9 @@ const ADMIN_IDS = [898508164];
 
 console.log('🚀 Starting Smart Clinic Bot...');
 
-// ==================== БАЗА ДАННЫХ ====================
+// ==================== БАЗА ДАННЫХ В ПАМЯТИ ====================
 const users = new Map();
+const userSurveys = new Map();
 const contentDB = {
   courses: [],
   podcasts: [],
@@ -26,64 +27,251 @@ const contentDB = {
   events: []
 };
 
-const buttonConfigs = {
-  navigation: { text: '📱 Навигация', reply: 'Открываю навигацию...' },
-  promotions: { text: '🎁 Акции', reply: '🎁 Раздел акций в разработке!' },
-  question: { text: '❓ Задать вопрос', reply: '❓ Напишите @academy_anb' },
-  support: { text: '💬 Поддержка', reply: '💬 Координатор: @academy_anb' }
-};
-
-const userSessions = new Map();
-
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 function isAdmin(userId) {
-  return userId === ADMIN_IDS[0];
+  return ADMIN_IDS.includes(userId);
 }
 
 function getUser(id) {
   if (!users.has(id)) {
     users.set(id, {
-      id, firstName: 'User', joinedAt: new Date(), lastActivity: new Date(),
-      stats: { commands: 0, buttons: 0 },
-      subscription: { status: 'inactive', type: 'none' },
-      progress: { level: 'Понимаю', steps: {} }
+      id,
+      firstName: 'User',
+      username: '',
+      joinedAt: new Date(),
+      lastActivity: new Date(),
+      surveyCompleted: false,
+      specialization: '',
+      city: '',
+      email: '',
+      subscription: { 
+        status: 'inactive', 
+        type: 'none',
+        endDate: null 
+      },
+      progress: { 
+        level: 'Понимаю', 
+        steps: {
+          materialsWatched: 0,
+          eventsParticipated: 0,
+          materialsSaved: 0,
+          coursesBought: 0
+        }
+      },
+      stats: { commands: 0, buttons: 0 }
     });
   }
   return users.get(id);
 }
 
+function completeSurvey(userId) {
+  const user = getUser(userId);
+  user.surveyCompleted = true;
+  user.lastActivity = new Date();
+  
+  // Даем пробный доступ после опроса
+  user.subscription = {
+    status: 'trial',
+    type: 'trial_7days',
+    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+  };
+}
+
+// ==================== ОПРОС НОВЫХ ПОЛЬЗОВАТЕЛЕЙ ====================
+const surveySteps = [
+  {
+    question: "🎯 Ваша специализация:",
+    options: [
+      "Невролог", "Ортопед", "Реабилитолог", "Физиотерапевт",
+      "Мануальный терапевт", "Спортивный врач", "Другое"
+    ],
+    field: 'specialization'
+  },
+  {
+    question: "🏙️ Ваш город:",
+    options: [
+      "Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург",
+      "Казань", "Нижний Новгород", "Другой город"
+    ],
+    field: 'city'
+  },
+  {
+    question: "📧 Ваш e-mail для доступа к материалам:",
+    field: 'email',
+    isTextInput: true
+  }
+];
+
 // ==================== ТЕЛЕГРАМ БОТ ====================
 const bot = new Telegraf(BOT_TOKEN);
 
-// ==================== ОСНОВНЫЕ КОМАНДЫ ====================
+// ==================== ОБРАБОТЧИК /start С ОПРОСОМ ====================
 bot.start(async (ctx) => {
   const user = getUser(ctx.from.id);
   user.stats.commands++;
   user.firstName = ctx.from.first_name;
+  user.username = ctx.from.username;
+
+  // Если опрос уже пройден - показываем главное меню
+  if (user.surveyCompleted) {
+    await showMainMenu(ctx);
+    return;
+  }
+
+  // Начинаем опрос для новых пользователей
+  userSurveys.set(ctx.from.id, {
+    step: 0,
+    answers: {}
+  });
+
+  await sendSurveyStep(ctx, ctx.from.id);
+});
+
+// Функция отправки шага опроса
+async function sendSurveyStep(ctx, userId) {
+  const survey = userSurveys.get(userId);
+  if (!survey || survey.step >= surveySteps.length) return;
+
+  const currentStep = surveySteps[survey.step];
   
-  let welcomeMessage = `👋 Добро пожаловать в Академию АНБ, ${ctx.from.first_name}!\n\n`;
+  if (currentStep.isTextInput) {
+    await ctx.reply(
+      `📝 ${currentStep.question}\n\n` +
+      `Пожалуйста, введите ваш ответ текстом:`,
+      Markup.removeKeyboard()
+    );
+  } else {
+    const buttons = currentStep.options.map(option => [option]);
+    buttons.push(['🚫 Пропустить вопрос']);
+    
+    await ctx.reply(
+      `📝 ${currentStep.question}\n\n` +
+      `Выберите вариант ответа:`,
+      Markup.keyboard(buttons)
+        .resize()
+        .oneTime()
+    );
+  }
+}
+
+// Обработка ответов на опрос
+bot.hears([
+  "Невролог", "Ортопед", "Реабилитолог", "Физиотерапевт", 
+  "Мануальный терапевт", "Спортивный врач", "Другое",
+  "Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург",
+  "Казань", "Нижний Новгород", "Другой город",
+  "🚫 Пропустить вопрос"
+], async (ctx) => {
+  const userId = ctx.from.id;
+  const survey = userSurveys.get(userId);
+  
+  if (!survey || survey.step >= surveySteps.length) return;
+
+  const currentStep = surveySteps[survey.step];
+  
+  // Сохраняем ответ (кроме "пропустить")
+  if (ctx.message.text !== '🚫 Пропустить вопрос') {
+    survey.answers[currentStep.field] = ctx.message.text;
+  }
+
+  // Переходим к следующему шагу
+  survey.step++;
+  
+  if (survey.step < surveySteps.length) {
+    await sendSurveyStep(ctx, userId);
+  } else {
+    // Опрос завершен
+    await completeSurveyAndShowMenu(ctx, userId, survey.answers);
+  }
+});
+
+// Обработка текстовых ответов (email)
+bot.on('text', async (ctx) => {
+  const userId = ctx.from.id;
+  const survey = userSurveys.get(userId);
+  
+  if (!survey || survey.step >= surveySteps.length) return;
+
+  const currentStep = surveySteps[survey.step];
+  
+  // Проверяем, что это шаг с текстовым вводом (email)
+  if (currentStep.isTextInput) {
+    const answer = ctx.message.text;
+    
+    // Простая валидация email
+    if (currentStep.field === 'email' && !answer.includes('@')) {
+      await ctx.reply('❌ Пожалуйста, введите корректный email адрес:');
+      return;
+    }
+    
+    survey.answers[currentStep.field] = answer;
+    survey.step++;
+    
+    if (survey.step < surveySteps.length) {
+      await sendSurveyStep(ctx, userId);
+    } else {
+      await completeSurveyAndShowMenu(ctx, userId, survey.answers);
+    }
+  }
+});
+
+// Завершение опроса и показ главного меню
+async function completeSurveyAndShowMenu(ctx, userId, answers) {
+  const user = getUser(userId);
+  
+  // Сохраняем ответы в профиль пользователя
+  user.specialization = answers.specialization || 'Не указано';
+  user.city = answers.city || 'Не указан';
+  user.email = answers.email || 'Не указан';
+  
+  completeSurvey(userId);
+  userSurveys.delete(userId);
+
+  await ctx.reply(
+    `🎉 Спасибо за прохождение опроса, ${user.firstName}!\n\n` +
+    `✅ Ваш профиль создан:\n` +
+    `🎯 Специализация: ${user.specialization}\n` +
+    `🏙️ Город: ${user.city}\n` +
+    `📧 Email: ${user.email}\n\n` +
+    `🎁 Вам предоставлен пробный доступ на 7 дней!`,
+    Markup.removeKeyboard()
+  );
+
+  await showMainMenu(ctx);
+}
+
+// ==================== ГЛАВНОЕ МЕНЮ ====================
+async function showMainMenu(ctx) {
+  const user = getUser(ctx.from.id);
+  
+  let menuMessage = `👋 Добро пожаловать в Академию АНБ, ${user.firstName}!\n\n`;
   
   if (isAdmin(ctx.from.id)) {
-    welcomeMessage += `⚡ <b>Вы администратор системы</b>\n\n`;
+    menuMessage += `⚡ <b>Вы администратор системы</b>\n\n`;
   }
   
-  welcomeMessage += `Используйте кнопки для навигации:`;
-  
-  await ctx.reply(welcomeMessage, {
+  menuMessage += `🕒 Пробный доступ до: ${user.subscription.endDate ? user.subscription.endDate.toLocaleDateString('ru-RU') : 'не активен'}\n\n`;
+  menuMessage += `Используйте кнопки для навигации:`;
+
+  await ctx.reply(menuMessage, {
     parse_mode: 'HTML',
     reply_markup: {
       keyboard: [
         ['📱 Навигация', '🎁 Акции'],
-        ['❓ Задать вопрос', '💬 Поддержка']
+        ['❓ Задать вопрос', '💬 Поддержка'],
+        ['👤 Мой профиль', '🔄 Продлить подписку']
       ],
       resize_keyboard: true
     }
   });
-});
+}
 
-// Основные обработчики кнопок
+// ==================== ОСНОВНЫЕ ОБРАБОТЧИКИ КНОПОК ====================
 bot.hears('📱 Навигация', async (ctx) => {
-  await ctx.reply(buttonConfigs.navigation.reply, {
+  const user = getUser(ctx.from.id);
+  user.stats.buttons++;
+  
+  await ctx.reply('🎯 Открываю навигацию по Академии...', {
     reply_markup: {
       inline_keyboard: [[
         { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
@@ -92,273 +280,191 @@ bot.hears('📱 Навигация', async (ctx) => {
   });
 });
 
-bot.hears('🎁 Акции', async (ctx) => await ctx.reply(buttonConfigs.promotions.reply));
-bot.hears('❓ Задать вопрос', async (ctx) => await ctx.reply(buttonConfigs.question.reply));
-bot.hears('💬 Поддержка', async (ctx) => await ctx.reply(buttonConfigs.support.reply));
-
-// ==================== АДМИН-ПАНЕЛЬ ====================
-bot.command('admin', async (ctx) => {
-  if (!isAdmin(ctx.from.id)) {
-    await ctx.reply('❌ Нет прав доступа');
-    return;
-  }
-
-  await ctx.reply('🔧 <b>Панель администратора</b>', {
-    parse_mode: 'HTML',
-    reply_markup: {
-      keyboard: [
-        ['📊 Статистика', '✏️ Редактировать кнопки'],
-        ['📝 Управление контентом', '👥 Пользователи'],
-        ['🔙 В главное меню']
-      ],
-      resize_keyboard: true
-    }
-  });
-});
-
-// Управление контентом
-bot.hears('📝 Управление контентом', async (ctx) => {
-  if (!isAdmin(ctx.from.id)) return;
-
-  await ctx.reply('📝 <b>Управление контентом</b>\n\nВыберите раздел для управления:', {
-    parse_mode: 'HTML',
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: '📚 Курсы', callback_data: 'manage_courses' },
-          { text: '🎧 АНБ FM', callback_data: 'manage_podcasts' }
-        ],
-        [
-          { text: '📹 Эфиры', callback_data: 'manage_streams' },
-          { text: '🎯 Шпаргалки', callback_data: 'manage_videos' }
-        ],
-        [
-          { text: '📋 Материалы', callback_data: 'manage_materials' },
-          { text: '🗺️ Мероприятия', callback_data: 'manage_events' }
-        ]
-      ]
-    }
-  });
-});
-
-// Обработчики управления контентом
-bot.action(/manage_(.+)/, async (ctx) => {
-  if (!isAdmin(ctx.from.id)) {
-    await ctx.answerCbQuery('❌ Нет прав доступа');
-    return;
-  }
-
-  const contentType = ctx.match[1];
-  const contentTypes = {
-    courses: 'курсы', podcasts: 'подкасты', streams: 'эфиры', 
-    videos: 'видео-шпаргалки', materials: 'материалы', events: 'мероприятия'
-  };
-
-  userSessions.set(ctx.from.id, { managing: contentType });
-
-  await ctx.editMessageText(
-    `📝 <b>Управление ${contentTypes[contentType]}</b>\n\n` +
-    `Выберите действие:`,
-    {
-      parse_mode: 'HTML',
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: '➕ Добавить', callback_data: `add_${contentType}` },
-            { text: '📋 Список', callback_data: `list_${contentType}` }
-          ],
-          [
-            { text: '🔙 Назад', callback_data: 'back_to_content_manage' }
-          ]
-        ]
-      }
-    }
-  );
+bot.hears('🎁 Акции', async (ctx) => {
+  const user = getUser(ctx.from.id);
+  user.stats.buttons++;
   
-  await ctx.answerCbQuery();
+  await ctx.reply(
+    '🎁 <b>Текущие акции и предложения</b>\n\n' +
+    '🔥 <b>Пробный период</b> - 7 дней бесплатного доступа\n' +
+    '💎 <b>Приведи друга</b> - получи скидку 20% на подписку\n' +
+    '🎯 <b>Пакет "Профи"</b> - 3 месяца по цене 2\n\n' +
+    'Подробности в приложении →',
+    { parse_mode: 'HTML' }
+  );
 });
 
-// Добавление контента
-bot.action(/add_(.+)/, async (ctx) => {
-  if (!isAdmin(ctx.from.id)) {
-    await ctx.answerCbQuery('❌ Нет прав доступа');
-    return;
-  }
-
-  const contentType = ctx.match[1];
-  userSessions.set(ctx.from.id, { adding: contentType, step: 'title' });
-
-  const contentNames = {
-    courses: 'курс', podcasts: 'подкаст', streams: 'эфир', 
-    videos: 'видео-шпаргалку', materials: 'материал', events: 'мероприятие'
-  };
-
-  await ctx.editMessageText(
-    `➕ <b>Добавление ${contentNames[contentType]}</b>\n\n` +
-    `Шаг 1/3: Введите название:`,
-    {
+bot.hears('❓ Задать вопрос', async (ctx) => {
+  const user = getUser(ctx.from.id);
+  user.stats.buttons++;
+  
+  await ctx.reply(
+    '❓ <b>Задать вопрос по обучению</b>\n\n' +
+    'Пожалуйста, опишите ваш вопрос:\n' +
+    '• Тема вопроса\n' + 
+    '• Связанный курс (если есть)\n' +
+    '• Подробное описание\n\n' +
+    'Отправьте сообщение с вашим вопросом, и мы ответим в течение 24 часов.',
+    { 
       parse_mode: 'HTML',
       reply_markup: {
-        inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'cancel_add' }]]
+        keyboard: [[ '🔙 Назад в меню' ]],
+        resize_keyboard: true
       }
     }
   );
 });
 
-// Просмотр списка контента
-bot.action(/list_(.+)/, async (ctx) => {
-  if (!isAdmin(ctx.from.id)) {
-    await ctx.answerCbQuery('❌ Нет прав доступа');
-    return;
-  }
-
-  const contentType = ctx.match[1];
-  const content = contentDB[contentType];
-  const contentNames = {
-    courses: 'Курсы', podcasts: 'Подкасты', streams: 'Эфиры',
-    videos: 'Видео-шпаргалки', materials: 'Материалы', events: 'Мероприятия'
-  };
-
-  let message = `📋 <b>${contentNames[contentType]}</b>\n\n`;
+bot.hears('💬 Поддержка', async (ctx) => {
+  const user = getUser(ctx.from.id);
+  user.stats.buttons++;
   
-  if (content.length === 0) {
-    message += 'Пока нет добавленного контента';
-  } else {
-    content.forEach((item, index) => {
-      message += `${index + 1}. <b>${item.title}</b>\n`;
-      if (item.description) message += `   ${item.description.substring(0, 50)}...\n`;
-      message += '\n';
-    });
-  }
+  await ctx.reply(
+    '💬 <b>Поддержка Академии АНБ</b>\n\n' +
+    '📞 Координатор проекта: @academy_anb\n' +
+    '⏰ Часы работы: ПН-ПТ с 11:00 до 19:00\n' +
+    '📧 Email: academy@anb.ru\n\n' +
+    'Мы поможем с:\n' +
+    '• Техническими вопросами\n' +
+    '• Оплатой и подписками\n' +
+    '• Доступом к материалам\n' +
+    '• Любыми другими вопросами',
+    { parse_mode: 'HTML' }
+  );
+});
 
-  await ctx.editMessageText(message, {
-    parse_mode: 'HTML',
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: '➕ Добавить новый', callback_data: `add_${contentType}` }],
-        [{ text: '🔙 Назад', callback_data: 'back_to_content_manage' }]
-      ]
+bot.hears('👤 Мой профиль', async (ctx) => {
+  const user = getUser(ctx.from.id);
+  user.stats.buttons++;
+  
+  const subscriptionStatus = user.subscription.status === 'trial' ? 
+    `🆓 Пробный (до ${user.subscription.endDate.toLocaleDateString('ru-RU')})` : 
+    '❌ Не активна';
+  
+  await ctx.reply(
+    `👤 <b>Ваш профиль</b>\n\n` +
+    `👨‍⚕️ Имя: ${user.firstName}\n` +
+    `🎯 Специализация: ${user.specialization}\n` +
+    `🏙️ Город: ${user.city}\n` +
+    `📧 Email: ${user.email}\n` +
+    `💳 Подписка: ${subscriptionStatus}\n` +
+    `🎯 Уровень: ${user.progress.level}\n\n` +
+    `📊 Активность:\n` +
+    `• Материалов просмотрено: ${user.progress.steps.materialsWatched}\n` +
+    `• Мероприятий посещено: ${user.progress.steps.eventsParticipated}\n` +
+    `• Материалов сохранено: ${user.progress.steps.materialsSaved}`,
+    { parse_mode: 'HTML' }
+  );
+});
+
+bot.hears('🔄 Продлить подписку', async (ctx) => {
+  const user = getUser(ctx.from.id);
+  user.stats.buttons++;
+  
+  await ctx.reply(
+    '💳 <b>Продление подписки</b>\n\n' +
+    'Доступные тарифы:\n\n' +
+    '🟢 <b>1 месяц</b> - 2 900 руб.\n' +
+    '🔵 <b>3 месяца</b> - 7 500 руб. (экономьте 600 руб.)\n' +
+    '🟣 <b>12 месяцев</b> - 24 000 руб. (экономьте 10 800 руб.)\n\n' +
+    'Для оформления подписки откройте приложение:',
+    {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [[
+          { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
+        ]]
+      }
     }
-  });
+  );
 });
 
-// Навигация назад
-bot.action('back_to_content_manage', async (ctx) => {
-  if (!isAdmin(ctx.from.id)) return;
-
-  await ctx.editMessageText('📝 <b>Управление контентом</b>\n\nВыберите раздел для управления:', {
-    parse_mode: 'HTML',
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: '📚 Курсы', callback_data: 'manage_courses' },
-          { text: '🎧 АНБ FM', callback_data: 'manage_podcasts' }
-        ],
-        [
-          { text: '📹 Эфиры', callback_data: 'manage_streams' },
-          { text: '🎯 Шпаргалки', callback_data: 'manage_videos' }
-        ],
-        [
-          { text: '📋 Материалы', callback_data: 'manage_materials' },
-          { text: '🗺️ Мероприятия', callback_data: 'manage_events' }
-        ]
-      ]
-    }
-  });
+bot.hears('🔙 Назад в меню', async (ctx) => {
+  await showMainMenu(ctx);
 });
 
-bot.action('cancel_add', async (ctx) => {
-  const userId = ctx.from.id;
-  userSessions.delete(userId);
-  await ctx.editMessageText('❌ Добавление отменено');
+// ==================== КОМАНДЫ БОТА ====================
+bot.command('menu', async (ctx) => {
+  await showMainMenu(ctx);
 });
 
-// ==================== ОБРАБОТКА СООБЩЕНИЙ ДЛЯ ДОБАВЛЕНИЯ КОНТЕНТА ====================
-bot.on('message', async (ctx) => {
-  const userId = ctx.from.id;
-  const session = userSessions.get(userId);
-  const message = ctx.message;
-
-  if (!session || !isAdmin(userId)) return;
-
-  // Обработка добавления контента
-  if (session.adding) {
-    const contentType = session.adding;
-
-    if (session.step === 'title') {
-      // Сохраняем название
-      session.title = message.text;
-      session.step = 'description';
-      
-      await ctx.reply('📝 <b>Шаг 2/3:</b> Введите описание:', { parse_mode: 'HTML' });
-    
-    } else if (session.step === 'description') {
-      // Сохраняем описание
-      session.description = message.text;
-      session.step = 'photo';
-      
-      await ctx.reply('🖼️ <b>Шаг 3/3:</b> Отправьте фото для превью:', { parse_mode: 'HTML' });
-    
-    } else if (session.step === 'photo' && message.photo) {
-      // Сохраняем фото и создаем контент
-      const photo = message.photo[message.photo.length - 1];
-      const fileLink = await ctx.telegram.getFileLink(photo.file_id);
-      
-      const newContent = {
-        id: Date.now().toString(),
-        title: session.title,
-        description: session.description,
-        photoUrl: fileLink.href,
-        createdAt: new Date(),
-        type: contentType
-      };
-
-      contentDB[contentType].push(newContent);
-      userSessions.delete(userId);
-
-      const contentNames = {
-        courses: 'курс', podcasts: 'подкаст', streams: 'эфир',
-        videos: 'видео-шпаргалку', materials: 'материал', events: 'мероприятие'
-      };
-
-      await ctx.replyWithPhoto(photo.file_id, {
-        caption: `✅ <b>${contentNames[contentType]} добавлен!</b>\n\n` +
-                `<b>Название:</b> ${session.title}\n` +
-                `<b>Описание:</b> ${session.description}`,
-        parse_mode: 'HTML'
-      });
-    }
-    return;
-  }
-
-  // Обычные сообщения
-  if (!message.text.startsWith('/')) {
-    await ctx.reply('🤗 Используйте кнопки меню для навигации');
-  }
+bot.command('status', async (ctx) => {
+  const user = getUser(ctx.from.id);
+  const status = user.subscription.status === 'trial' ? 
+    `активна (пробный до ${user.subscription.endDate.toLocaleDateString('ru-RU')})` : 'не активна';
+  
+  await ctx.reply(
+    `📊 <b>Статус подписки</b>\n\n` +
+    `✅ Подписка: ${status}\n` +
+    `🎯 Уровень: ${user.progress.level}\n` +
+    `📧 Email: ${user.email}`,
+    { parse_mode: 'HTML' }
+  );
 });
 
-// ==================== WEB APP SERVER С API ====================
+bot.command('help', async (ctx) => {
+  await ctx.reply(
+    'ℹ️ <b>Помощь по боту Академии АНБ</b>\n\n' +
+    'Основные команды:\n' +
+    '/start - начать работу с ботом\n' +
+    '/menu - главное меню\n' +
+    '/status - статус подписки\n' +
+    '/help - эта справка\n\n' +
+    'Основные разделы:\n' +
+    '📱 Навигация - доступ к приложению\n' +
+    '🎁 Акции - текущие предложения\n' +
+    '❓ Задать вопрос - помощь по обучению\n' +
+    '💬 Поддержка - связь с координатором\n' +
+    '👤 Мой профиль - информация о вас\n\n' +
+    'По всем вопросам: @academy_anb',
+    { parse_mode: 'HTML' }
+  );
+});
+
+// ==================== WEB APP SERVER ====================
 const app = express();
 app.use(express.json());
-
-// Раздаем статические файлы
 app.use(express.static(join(__dirname, 'webapp')));
+
+// API для получения данных пользователя
+app.get('/api/user/:id', (req, res) => {
+  const userId = parseInt(req.params.id);
+  const user = users.get(userId);
+  
+  if (user) {
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        username: user.username,
+        specialization: user.specialization,
+        city: user.city,
+        email: user.email,
+        subscription: user.subscription,
+        progress: user.progress,
+        surveyCompleted: user.surveyCompleted
+      }
+    });
+  } else {
+    res.json({ success: false, error: 'User not found' });
+  }
+});
 
 // API для получения контента
 app.get('/api/content/:type', (req, res) => {
   const contentType = req.params.type;
   if (contentDB[contentType]) {
-    res.json(contentDB[contentType]);
+    res.json({ success: true, data: contentDB[contentType] });
   } else {
-    res.status(404).json({ error: 'Content type not found' });
+    res.status(404).json({ success: false, error: 'Content type not found' });
   }
 });
 
 app.get('/api/content', (req, res) => {
-  res.json(contentDB);
+  res.json({ success: true, data: contentDB });
 });
 
-// Все остальные запросы
 app.get('*', (req, res) => {
   res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
@@ -368,12 +474,14 @@ async function startApp() {
   try {
     app.listen(PORT, () => {
       console.log(`🌐 WebApp server running on port ${PORT}`);
+      console.log(`📱 WebApp URL: ${WEBAPP_URL}`);
     });
 
     await bot.launch();
     console.log('✅ Bot started successfully!');
     console.log(`⚡ Admin ID: ${ADMIN_IDS[0]}`);
-    console.log('🔧 Команды: /admin, /start, /help');
+    console.log('🔧 Команды: /start, /menu, /status, /help');
+    console.log('📊 Готов к приему пользователей!');
 
   } catch (error) {
     console.error('❌ Failed to start app:', error);
