@@ -18,8 +18,8 @@ if (!BOT_TOKEN) {
 // Создаем бота даже если БД не доступна
 const bot = new Telegraf(BOT_TOKEN);
 
-// Пытаемся подключиться к БД, но не блокируем запуск бота
-let prisma: PrismaClient | null = null;
+// Простое хранилище сессий
+const userSessions = new Map();
 
 // Конфигурация кнопок (временное хранилище)
 let buttonConfigs: Record<string, { text: string; reply: string }> = {
@@ -41,18 +41,21 @@ let buttonConfigs: Record<string, { text: string; reply: string }> = {
   }
 };
 
-// Список админов (замените на ваш Telegram ID)
-const ADMIN_IDS = [123456789]; // TODO: Заменить на реальный ID
+// Список админов - ЗАМЕНИТЕ НА ВАШ REAL TELEGRAM ID
+const ADMIN_IDS = [123456789]; // TODO: ЗАМЕНИТЕ на ваш реальный ID!
 
 // Функция проверки прав админа
-function isAdmin(ctx: any): boolean {
-  return ADMIN_IDS.includes(ctx.from?.id || 0);
+function isAdmin(userId: number): boolean {
+  console.log(`🔐 Checking admin rights for user ${userId}. Admins:`, ADMIN_IDS);
+  return ADMIN_IDS.includes(userId);
 }
 
 // Функция для получения конфигурации кнопок
 function getButtonConfig(buttonType: string): { text: string; reply: string } {
   return buttonConfigs[buttonType] || { text: 'Кнопка', reply: 'Ответ не настроен' };
 }
+
+let prisma: PrismaClient | null = null;
 
 async function initializeDatabase() {
   if (!DATABASE_URL) {
@@ -62,10 +65,6 @@ async function initializeDatabase() {
 
   try {
     console.log('🔧 Initializing database connection...');
-    
-    // Логируем DATABASE_URL (без пароля для безопасности)
-    const safeUrl = DATABASE_URL.replace(/:[^:]*@/, ':****@');
-    console.log('   Database URL:', safeUrl);
     
     prisma = new PrismaClient({
       log: ['warn', 'error'],
@@ -90,11 +89,17 @@ async function initializeDatabase() {
 
 // Команда /admin - только для админов
 bot.command('admin', async (ctx) => {
-  if (!isAdmin(ctx)) {
+  const userId = ctx.from?.id;
+  console.log(`👤 User ${userId} trying to access admin panel`);
+  
+  if (!userId || !isAdmin(userId)) {
     await ctx.reply('❌ У вас нет прав доступа к админ-панели');
+    console.log(`❌ Access denied for user ${userId}`);
     return;
   }
 
+  console.log(`✅ Admin access granted for user ${userId}`);
+  
   await ctx.reply('🔧 Панель администратора', {
     reply_markup: {
       keyboard: [
@@ -109,7 +114,8 @@ bot.command('admin', async (ctx) => {
 
 // Редактирование кнопок
 bot.hears('✏️ Редактировать кнопки', async (ctx) => {
-  if (!isAdmin(ctx)) return;
+  const userId = ctx.from?.id;
+  if (!userId || !isAdmin(userId)) return;
 
   let buttonsText = '📋 Текущие настройки кнопок:\n\n';
   Object.entries(buttonConfigs).forEach(([key, config]) => {
@@ -134,7 +140,11 @@ bot.hears('✏️ Редактировать кнопки', async (ctx) => {
 
 // Обработка callback для редактирования
 bot.action(/edit_(.+)/, async (ctx) => {
-  if (!isAdmin(ctx)) return;
+  const userId = ctx.from?.id;
+  if (!userId || !isAdmin(userId)) {
+    await ctx.answerCbQuery('❌ Нет прав доступа');
+    return;
+  }
 
   const buttonType = ctx.match[1];
   const config = buttonConfigs[buttonType];
@@ -153,17 +163,24 @@ bot.action(/edit_(.+)/, async (ctx) => {
   );
 
   // Сохраняем состояние редактирования
-  (ctx as any).session = { editing: buttonType };
+  userSessions.set(userId, { editing: buttonType });
+  await ctx.answerCbQuery();
 });
 
 // Отмена редактирования
 bot.action('cancel_edit', async (ctx) => {
+  const userId = ctx.from?.id;
+  if (userId) {
+    userSessions.delete(userId);
+  }
   await ctx.editMessageText('❌ Редактирование отменено');
+  await ctx.answerCbQuery();
 });
 
 // Статистика
 bot.hears('📊 Статистика', async (ctx) => {
-  if (!isAdmin(ctx)) return;
+  const userId = ctx.from?.id;
+  if (!userId || !isAdmin(userId)) return;
 
   let userCount = 0;
   if (prisma) {
@@ -186,7 +203,8 @@ bot.hears('📊 Статистика', async (ctx) => {
 
 // Рассылка
 bot.hears('📢 Сделать рассылку', async (ctx) => {
-  if (!isAdmin(ctx)) return;
+  const userId = ctx.from?.id;
+  if (!userId || !isAdmin(userId)) return;
 
   await ctx.reply(
     '📢 Создание рассылки\n\n' +
@@ -200,17 +218,23 @@ bot.hears('📢 Сделать рассылку', async (ctx) => {
     }
   );
 
-  (ctx as any).session = { broadcasting: true };
+  userSessions.set(userId, { broadcasting: true });
 });
 
 // Отмена рассылки
 bot.action('cancel_broadcast', async (ctx) => {
+  const userId = ctx.from?.id;
+  if (userId) {
+    userSessions.delete(userId);
+  }
   await ctx.editMessageText('❌ Рассылка отменена');
+  await ctx.answerCbQuery();
 });
 
 // Управление пользователями
 bot.hears('👥 Управление пользователями', async (ctx) => {
-  if (!isAdmin(ctx)) return;
+  const userId = ctx.from?.id;
+  if (!userId || !isAdmin(userId)) return;
 
   let userCount = 0;
   if (prisma) {
@@ -235,6 +259,11 @@ bot.hears('👥 Управление пользователями', async (ctx) 
 
 // Возврат в главное меню
 bot.hears('🔙 В главное меню', async (ctx) => {
+  const userId = ctx.from?.id;
+  if (userId) {
+    userSessions.delete(userId);
+  }
+
   await ctx.reply('Возвращаемся в главное меню...', {
     reply_markup: {
       keyboard: [
@@ -250,13 +279,14 @@ bot.hears('🔙 В главное меню', async (ctx) => {
 
 // Простой обработчик старта (работает даже без БД)
 bot.start(async (ctx) => {
-  console.log('👤 User started bot:', ctx.from.id);
+  const userId = ctx.from?.id;
+  console.log('👤 User started bot:', userId);
   
   try {
     let welcomeMessage = `👋 Добро пожаловать в Академию АНБ, ${ctx.from.first_name}!\n\n`;
 
-    if (prisma) {
-      const telegramId = BigInt(ctx.from.id);
+    if (prisma && userId) {
+      const telegramId = BigInt(userId);
       
       // Проверяем или создаем пользователя
       let user = await prisma.user.findUnique({
@@ -361,7 +391,8 @@ bot.help(async (ctx) => {
     'Основные команды:\n' +
     '/start - начать работу\n' +
     '/help - показать эту справку\n' +
-    '/status - статус подписки\n\n' +
+    '/status - статус подписки\n' +
+    '/admin - панель администратора\n\n' +
     'Используйте кнопки меню для навигации по разделам.'
   );
 });
@@ -395,16 +426,19 @@ bot.command('menu', async (ctx) => {
 // Обработчик текста для редактирования кнопок (админ)
 bot.on('text', async (ctx) => {
   const messageText = ctx.message.text;
+  const userId = ctx.from?.id;
   
+  if (!userId) return;
+
   // Проверяем, не является ли сообщение командой
   if (messageText.startsWith('/')) {
     return;
   }
 
-  const session = (ctx as any).session;
+  const session = userSessions.get(userId);
 
   // Если админ редактирует кнопку
-  if (session && session.editing && isAdmin(ctx)) {
+  if (session && session.editing && isAdmin(userId)) {
     const buttonType = session.editing;
     const newReply = messageText;
 
@@ -414,19 +448,19 @@ bot.on('text', async (ctx) => {
     await ctx.reply(`✅ Ответ для кнопки "${buttonConfigs[buttonType].text}" обновлен!`);
     
     // Очищаем сессию
-    (ctx as any).session = null;
+    userSessions.delete(userId);
     return;
   }
 
   // Если админ создает рассылку
-  if (session && session.broadcasting && isAdmin(ctx)) {
+  if (session && session.broadcasting && isAdmin(userId)) {
     await ctx.reply('📢 Рассылка запущена... (функционал в разработке)');
     
     // Здесь будет код рассылки всем пользователям
     console.log('Broadcast message:', messageText);
     
     // Очищаем сессию
-    (ctx as any).session = null;
+    userSessions.delete(userId);
     return;
   }
 
@@ -481,9 +515,11 @@ async function startBot() {
     console.log('   WebHook:', '✅ Active');
     console.log('   Ready to receive messages!');
 
-    // Выводим информацию для админа
-    console.log('\n🔧 Админ-панель доступна по команде: /admin');
-    console.log('   Не забудьте установить ваш Telegram ID в переменную ADMIN_IDS');
+    // ВАЖНО: Сообщение для настройки админ-панели
+    console.log('\n⚠️  ВАЖНО: Для доступа к админ-панели:');
+    console.log('   1. Узнайте ваш Telegram ID через @userinfobot');
+    console.log('   2. Замените 123456789 в переменной ADMIN_IDS на ваш ID');
+    console.log('   3. Перезапустите бота');
 
   } catch (error) {
     console.error('❌ Failed to start bot:', error);
