@@ -174,10 +174,11 @@ function getUser(id) {
 }
 
 function isAdmin(userId) {
-    console.log(`🔍 Проверка админских прав для пользователя ${userId}`);
-    console.log(`👑 Админ ID: ${Array.from(admins)}`);
-    console.log(`✅ Результат проверки: ${admins.has(userId)}`);
-    return admins.has(userId);
+    console.log(`🔍 Checking admin rights for ${userId}`);
+    console.log(`👑 Admin IDs: ${Array.from(admins)}`);
+    const result = admins.has(userId);
+    console.log(`✅ Result: ${result}`);
+    return result;
 }
 
 function completeSurvey(userId) {
@@ -713,6 +714,28 @@ app.get('*', (req, res) => {
 });
 
 // ==================== ЗАПУСК ====================
+bot.start(async (ctx) => {
+    const user = getUser(ctx.from.id);
+    user.firstName = ctx.from.first_name;
+    user.username = ctx.from.username;
+    user.isAdmin = isAdmin(ctx.from.id);
+
+    console.log('=== DEBUG ADMIN CHECK ===');
+    console.log('User ID:', ctx.from.id);
+    console.log('Admin IDs:', Array.from(admins));
+    console.log('Is admin:', user.isAdmin);
+    console.log('User object:', user);
+    console.log('=========================');
+
+    if (user.surveyCompleted) {
+        await showMainMenu(ctx);
+        return;
+    }
+
+    userSurveys.set(ctx.from.id, { step: 0, answers: {} });
+    await sendSurveyStep(ctx, ctx.from.id);
+});
+
 async function startApp() {
     try {
         app.listen(PORT, '0.0.0.0', () => {
