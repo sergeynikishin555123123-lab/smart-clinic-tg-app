@@ -13,7 +13,7 @@ const WEBAPP_URL = process.env.WEBAPP_URL || `http://localhost:${PORT}`;
 
 // ЗАМЕНИТЕ НА ВАШ ТЕЛЕГРАМ ID!
 // Чтобы узнать свой ID: напишите @userinfobot в Telegram
-const ADMIN_IDS = [123456789]; 
+const ADMIN_IDS = [898508164]; 
 
 console.log('🚀 Starting Smart Clinic Bot...');
 console.log('🔧 Admin IDs:', ADMIN_IDS);
