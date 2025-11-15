@@ -1,4 +1,3 @@
-/* ==================== ОСНОВНЫЕ СТИЛИ ==================== */
 * {
     margin: 0;
     padding: 0;
@@ -18,7 +17,6 @@ body {
     flex-direction: column;
 }
 
-/* Шапка */
 .header {
     background: #58b8e7;
     color: white;
@@ -44,7 +42,6 @@ body {
     font-weight: 600;
 }
 
-/* Основной контент */
 .main {
     flex: 1;
     padding: 20px;
@@ -60,7 +57,6 @@ body {
     font-weight: 700;
 }
 
-/* Поиск */
 .search {
     margin-bottom: 24px;
 }
@@ -74,7 +70,6 @@ body {
     background: #f8f9fa;
 }
 
-/* Сетка карточек */
 .grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -98,7 +93,6 @@ body {
 .card:hover {
     background: #e3f2fd;
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(88, 184, 231, 0.25);
 }
 
 .card-icon {
@@ -106,7 +100,6 @@ body {
     margin-bottom: 8px;
 }
 
-/* Новости */
 .news {
     background: #f8f9fa;
     border-radius: 14px;
@@ -137,7 +130,6 @@ body {
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
-    transition: all 0.3s ease;
 }
 
 .filter.active {
@@ -157,7 +149,6 @@ body {
     padding: 18px;
     border-radius: 12px;
     border-left: 4px solid #58b8e7;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
 .news-item strong {
@@ -172,16 +163,14 @@ body {
     font-size: 14px;
 }
 
-/* Профиль */
 .profile-header {
     display: flex;
     gap: 18px;
     align-items: center;
     margin-bottom: 28px;
     padding: 20px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);
+    background: #f8f9fa;
     border-radius: 16px;
-    border: 2px solid #58b8e7;
 }
 
 .avatar {
@@ -204,7 +193,6 @@ body {
     font-size: 20px;
     font-weight: 700;
     margin-bottom: 4px;
-    color: #2c3e50;
 }
 
 .status {
@@ -213,11 +201,16 @@ body {
     font-size: 14px;
 }
 
-.subscription {
+.subscription.active {
     color: #28a745;
-    margin-bottom: 12px;
     font-weight: 600;
-    font-size: 15px;
+    margin-bottom: 12px;
+}
+
+.subscription.inactive {
+    color: #dc3545;
+    font-weight: 600;
+    margin-bottom: 12px;
 }
 
 .btn {
@@ -228,15 +221,8 @@ body {
     border-radius: 10px;
     cursor: pointer;
     font-weight: 600;
-    transition: all 0.3s ease;
 }
 
-.btn:hover {
-    background: #4aa8d8;
-    transform: translateY(-1px);
-}
-
-/* Путь развития */
 .journey {
     background: #ffffff;
     border-radius: 16px;
@@ -248,7 +234,6 @@ body {
 .journey h3 {
     color: #58b8e7;
     margin-bottom: 20px;
-    font-size: 18px;
 }
 
 .journey-steps {
@@ -264,13 +249,11 @@ body {
     background: #f8f9fa;
     border-radius: 12px;
     border-left: 4px solid #58b8e7;
-    transition: all 0.3s ease;
 }
 
 .step.active {
     background: #e3f2fd;
     border-left-color: #28a745;
-    transform: translateX(4px);
 }
 
 .step-number {
@@ -284,8 +267,6 @@ body {
 .step-title {
     font-weight: 700;
     margin-bottom: 6px;
-    color: #2c3e50;
-    font-size: 16px;
 }
 
 .step-progress {
@@ -297,10 +278,8 @@ body {
 .step-hint {
     font-size: 13px;
     color: #6c757d;
-    line-height: 1.4;
 }
 
-/* Статистика */
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -334,7 +313,6 @@ body {
     font-weight: 700;
 }
 
-/* Чаты */
 .chats-list {
     display: flex;
     flex-direction: column;
@@ -349,12 +327,6 @@ body {
     border-radius: 12px;
     border: 2px solid #e3f2fd;
     cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.chat-item:hover {
-    border-color: #58b8e7;
-    transform: translateY(-2px);
 }
 
 .chat-icon {
@@ -368,7 +340,6 @@ body {
 .chat-name {
     font-weight: 700;
     margin-bottom: 6px;
-    color: #2c3e50;
 }
 
 .chat-desc {
@@ -387,13 +358,10 @@ body {
     text-align: center;
 }
 
-/* Вкладки */
 .tabs {
     display: flex;
     border-bottom: 2px solid #e9ecef;
     margin-bottom: 20px;
-    background: #ffffff;
-    border-radius: 10px 10px 0 0;
 }
 
 .tab {
@@ -403,7 +371,6 @@ body {
     cursor: pointer;
     font-weight: 600;
     color: #6c757d;
-    transition: all 0.3s ease;
     flex: 1;
     text-align: center;
 }
@@ -421,7 +388,6 @@ body {
     display: block;
 }
 
-/* Материалы */
 .materials-list {
     display: flex;
     flex-direction: column;
@@ -435,11 +401,6 @@ body {
     background: #ffffff;
     border-radius: 12px;
     border: 2px solid #e3f2fd;
-    transition: all 0.3s ease;
-}
-
-.material-item:hover {
-    border-color: #58b8e7;
 }
 
 .material-icon {
@@ -453,7 +414,6 @@ body {
 .material-title {
     font-weight: 600;
     margin-bottom: 6px;
-    color: #2c3e50;
 }
 
 .material-date {
@@ -467,7 +427,6 @@ body {
     gap: 14px;
 }
 
-/* Навигация */
 .nav {
     position: fixed;
     bottom: 0;
@@ -478,7 +437,6 @@ body {
     display: flex;
     padding: 12px 8px;
     gap: 4px;
-    z-index: 100;
 }
 
 .nav-btn {
@@ -490,7 +448,6 @@ body {
     font-size: 12px;
     color: #6c757d;
     cursor: pointer;
-    transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -501,10 +458,8 @@ body {
 .nav-btn.active {
     background: #58b8e7;
     color: white;
-    transform: translateY(-2px);
 }
 
-/* Адаптивность */
 @media (max-width: 480px) {
     .main {
         padding: 16px;
@@ -513,32 +468,14 @@ body {
     
     .grid {
         grid-template-columns: 1fr;
-        gap: 12px;
     }
     
     .profile-header {
         flex-direction: column;
         text-align: center;
-        gap: 16px;
     }
     
     .stats-grid {
         grid-template-columns: 1fr;
     }
-
-    /* Статусы подписки */
-.subscription.active {
-    color: #28a745;
-    font-weight: 600;
-}
-
-.subscription.inactive {
-    color: #dc3545;
-    font-weight: 600;
-}
-
-.subscription.trial {
-    color: #ffc107;
-    font-weight: 600;
-}    
 }
