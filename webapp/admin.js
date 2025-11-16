@@ -27,34 +27,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadAdminData();
 });
 
+// === ВСТАВЬТЕ ЭТУ ФУНКЦИЮ ПРЯМО ЗДЕСЬ ===
 async function checkAdminStatus() {
     try {
+        console.log('🔧 Проверка прав для админ-панели...');
+        
         if (window.Telegram && Telegram.WebApp) {
             const tgUser = Telegram.WebApp.initDataUnsafe.user;
             if (tgUser && tgUser.id) {
-                console.log(`🔍 Проверка прав для пользователя: ${tgUser.id}`);
+                console.log('👤 Telegram пользователь:', tgUser);
                 
                 const response = await fetch(`/api/check-admin/${tgUser.id}`);
                 const data = await response.json();
                 
-                console.log('✅ Результат проверки админа:', data);
+                console.log('📊 Результат проверки:', data);
                 
                 if (data.success && data.isAdmin) {
-                    // Загружаем данные пользователя для отображения в админке
-                    const userResponse = await fetch(`/api/user/${tgUser.id}`);
-                    const userData = await userResponse.json();
-                    
-                    if (userData.success) {
-                        document.getElementById('adminName').textContent = userData.user.firstName;
-                        console.log('👑 Администратор авторизован:', userData.user.firstName);
-                    }
-                    
+                    console.log('✅ Доступ разрешен');
                     return true;
                 }
             }
         }
         
-        console.log('❌ Пользователь не является администратором');
+        console.log('❌ Доступ запрещен');
         return false;
         
     } catch (error) {
@@ -62,6 +57,7 @@ async function checkAdminStatus() {
         return false;
     }
 }
+// === КОНЕЦ ВСТАВКИ ===
 
 function initAdminPanel() {
     console.log('⚙️ Инициализация интерфейса админ-панели...');
