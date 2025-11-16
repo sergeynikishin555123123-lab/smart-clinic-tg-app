@@ -1,9 +1,8 @@
-// server.js - ПОЛНАЯ ИСПРАВЛЕННАЯ РЕАЛИЗАЦИЯ
+// server.js - ИСПРАВЛЕННАЯ ВЕРСИЯ С УЛУЧШЕННОЙ ОБРАБОТКОЙ БД
 import { Telegraf, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { Pool } from 'pg';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,39 +12,52 @@ const BOT_TOKEN = process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoN
 const PORT = process.env.PORT || 3000;
 const WEBAPP_URL = process.env.WEBAPP_URL || `https://sergeynikishin555123123-lab-smart-clinic-tg-app-a472.twc1.net`;
 
-const ADMIN_IDS = new Set([898508164]); // Главный администратор
+const ADMIN_IDS = new Set([898508164]);
 
 console.log('🚀 Starting Smart Clinic Bot...');
 
 // ==================== БАЗА ДАННЫХ ====================
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    }
-});
+let pool;
+let dbConnected = false;
 
-// Проверка подключения к базе данных
-async function testDatabaseConnection() {
+async function initDatabase() {
     try {
+        const { Pool } = await import('pg');
+        
+        pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: {
+                rejectUnauthorized: false
+            },
+            // Оптимизированные настройки пула
+            max: 10,
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 10000,
+            maxUses: 7500,
+        });
+
+        // Тестируем подключение
         const client = await pool.connect();
         console.log('✅ Успешное подключение к PostgreSQL');
         client.release();
-        return true;
+        dbConnected = true;
+
+        await createTables();
+        await addDemoData();
+        
     } catch (error) {
         console.error('❌ Ошибка подключения к PostgreSQL:', error.message);
-        return false;
+        console.log('⚠️  Работаем без базы данных');
+        dbConnected = false;
     }
 }
 
-// Инициализация базы данных
-async function initDatabase() {
+async function createTables() {
     try {
-        console.log('📦 Инициализация базы данных...');
+        console.log('📦 Создание таблиц...');
         
-        // Таблица пользователей
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS users (
+        const tables = [
+            `CREATE TABLE IF NOT EXISTS users (
                 id BIGINT PRIMARY KEY,
                 first_name TEXT NOT NULL,
                 username TEXT,
@@ -62,11 +74,7 @@ async function initDatabase() {
                 joined_at TIMESTAMP DEFAULT NOW(),
                 last_activity TIMESTAMP DEFAULT NOW(),
                 survey_completed BOOLEAN DEFAULT FALSE
-            )
-        `);
-
-        // Таблицы контента
-        const tables = [
+            )`,
             `CREATE TABLE IF NOT EXISTS courses (
                 id SERIAL PRIMARY KEY,
                 title TEXT NOT NULL,
@@ -77,8 +85,7 @@ async function initDatabase() {
                 modules INTEGER DEFAULT 1,
                 image_url TEXT,
                 file_url TEXT,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
+                created_at TIMESTAMP DEFAULT NOW()
             )`,
             `CREATE TABLE IF NOT EXISTS podcasts (
                 id SERIAL PRIMARY KEY,
@@ -142,80 +149,44 @@ async function initDatabase() {
         for (const tableQuery of tables) {
             await pool.query(tableQuery);
         }
-
-        // Добавляем демо-данные
-        await addDemoData();
-        console.log('✅ База данных инициализирована');
+        console.log('✅ Таблицы созданы/проверены');
 
     } catch (error) {
-        console.error('❌ Ошибка инициализации БД:', error);
+        console.error('❌ Ошибка создания таблиц:', error.message);
     }
 }
 
-// Добавление демо-данных
 async function addDemoData() {
     try {
         // Проверяем, есть ли уже данные
         const coursesCount = await pool.query('SELECT COUNT(*) FROM courses');
-        if (parseInt(coursesCount.rows[0].count) > 0) return;
+        if (parseInt(coursesCount.rows[0].count) > 0) {
+            console.log('✅ Демо-данные уже существуют');
+            return;
+        }
 
         console.log('📝 Добавление демо-данных...');
 
         // Демо-курсы
         await pool.query(`
             INSERT INTO courses (title, description, full_description, price, duration, modules) VALUES
-            ('Мануальные техники в практике', '6 модулей по современным мануальным методикам', 'Комплексный курс, охватывающий основные мануальные техники, применяемые в неврологической практике.', 15000, '12 часов', 6),
-            ('Неврология для практикующих врачей', 'Основы неврологической диагностики и лечения', 'Фундаментальный курс по неврологии для врачей различных специальностей.', 12000, '10 часов', 5)
+            ('Мануальные техники в практике', '6 модулей по современным мануальным методикам', 'Комплексный курс по мануальным техникам', 15000, '12 часов', 6),
+            ('Неврология для практикующих врачей', 'Основы неврологической диагностики', 'Фундаментальный курс по неврологии', 12000, '10 часов', 5)
         `);
 
         // Демо-подкасты
         await pool.query(`
             INSERT INTO podcasts (title, description, duration) VALUES
-            ('АНБ FM: Основы неврологии', 'Подкаст о современных подходах в неврологии', '45:20'),
-            ('АНБ FM: Реабилитация', 'Современные методы восстановительного лечения', '38:15')
-        `);
-
-        // Демо-эфиры
-        await pool.query(`
-            INSERT INTO streams (title, description, duration, scheduled) VALUES
-            ('Разбор клинического случая: боль в пояснице', 'Подробный разбор с Ильей Чистяковым', '1:15:30', NOW() + INTERVAL '2 days'),
-            ('Современные методы диагностики', 'Новые подходы в диагностике неврологических заболеваний', '1:30:00', NOW() + INTERVAL '5 days')
-        `);
-
-        // Демо-видео
-        await pool.query(`
-            INSERT INTO videos (title, description, duration) VALUES
-            ('Техника миофасциального релиза', 'Короткая видео-шпаргалка по технике МФР', '08:15'),
-            ('Основы кинезиотейпирования', 'Базовые техники наложения тейпов', '12:30')
-        `);
-
-        // Демо-материалы
-        await pool.query(`
-            INSERT INTO materials (title, description, type, duration) VALUES
-            ('МРТ разбор: грыжа позвоночника L4-L5', 'Детальный анализ МРТ снимков пациента с грыжей', 'mri', '25 мин'),
-            ('Клинический случай: мигрень', 'Разбор диагностики и лечения пациента с мигренью', 'case', '20 мин'),
-            ('Чек-лист: первичный осмотр неврологического пациента', 'Структурированный подход к осмотру', 'checklist', '15 мин')
-        `);
-
-        // Демо-мероприятия
-        await pool.query(`
-            INSERT INTO events (title, description, type, date, location) VALUES
-            ('Онлайн-вебинар по современной реабилитации', 'Современные методы восстановительного лечения', 'online', '2024-12-15', 'Zoom'),
-            ('Офлайн-семинар: мануальные техники', 'Практический семинар с отработкой навыков', 'offline', '2024-12-20', 'Москва, ул. Профессиональная, 15')
-        `);
-
-        // Демо-новости
-        await pool.query(`
-            INSERT INTO news (title, content, category) VALUES
-            ('Запуск новой образовательной платформы', 'Академия АНБ представляет обновленную платформу для профессионального развития врачей', 'development'),
-            ('Новый курс по мануальным техникам', 'Доступен для записи комплексный курс из 6 модулей', 'courses')
+            ('АНБ FM: Основы неврологии', 'Подкаст о современных подходах', '45:20'),
+            ('АНБ FM: Реабилитация', 'Современные методы восстановления', '38:15')
         `);
 
         console.log('✅ Демо-данные добавлены');
     } catch (error) {
-        console.error('❌ Ошибка добавления демо-данных:', error);
+        console.error('❌ Ошибка добавления демо-данных:', error.message);
     }
 }
+
 
 // ==================== TELEGRAM BOT ====================
 const bot = new Telegraf(BOT_TOKEN);
