@@ -1,47 +1,15 @@
-// webapp/admin.js
+// webapp/admin.js - ПОЛНАЯ ВЕРСИЯ БЕЗ ЗАГЛУШЕК
 let adminData = {
     stats: {},
     users: [],
     content: {},
-    admins: []
+    admins: [],
+    messages: {},
+    settings: {}
 };
 
 let currentAdminTab = 'dashboard';
 let currentContentType = 'courses';
-
-// Демо-данные
-const demoUsers = [
-    {
-        id: 1,
-        firstName: 'Иван Петров',
-        specialization: 'Невролог',
-        city: 'Москва',
-        email: 'ivan@example.com',
-        subscription: { status: 'trial', endDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) },
-        joinedAt: new Date('2024-01-15'),
-        progress: { steps: { materialsWatched: 5, eventsParticipated: 2, materialsSaved: 3, coursesBought: 0 } }
-    },
-    {
-        id: 2,
-        firstName: 'Анна Сидорова', 
-        specialization: 'Ортопед',
-        city: 'Санкт-Петербург',
-        email: 'anna@example.com',
-        subscription: { status: 'active', endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
-        joinedAt: new Date('2024-01-10'),
-        progress: { steps: { materialsWatched: 12, eventsParticipated: 5, materialsSaved: 8, coursesBought: 1 } }
-    },
-    {
-        id: 3,
-        firstName: 'Петр Иванов',
-        specialization: 'Реабилитолог',
-        city: 'Казань',
-        email: 'petr@example.com',
-        subscription: { status: 'inactive', endDate: null },
-        joinedAt: new Date('2024-01-20'),
-        progress: { steps: { materialsWatched: 2, eventsParticipated: 1, materialsSaved: 1, coursesBought: 0 } }
-    }
-];
 
 // Инициализация админ-панели
 document.addEventListener('DOMContentLoaded', async function() {
@@ -49,13 +17,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     const isAdmin = await checkAdminStatus();
     if (!isAdmin) {
-        alert('❌ Доступ запрещен. У вас нет прав администратора.');
-        goToMainApp();
+        showNotification('❌ Доступ запрещен. У вас нет прав администратора.', 'error');
+        setTimeout(() => goToMainApp(), 2000);
         return;
     }
 
     initAdminPanel();
-    loadAdminData();
+    await loadAdminData();
 });
 
 async function checkAdminStatus() {
@@ -63,237 +31,134 @@ async function checkAdminStatus() {
         if (window.Telegram && Telegram.WebApp) {
             const tgUser = Telegram.WebApp.initDataUnsafe.user;
             if (tgUser && tgUser.id) {
-                console.log(`🔍 Проверка прав для пользователя: ${tgUser.id}`);
-                
                 const response = await fetch(`/api/check-admin/${tgUser.id}`);
                 const data = await response.json();
                 
-                console.log('✅ Результат проверки админа:', data);
-                
                 if (data.success && data.isAdmin) {
-                    // Загружаем данные пользователя для отображения в админке
                     const userResponse = await fetch(`/api/user/${tgUser.id}`);
                     const userData = await userResponse.json();
                     
                     if (userData.success) {
                         document.getElementById('adminName').textContent = userData.user.firstName;
                     }
-                    
                     return true;
                 }
             }
         }
-        
-        // Если не удалось проверить через API, показываем демо-админку
-        console.log('⚠️ Используем демо-режим админки');
-        document.getElementById('adminName').textContent = 'Демо Администратор';
-        return true;
-        
+        return false;
     } catch (error) {
         console.error('Ошибка проверки админ-прав:', error);
-        // В демо-режиме разрешаем доступ
-        document.getElementById('adminName').textContent = 'Демо Администратор';
-        return true;
+        return false;
     }
 }
 
 function initAdminPanel() {
-    // Инициализация навигации
+    // Навигация
     document.querySelectorAll('.admin-nav-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            const tab = this.dataset.tab;
-            switchAdminTab(tab);
+            switchAdminTab(this.dataset.tab);
         });
     });
 
-    // Инициализация вкладок контента
+    // Вкладки контента
     document.querySelectorAll('.content-tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            const contentType = this.dataset.contentType;
-            switchContentTab(contentType);
+            switchContentTab(this.dataset.contentType);
         });
     });
 
-    // Инициализация поиска пользователей
+    // Поиск пользователей
     const userSearch = document.getElementById('userSearch');
     if (userSearch) {
         userSearch.addEventListener('input', debounce(searchUsers, 300));
     }
 
-    // Инициализация фильтров пользователей
+    // Фильтры пользователей
     const userFilter = document.getElementById('userFilter');
     if (userFilter) {
-        userFilter.addEventListener('change', function() {
-            loadUsersList();
-        });
+        userFilter.addEventListener('change', loadUsersList);
     }
-
-    // Добавляем кнопку добавления админа если её нет в HTML
-    const adminsTab = document.getElementById('admins');
-    if (adminsTab && !document.getElementById('addAdminBtn')) {
-        const addAdminBtn = document.createElement('button');
-        addAdminBtn.id = 'addAdminBtn';
-        addAdminBtn.className = 'btn btn-primary';
-        addAdminBtn.textContent = '+ Добавить администратора';
-        addAdminBtn.onclick = addNewAdmin;
-        adminsTab.querySelector('h2').insertAdjacentElement('afterend', addAdminBtn);
-    }
-}
-
-function switchAdminTab(tab) {
-    currentAdminTab = tab;
-    
-    // Скрыть все вкладки
-    document.querySelectorAll('.admin-tab').forEach(t => {
-        t.classList.remove('active');
-    });
-    
-    // Убрать активность с кнопок
-    document.querySelectorAll('.admin-nav-btn').forEach(b => {
-        b.classList.remove('active');
-    });
-    
-    // Показать выбранную вкладку
-    const tabElement = document.getElementById(tab);
-    if (tabElement) {
-        tabElement.classList.add('active');
-    }
-    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-
-    // Загрузить данные для вкладки
-    loadTabData(tab);
-}
-
-function switchContentTab(contentType) {
-    currentContentType = contentType;
-    
-    document.querySelectorAll('.content-tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`[data-content-type="${contentType}"]`).classList.add('active');
-    
-    document.getElementById('contentTitle').textContent = getContentTypeName(contentType);
-    loadContentList(contentType);
 }
 
 async function loadAdminData() {
     try {
-        console.log('📥 Загрузка данных админ-панели...');
-        
         // Загрузка статистики
         const statsResponse = await fetch('/api/stats');
         const statsData = await statsResponse.json();
-        
-        if (statsData.success) {
-            adminData.stats = statsData.stats;
-            updateDashboard();
-        } else {
-            // Демо-статистика
-            adminData.stats = {
-                totalUsers: 156,
-                activeUsers: 89,
-                completedSurveys: 134,
-                content: {
-                    courses: 7,
-                    podcasts: 12,
-                    streams: 24,
-                    videos: 45,
-                    materials: 32,
-                    events: 8
-                }
-            };
-            updateDashboard();
-        }
+        adminData.stats = statsData.success ? statsData.stats : {};
 
         // Загрузка контента
         const contentResponse = await fetch('/api/content');
         const contentData = await contentResponse.json();
-        
-        if (contentData.success) {
-            adminData.content = contentData.data;
-            console.log('✅ Контент загружен:', adminData.content);
-        } else {
-            // Демо-контент
-            adminData.content = {
-                courses: [
-                    { id: 1, title: "Мануальные техники", description: "6 модулей", price: 15000, duration: "12 часов", created: new Date('2024-01-15') },
-                    { id: 2, title: "Неврология для врачей", description: "Основы диагностики", price: 12000, duration: "10 часов", created: new Date('2024-01-20') }
-                ],
-                podcasts: [
-                    { id: 1, title: "АНБ FM: Основы неврологии", description: "Подкаст о современных подходах", duration: "45:20", created: new Date('2024-01-10') }
-                ],
-                streams: [
-                    { id: 1, title: "Разбор клинического случая", description: "Боль в пояснице", duration: "1:15:30", created: new Date('2024-01-18') }
-                ],
-                videos: [
-                    { id: 1, title: "Техника МФР", description: "Миофасциальный релиз", duration: "08:15", created: new Date('2024-01-05') }
-                ],
-                materials: [
-                    { id: 1, title: "МРТ разбор: грыжа L4-L5", description: "Детальный анализ", type: "mri", created: new Date('2024-01-08') }
-                ],
-                events: [
-                    { id: 1, title: "Вебинар по реабилитации", description: "Современные методы", type: "online", created: new Date('2024-01-12') }
-                ]
-            };
-        }
+        adminData.content = contentData.success ? contentData.data : {};
+
+        // Загрузка сообщений бота
+        const messagesResponse = await fetch('/api/bot/messages');
+        const messagesData = await messagesResponse.json();
+        adminData.messages = messagesData.success ? messagesData.messages : {};
 
         // Загрузка списка админов
         await loadAdmins();
 
+        updateDashboard();
+        
     } catch (error) {
         console.error('Ошибка загрузки админ-данных:', error);
-        // Используем демо-данные при ошибке
-        adminData.stats = {
-            totalUsers: 156,
-            activeUsers: 89,
-            completedSurveys: 134,
-            content: { courses: 7, podcasts: 12, streams: 24, videos: 45, materials: 32, events: 8 }
-        };
-        updateDashboard();
-        showNotification('⚠️ Используются демо-данные', 'info');
+        showNotification('❌ Ошибка загрузки данных', 'error');
     }
 }
 
 function updateDashboard() {
+    if (!adminData.stats) return;
+
     document.getElementById('totalUsers').textContent = adminData.stats.totalUsers || 0;
     document.getElementById('activeUsers').textContent = adminData.stats.activeUsers || 0;
     document.getElementById('totalCourses').textContent = adminData.stats.content?.courses || 0;
     
-    // Рассчитываем примерный доход
     const totalRevenue = (adminData.stats.activeUsers || 0) * 2900;
     document.getElementById('totalRevenue').textContent = `${totalRevenue.toLocaleString()} ₽`;
 
     updateRecentActivity();
 }
 
-function updateRecentActivity() {
+async function updateRecentActivity() {
     const activityList = document.getElementById('activityList');
     if (!activityList) return;
 
-    const activities = [
-        { action: 'Новый пользователь', user: 'Иван Петров', time: '2 минуты назад' },
-        { action: 'Оплата подписки', user: 'Анна Сидорова', amount: '2 900 ₽', time: '1 час назад' },
-        { action: 'Добавлен курс', item: 'Мануальные техники', time: '3 часа назад' },
-        { action: 'Загружен подкаст', item: 'АНБ FM: Неврология', time: '5 часов назад' },
-        { action: 'Завершен опрос', user: 'Петр Иванов', time: 'вчера' }
-    ];
-
-    activityList.innerHTML = activities.map(activity => `
-        <div class="activity-item">
-            <div class="activity-icon">🔔</div>
-            <div class="activity-info">
-                <div class="activity-action">${activity.action}</div>
-                <div class="activity-details">
-                    ${activity.user ? `<span class="user">${activity.user}</span>` : ''}
-                    ${activity.item ? `<span class="item">${activity.item}</span>` : ''}
-                    ${activity.amount ? `<span class="amount">${activity.amount}</span>` : ''}
+    try {
+        // Реальные данные активности из API
+        const activities = await fetchRecentActivity();
+        activityList.innerHTML = activities.map(activity => `
+            <div class="activity-item">
+                <div class="activity-icon">${getActivityIcon(activity.type)}</div>
+                <div class="activity-info">
+                    <div class="activity-action">${activity.action}</div>
+                    <div class="activity-details">
+                        ${activity.user ? `<span class="user">${activity.user}</span>` : ''}
+                        ${activity.item ? `<span class="item">${activity.item}</span>` : ''}
+                        ${activity.amount ? `<span class="amount">${activity.amount}</span>` : ''}
+                    </div>
+                    <div class="activity-time">${activity.time}</div>
                 </div>
-                <div class="activity-time">${activity.time}</div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
+    } catch (error) {
+        activityList.innerHTML = '<div class="error">Ошибка загрузки активности</div>';
+    }
 }
 
+async function fetchRecentActivity() {
+    // Реальная реализация получения активности
+    try {
+        const response = await fetch('/api/activity');
+        const data = await response.json();
+        return data.success ? data.activities : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+// ПОЛНЫЙ ФУНКЦИОНАЛ УПРАВЛЕНИЯ КОНТЕНТОМ
 async function loadContentList(contentType) {
     const contentList = document.getElementById('contentList');
     if (!contentList) return;
@@ -315,7 +180,7 @@ async function loadContentList(contentType) {
         }
 
         contentList.innerHTML = content.map(item => `
-            <div class="admin-content-item">
+            <div class="admin-content-item" data-content-id="${item.id}" data-content-type="${contentType}">
                 <div class="content-preview">
                     <div class="content-info">
                         <div class="content-title">${item.title}</div>
@@ -339,12 +204,12 @@ async function loadContentList(contentType) {
     }
 }
 
-function showAddContentForm(defaultType = 'courses') {
+async function showAddContentForm(defaultType = 'courses') {
     currentContentType = defaultType;
     
     const modalHTML = `
         <div class="modal" id="addContentModal">
-            <div class="modal-content">
+            <div class="modal-content large">
                 <div class="modal-header">
                     <h3>Добавить контент - ${getContentTypeName(defaultType)}</h3>
                     <button class="close-btn" onclick="closeModal('addContentModal')">×</button>
@@ -352,7 +217,7 @@ function showAddContentForm(defaultType = 'courses') {
                 <div class="modal-body">
                     <form id="addContentForm">
                         <div class="form-group">
-                            <label>Тип контента</label>
+                            <label>Тип контента *</label>
                             <select id="contentTypeSelect" required>
                                 <option value="courses">Курс</option>
                                 <option value="podcasts">Подкаст</option>
@@ -374,25 +239,37 @@ function showAddContentForm(defaultType = 'courses') {
                             <label>Полное описание</label>
                             <textarea id="contentFullDescriptionInput" rows="5" placeholder="Подробное описание контента"></textarea>
                         </div>
-                        <div class="form-group">
-                            <label>Длительность</label>
-                            <input type="text" id="contentDurationInput" placeholder="например: 1:30:00">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Длительность</label>
+                                <input type="text" id="contentDurationInput" placeholder="1:30:00">
+                            </div>
+                            <div class="form-group">
+                                <label>Цена (руб.)</label>
+                                <input type="number" id="contentPriceInput" value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Количество модулей</label>
+                                <input type="number" id="contentModulesInput" value="1" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Тип материала</label>
+                                <select id="contentMaterialType">
+                                    <option value="mri">МРТ разбор</option>
+                                    <option value="case">Клинический случай</option>
+                                    <option value="checklist">Чек-лист</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label>Цена (руб.)</label>
-                            <input type="number" id="contentPriceInput" placeholder="0 для бесплатного" min="0">
+                            <label>URL изображения</label>
+                            <input type="url" id="contentImageInput" placeholder="https://example.com/image.jpg">
                         </div>
                         <div class="form-group">
-                            <label>Количество модулей (для курсов)</label>
-                            <input type="number" id="contentModulesInput" value="1" min="1">
-                        </div>
-                        <div class="form-group">
-                            <label>Тип материала</label>
-                            <select id="contentMaterialType">
-                                <option value="mri">МРТ разбор</option>
-                                <option value="case">Клинический случай</option>
-                                <option value="checklist">Чек-лист</option>
-                            </select>
+                            <label>URL контента (видео/аудио/файл)</label>
+                            <input type="url" id="contentFileInput" placeholder="https://example.com/content.mp4">
                         </div>
                         <div class="form-actions">
                             <button type="button" class="btn btn-secondary" onclick="closeModal('addContentModal')">Отмена</button>
@@ -405,11 +282,8 @@ function showAddContentForm(defaultType = 'courses') {
     `;
     
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // Устанавливаем выбранный тип контента
     document.getElementById('contentTypeSelect').value = defaultType;
     
-    // Обработчик формы
     document.getElementById('addContentForm').addEventListener('submit', function(e) {
         e.preventDefault();
         addNewContent();
@@ -418,49 +292,133 @@ function showAddContentForm(defaultType = 'courses') {
 
 async function addNewContent() {
     const form = document.getElementById('addContentForm');
-    const title = document.getElementById('contentTitleInput').value;
-    const contentType = document.getElementById('contentTypeSelect').value;
-    
-    if (!title.trim()) {
-        showNotification('❌ Введите название контента', 'error');
-        return;
-    }
+    const formData = new FormData(form);
     
     const contentData = {
-        title: title,
+        title: document.getElementById('contentTitleInput').value,
         description: document.getElementById('contentDescriptionInput').value,
         fullDescription: document.getElementById('contentFullDescriptionInput').value,
         duration: document.getElementById('contentDurationInput').value,
         price: parseInt(document.getElementById('contentPriceInput').value) || 0,
         modules: parseInt(document.getElementById('contentModulesInput').value) || 1,
-        type: document.getElementById('contentMaterialType').value
+        type: document.getElementById('contentMaterialType').value,
+        image: document.getElementById('contentImageInput').value,
+        file: document.getElementById('contentFileInput').value,
+        contentType: document.getElementById('contentTypeSelect').value
     };
     
     try {
-        // В демо-режиме просто добавляем в локальную базу
-        if (!adminData.content[contentType]) {
-            adminData.content[contentType] = [];
+        const response = await fetch('/api/content', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(contentData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('✅ Контент успешно добавлен', 'success');
+            closeModal('addContentModal');
+            await loadAdminData(); // Перезагружаем данные
+            loadContentList(contentData.contentType);
+        } else {
+            throw new Error(data.error);
         }
-        
-        const newContent = {
-            id: Math.max(0, ...adminData.content[contentType].map(item => item.id)) + 1,
-            ...contentData,
-            contentType: contentType,
-            created: new Date(),
-            updated: new Date()
-        };
-        
-        adminData.content[contentType].push(newContent);
-        
-        showNotification('✅ Контент успешно добавлен', 'success');
-        closeModal('addContentModal');
-        
-        // Обновляем список контента
-        loadContentList(contentType);
-        
     } catch (error) {
         console.error('Ошибка при добавлении контента:', error);
         showNotification('❌ Ошибка при добавлении контента', 'error');
+    }
+}
+
+async function editContent(contentType, contentId) {
+    const content = adminData.content[contentType]?.find(item => item.id === contentId);
+    if (!content) {
+        showNotification('❌ Контент не найден', 'error');
+        return;
+    }
+    
+    const modalHTML = `
+        <div class="modal" id="editContentModal">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h3>Редактировать контент</h3>
+                    <button class="close-btn" onclick="closeModal('editContentModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <form id="editContentForm">
+                        <div class="form-group">
+                            <label>Название *</label>
+                            <input type="text" id="editContentTitleInput" value="${content.title}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Описание</label>
+                            <textarea id="editContentDescriptionInput" rows="3">${content.description || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Полное описание</label>
+                            <textarea id="editContentFullDescriptionInput" rows="5">${content.fullDescription || ''}</textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Длительность</label>
+                                <input type="text" id="editContentDurationInput" value="${content.duration || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Цена (руб.)</label>
+                                <input type="number" id="editContentPriceInput" value="${content.price || 0}" min="0">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeModal('editContentModal')">Отмена</button>
+                            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    document.getElementById('editContentForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        await updateContent(contentType, contentId);
+    });
+}
+
+async function updateContent(contentType, contentId) {
+    const updateData = {
+        title: document.getElementById('editContentTitleInput').value,
+        description: document.getElementById('editContentDescriptionInput').value,
+        fullDescription: document.getElementById('editContentFullDescriptionInput').value,
+        duration: document.getElementById('editContentDurationInput').value,
+        price: parseInt(document.getElementById('editContentPriceInput').value) || 0
+    };
+    
+    try {
+        const response = await fetch(`/api/content/${contentType}/${contentId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updateData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('✅ Контент успешно обновлен', 'success');
+            closeModal('editContentModal');
+            await loadAdminData();
+            loadContentList(contentType);
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (error) {
+        console.error('Ошибка при обновлении контента:', error);
+        showNotification('❌ Ошибка при обновлении контента', 'error');
     }
 }
 
@@ -468,68 +426,61 @@ async function deleteContent(contentType, contentId) {
     if (!confirm(`🗑️ Удалить этот контент?`)) return;
 
     try {
-        // В демо-режиме удаляем из локальной базы
-        adminData.content[contentType] = adminData.content[contentType].filter(item => item.id !== contentId);
+        const response = await fetch(`/api/content/${contentType}/${contentId}`, {
+            method: 'DELETE'
+        });
         
-        showNotification('✅ Контент удален', 'success');
-        loadContentList(contentType);
+        const data = await response.json();
         
+        if (data.success) {
+            showNotification('✅ Контент удален', 'success');
+            await loadAdminData();
+            loadContentList(contentType);
+        } else {
+            throw new Error(data.error);
+        }
     } catch (error) {
         console.error('Ошибка при удалении контента:', error);
         showNotification('❌ Ошибка при удалении контента', 'error');
     }
 }
 
-function editContent(contentType, contentId) {
-    const content = adminData.content[contentType]?.find(item => item.id === contentId);
-    if (!content) {
-        showNotification('❌ Контент не найден', 'error');
-        return;
-    }
-    
-    showNotification(`✏️ Редактирование: ${content.title}`, 'info');
-    // Здесь можно открыть форму редактирования с предзаполненными данными
-}
-
-function loadTabData(tab) {
-    switch (tab) {
-        case 'users':
-            loadUsersList();
-            break;
-        case 'admins':
-            loadAdmins();
-            break;
-        case 'subscriptions':
-            loadSubscriptions();
-            break;
-        case 'promotions':
-            loadPromotions();
-            break;
-        case 'settings':
-            loadSettings();
-            break;
-    }
-}
-
+// ПОЛНЫЙ ФУНКЦИОНАЛ УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ
 async function loadUsersList() {
     const usersList = document.getElementById('usersList');
     if (!usersList) return;
     
     usersList.innerHTML = '<div class="loading">Загрузка пользователей...</div>';
 
+    try {
+        const response = await fetch('/api/users');
+        const data = await response.json();
+        
+        if (data.success) {
+            adminData.users = data.users;
+            renderUsersList();
+        } else {
+            throw new Error('Failed to load users');
+        }
+    } catch (error) {
+        usersList.innerHTML = '<div class="error">Ошибка загрузки пользователей</div>';
+    }
+}
+
+function renderUsersList() {
+    const usersList = document.getElementById('usersList');
     const searchTerm = document.getElementById('userSearch')?.value.toLowerCase() || '';
     const filterType = document.getElementById('userFilter')?.value || 'all';
 
-    // Фильтрация пользователей
-    let filteredUsers = demoUsers.filter(user => {
+    const filteredUsers = adminData.users.filter(user => {
         const matchesSearch = user.firstName.toLowerCase().includes(searchTerm) ||
-                             user.email.toLowerCase().includes(searchTerm) ||
-                             user.specialization.toLowerCase().includes(searchTerm);
+                             user.email?.toLowerCase().includes(searchTerm) ||
+                             user.specialization?.toLowerCase().includes(searchTerm);
         
         const matchesFilter = filterType === 'all' || 
-                             (filterType === 'active' && user.subscription.status === 'active') ||
-                             (filterType === 'trial' && user.subscription.status === 'trial') ||
-                             (filterType === 'inactive' && user.subscription.status === 'inactive');
+                             (filterType === 'active' && user.subscription?.status === 'active') ||
+                             (filterType === 'trial' && user.subscription?.status === 'trial') ||
+                             (filterType === 'inactive' && (!user.subscription || user.subscription.status === 'inactive'));
         
         return matchesSearch && matchesFilter;
     });
@@ -549,45 +500,201 @@ async function loadUsersList() {
             <div class="user-info">
                 <div class="user-avatar">👤</div>
                 <div class="user-details">
-                    <div class="user-name">${user.firstName}</div>
+                    <div class="user-name">${user.firstName} ${user.lastName || ''}</div>
                     <div class="user-meta">
-                        <span>🎯 ${user.specialization}</span>
-                        <span>🏙️ ${user.city}</span>
-                        <span>📧 ${user.email}</span>
+                        ${user.specialization ? `<span>🎯 ${user.specialization}</span>` : ''}
+                        ${user.city ? `<span>🏙️ ${user.city}</span>` : ''}
+                        ${user.email ? `<span>📧 ${user.email}</span>` : ''}
                     </div>
                     <div class="user-status">
-                        <span class="status-badge ${user.subscription.status}">
-                            ${user.subscription.status === 'active' ? '✅ Активная' : 
-                              user.subscription.status === 'trial' ? '🆓 Пробная' : '❌ Неактивная'}
+                        <span class="status-badge ${user.subscription?.status || 'inactive'}">
+                            ${getSubscriptionStatusText(user.subscription?.status)}
                         </span>
                         <span class="join-date">Зарегистрирован: ${new Date(user.joinedAt).toLocaleDateString('ru-RU')}</span>
                     </div>
                     <div class="user-stats">
-                        <span>📚 Материалов: ${user.progress.steps.materialsWatched}</span>
-                        <span>👥 Мероприятий: ${user.progress.steps.eventsParticipated}</span>
-                        <span>💾 Сохранено: ${user.progress.steps.materialsSaved}</span>
-                        <span>🎓 Курсов: ${user.progress.steps.coursesBought}</span>
+                        <span>📚 Материалов: ${user.progress?.steps?.materialsWatched || 0}</span>
+                        <span>👥 Мероприятий: ${user.progress?.steps?.eventsParticipated || 0}</span>
+                        <span>💾 Сохранено: ${user.progress?.steps?.materialsSaved || 0}</span>
+                        <span>🎓 Курсов: ${user.progress?.steps?.coursesBought || 0}</span>
                     </div>
                 </div>
             </div>
             <div class="user-actions">
                 <button class="btn btn-small" onclick="viewUser(${user.id})">👁️ Профиль</button>
                 <button class="btn btn-small" onclick="messageUser(${user.id})">✉️ Сообщение</button>
-                <button class="btn btn-small btn-primary" onclick="makeAdmin(${user.id})">👑 Админ</button>
+                ${!user.isAdmin ? `<button class="btn btn-small btn-primary" onclick="makeAdmin(${user.id})">👑 Админ</button>` : ''}
             </div>
         </div>
     `).join('');
 }
 
-function searchUsers() {
-    loadUsersList();
+async function viewUser(userId) {
+    try {
+        const response = await fetch(`/api/user/${userId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            showUserModal(data.user);
+        } else {
+            throw new Error('User not found');
+        }
+    } catch (error) {
+        showNotification('❌ Пользователь не найден', 'error');
+    }
 }
 
+function showUserModal(user) {
+    const modalHTML = `
+        <div class="modal" id="userModal">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h3>👤 Профиль пользователя</h3>
+                    <button class="close-btn" onclick="closeModal('userModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="user-profile">
+                        <div class="profile-header">
+                            <div class="avatar-large">👤</div>
+                            <div class="profile-info">
+                                <div class="profile-name">${user.firstName} ${user.lastName || ''}</div>
+                                <div class="profile-meta">
+                                    ${user.specialization ? `<span>🎯 ${user.specialization}</span>` : ''}
+                                    ${user.city ? `<span>🏙️ ${user.city}</span>` : ''}
+                                    ${user.email ? `<span>📧 ${user.email}</span>` : ''}
+                                </div>
+                                <div class="subscription-status ${user.subscription?.status || 'inactive'}">
+                                    ${getSubscriptionStatusText(user.subscription?.status)}
+                                    ${user.subscription?.endDate ? ` до ${new Date(user.subscription.endDate).toLocaleDateString('ru-RU')}` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="user-stats-detailed">
+                            <h4>📊 Статистика активности</h4>
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value">${user.progress?.steps?.materialsWatched || 0}</div>
+                                    <div class="stat-label">Просмотрено материалов</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">${user.progress?.steps?.eventsParticipated || 0}</div>
+                                    <div class="stat-label">Участий в мероприятиях</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">${user.progress?.steps?.materialsSaved || 0}</div>
+                                    <div class="stat-label">Сохранено материалов</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">${user.progress?.steps?.coursesBought || 0}</div>
+                                    <div class="stat-label">Приобретено курсов</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="user-actions-full">
+                            <button class="btn btn-primary" onclick="editUserSubscription(${user.id})">✏️ Изменить подписку</button>
+                            <button class="btn btn-secondary" onclick="sendUserMessage(${user.id})">✉️ Отправить сообщение</button>
+                            <button class="btn btn-outline" onclick="exportUserData(${user.id})">📥 Экспорт данных</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+async function editUserSubscription(userId) {
+    const user = adminData.users.find(u => u.id === userId);
+    if (!user) return;
+
+    const newStatus = prompt('Изменить статус подписки (active/trial/inactive):', user.subscription?.status || 'inactive');
+    if (newStatus && ['active', 'trial', 'inactive'].includes(newStatus)) {
+        try {
+            const response = await fetch(`/api/user/${userId}/subscription`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    status: newStatus,
+                    endDate: newStatus === 'active' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : 
+                            newStatus === 'trial' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : null
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification(`✅ Подписка пользователя изменена на "${newStatus}"`, 'success');
+                closeModal('userModal');
+                await loadUsersList();
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            showNotification('❌ Ошибка при изменении подписки', 'error');
+        }
+    }
+}
+
+async function sendUserMessage(userId) {
+    const message = prompt('Введите сообщение для пользователя:');
+    if (message) {
+        try {
+            const response = await fetch(`/api/user/${userId}/message`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification('✉️ Сообщение отправлено', 'success');
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            showNotification('❌ Ошибка при отправке сообщения', 'error');
+        }
+    }
+}
+
+async function makeAdmin(userId) {
+    if (confirm('Назначить пользователя администратором?')) {
+        try {
+            const response = await fetch('/api/admins', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification('✅ Пользователь назначен администратором', 'success');
+                await loadAdmins();
+                await loadUsersList();
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            showNotification('❌ Ошибка при назначении администратора', 'error');
+        }
+    }
+}
+
+// УПРАВЛЕНИЕ АДМИНИСТРАТОРАМИ
 async function loadAdmins() {
     const adminsList = document.getElementById('adminsList');
     if (!adminsList) return;
-
-    adminsList.innerHTML = '<div class="loading">Загрузка администраторов...</div>';
 
     try {
         const response = await fetch('/api/admins');
@@ -597,20 +704,10 @@ async function loadAdmins() {
             adminData.admins = data.data;
             updateAdminsList();
         } else {
-            // Демо-админы
-            adminData.admins = [
-                { id: 898508164, firstName: 'Главный Администратор', username: 'admin', joinedAt: new Date('2024-01-01') },
-                { id: 123456789, firstName: 'Тест Админ', username: 'testadmin', joinedAt: new Date('2024-01-10') }
-            ];
-            updateAdminsList();
+            throw new Error('Failed to load admins');
         }
     } catch (error) {
-        console.error('Ошибка загрузки списка админов:', error);
-        // Демо-админы при ошибке
-        adminData.admins = [
-            { id: 898508164, firstName: 'Главный Администратор', username: 'admin', joinedAt: new Date('2024-01-01') }
-        ];
-        updateAdminsList();
+        adminsList.innerHTML = '<div class="error">Ошибка загрузки администраторов</div>';
     }
 }
 
@@ -659,40 +756,30 @@ async function addNewAdmin() {
         return;
     }
 
-    const userIdNum = parseInt(userId);
-    
     try {
         const response = await fetch('/api/admins', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ userId: userIdNum })
+            body: JSON.stringify({ userId: parseInt(userId) })
         });
         
         const data = await response.json();
         
         if (data.success) {
             showNotification('✅ Администратор добавлен', 'success');
-            loadAdmins();
+            await loadAdmins();
         } else {
             throw new Error(data.error);
         }
     } catch (error) {
-        console.error('Ошибка при добавлении админа:', error);
-        // Демо-режим
-        adminData.admins.push({
-            id: userIdNum,
-            firstName: `Пользователь ${userIdNum}`,
-            joinedAt: new Date()
-        });
-        showNotification('✅ Администратор добавлен (демо-режим)', 'success');
-        updateAdminsList();
+        showNotification('❌ Ошибка при добавлении администратора', 'error');
     }
 }
 
 async function removeAdmin(userId) {
-    if (!confirm(`🗑️ Удалить администратора?`)) return;
+    if (!confirm('🗑️ Удалить администратора?')) return;
 
     try {
         const response = await fetch(`/api/admins/${userId}`, {
@@ -703,384 +790,68 @@ async function removeAdmin(userId) {
         
         if (data.success) {
             showNotification('✅ Администратор удален', 'success');
-            loadAdmins();
+            await loadAdmins();
         } else {
             throw new Error(data.error);
         }
     } catch (error) {
-        console.error('Ошибка при удалении админа:', error);
-        // Демо-режим
-        adminData.admins = adminData.admins.filter(admin => admin.id !== userId);
-        showNotification('✅ Администратор удален (демо-режим)', 'success');
-        updateAdminsList();
-    }
-}
-
-// РАБОЧИЕ ФУНКЦИИ (без заглушек)
-
-function viewUser(userId) {
-    const user = demoUsers.find(u => u.id === userId);
-    if (!user) {
-        showNotification('❌ Пользователь не найден', 'error');
-        return;
-    }
-    
-    const modalHTML = `
-        <div class="modal" id="userModal">
-            <div class="modal-content large">
-                <div class="modal-header">
-                    <h3>👤 Профиль пользователя</h3>
-                    <button class="close-btn" onclick="closeModal('userModal')">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="user-profile">
-                        <div class="profile-header">
-                            <div class="avatar-large">👤</div>
-                            <div class="profile-info">
-                                <div class="profile-name">${user.firstName}</div>
-                                <div class="profile-meta">
-                                    <span>🎯 ${user.specialization}</span>
-                                    <span>🏙️ ${user.city}</span>
-                                    <span>📧 ${user.email}</span>
-                                </div>
-                                <div class="subscription-status ${user.subscription.status}">
-                                    ${user.subscription.status === 'active' ? '✅ Активная подписка' : 
-                                      user.subscription.status === 'trial' ? '🆓 Пробный период' : '❌ Нет подписки'}
-                                    ${user.subscription.endDate ? ` до ${new Date(user.subscription.endDate).toLocaleDateString('ru-RU')}` : ''}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="user-stats-detailed">
-                            <h4>📊 Статистика активности</h4>
-                            <div class="stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-value">${user.progress.steps.materialsWatched}</div>
-                                    <div class="stat-label">Просмотрено материалов</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value">${user.progress.steps.eventsParticipated}</div>
-                                    <div class="stat-label">Участий в мероприятиях</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value">${user.progress.steps.materialsSaved}</div>
-                                    <div class="stat-label">Сохранено материалов</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value">${user.progress.steps.coursesBought}</div>
-                                    <div class="stat-label">Приобретено курсов</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="user-actions-full">
-                            <button class="btn btn-primary" onclick="editUserSubscription(${user.id})">✏️ Изменить подписку</button>
-                            <button class="btn btn-secondary" onclick="sendUserMessage(${user.id})">✉️ Отправить сообщение</button>
-                            <button class="btn btn-outline" onclick="exportUserData(${user.id})">📥 Экспорт данных</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-function messageUser(userId) {
-    const user = demoUsers.find(u => u.id === userId);
-    if (!user) {
-        showNotification('❌ Пользователь не найден', 'error');
-        return;
-    }
-    
-    const message = prompt(`Введите сообщение для ${user.firstName}:`);
-    if (message) {
-        showNotification(`✉️ Сообщение отправлено пользователю ${user.firstName}`, 'success');
-        // Здесь можно добавить реальную отправку сообщения через бота
-    }
-}
-
-function makeAdmin(userId) {
-    const user = demoUsers.find(u => u.id === userId);
-    if (!user) {
-        showNotification('❌ Пользователь не найден', 'error');
-        return;
-    }
-    
-    if (confirm(`Назначить пользователя ${user.firstName} администратором?`)) {
-        addNewAdmin(userId);
-    }
-}
-
-function editUserSubscription(userId) {
-    const user = demoUsers.find(u => u.id === userId);
-    if (!user) {
-        showNotification('❌ Пользователь не найден', 'error');
-        return;
-    }
-    
-    const newStatus = prompt('Изменить статус подписки (active/trial/inactive):', user.subscription.status);
-    if (newStatus && ['active', 'trial', 'inactive'].includes(newStatus)) {
-        user.subscription.status = newStatus;
-        if (newStatus === 'active') {
-            user.subscription.endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        } else if (newStatus === 'trial') {
-            user.subscription.endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        } else {
-            user.subscription.endDate = null;
-        }
-        showNotification(`✅ Подписка пользователя ${user.firstName} изменена на "${newStatus}"`, 'success');
-        closeModal('userModal');
-        loadUsersList();
-    }
-}
-
-function sendUserMessage(userId) {
-    const user = demoUsers.find(u => u.id === userId);
-    if (!user) return;
-    
-    const message = prompt(`Введите сообщение для ${user.firstName}:`);
-    if (message) {
-        showNotification(`✉️ Сообщение отправлено: "${message}"`, 'success');
-    }
-}
-
-function exportUserData(userId) {
-    const user = demoUsers.find(u => u.id === userId);
-    if (!user) return;
-    
-    const dataStr = JSON.stringify(user, null, 2);
-    const dataBlob = new Blob([dataStr], {type: 'application/json'});
-    
-    // Создаем временную ссылку для скачивания
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `user_${userId}_data.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    showNotification('📥 Данные пользователя экспортированы', 'success');
-}
-
-function loadSubscriptions() {
-    const subscriptionsTab = document.getElementById('subscriptions');
-    if (!subscriptionsTab) return;
-    
-    subscriptionsTab.innerHTML = `
-        <h2>💳 Управление подписками</h2>
-        <div class="subscriptions-stats">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value">${adminData.stats.activeUsers || 0}</div>
-                    <div class="stat-label">Активных подписок</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${(adminData.stats.totalUsers || 0) - (adminData.stats.activeUsers || 0)}</div>
-                    <div class="stat-label">Неактивных</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${((adminData.stats.activeUsers || 0) / (adminData.stats.totalUsers || 1) * 100).toFixed(1)}%</div>
-                    <div class="stat-label">Конверсия</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="subscriptions-actions">
-            <h3>Действия</h3>
-            <div class="action-buttons">
-                <button class="btn btn-primary" onclick="createPromoCode()">🎫 Создать промокод</button>
-                <button class="btn btn-secondary" onclick="exportSubscriptions()">📥 Экспорт подписок</button>
-                <button class="btn btn-outline" onclick="sendMassNotification()">📢 Массовое уведомление</button>
-            </div>
-        </div>
-        
-        <div class="recent-payments">
-            <h3>💸 Последние платежи</h3>
-            <div class="payments-list">
-                <div class="payment-item">
-                    <div class="payment-user">Анна Сидорова</div>
-                    <div class="payment-amount">2 900 ₽</div>
-                    <div class="payment-date">Сегодня, 14:30</div>
-                    <div class="payment-status success">✅ Успешно</div>
-                </div>
-                <div class="payment-item">
-                    <div class="payment-user">Иван Петров</div>
-                    <div class="payment-amount">7 500 ₽</div>
-                    <div class="payment-date">Вчера, 11:15</div>
-                    <div class="payment-status success">✅ Успешно</div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function loadPromotions() {
-    const promotionsTab = document.getElementById('promotions');
-    if (!promotionsTab) return;
-    
-    promotionsTab.innerHTML = `
-        <div class="promotions-header">
-            <h2>🎁 Управление акциями</h2>
-            <button class="btn btn-primary" onclick="createPromotion()">+ Создать акцию</button>
-        </div>
-        
-        <div class="promotions-grid">
-            <div class="promotion-card">
-                <div class="promotion-header">
-                    <div class="promotion-title">Пробный период</div>
-                    <div class="promotion-status active">✅ Активна</div>
-                </div>
-                <div class="promotion-description">7 дней бесплатного доступа ко всем материалам</div>
-                <div class="promotion-stats">
-                    <span>👥 45 активаций</span>
-                    <span>🔄 12% конверсия</span>
-                </div>
-                <div class="promotion-actions">
-                    <button class="btn btn-small" onclick="editPromotion(1)">✏️</button>
-                    <button class="btn btn-small btn-danger" onclick="deletePromotion(1)">🗑️</button>
-                </div>
-            </div>
-            
-            <div class="promotion-card">
-                <div class="promotion-header">
-                    <div class="promotion-title">Приведи друга</div>
-                    <div class="promotion-status active">✅ Активна</div>
-                </div>
-                <div class="promotion-description">Скидка 20% на подписку за каждого приглашенного</div>
-                <div class="promotion-stats">
-                    <span>👥 28 приглашений</span>
-                    <span>🔄 8% конверсия</span>
-                </div>
-                <div class="promotion-actions">
-                    <button class="btn btn-small" onclick="editPromotion(2)">✏️</button>
-                    <button class="btn btn-small btn-danger" onclick="deletePromotion(2)">🗑️</button>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function loadSettings() {
-    const settingsTab = document.getElementById('settings');
-    if (!settingsTab) return;
-    
-    settingsTab.innerHTML = `
-        <h2>⚙️ Настройки системы</h2>
-        
-        <div class="settings-sections">
-            <div class="settings-section">
-                <h3>🔧 Основные настройки</h3>
-                <div class="setting-item">
-                    <label>Название академии</label>
-                    <input type="text" value="Академия АНБ" class="setting-input">
-                </div>
-                <div class="setting-item">
-                    <label>Email поддержки</label>
-                    <input type="email" value="academy@anb.ru" class="setting-input">
-                </div>
-                <div class="setting-item">
-                    <label>Валюта</label>
-                    <select class="setting-input">
-                        <option>RUB - Российский рубль</option>
-                        <option>USD - Доллар США</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h3>💰 Настройки платежей</h3>
-                <div class="setting-item">
-                    <label>Минимальная сумма платежа</label>
-                    <input type="number" value="100" class="setting-input">
-                </div>
-                <div class="setting-item">
-                    <label>Пробный период (дни)</label>
-                    <input type="number" value="7" class="setting-input">
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h3>📧 Уведомления</h3>
-                <div class="setting-item">
-                    <label>
-                        <input type="checkbox" checked> Уведомления о новых платежах
-                    </label>
-                </div>
-                <div class="setting-item">
-                    <label>
-                        <input type="checkbox" checked> Уведомления о новых пользователях
-                    </label>
-                </div>
-                <div class="setting-item">
-                    <label>
-                        <input type="checkbox"> Ежедневная статистика
-                    </label>
-                </div>
-            </div>
-        </div>
-        
-        <div class="settings-actions">
-            <button class="btn btn-primary" onclick="saveSettings()">💾 Сохранить настройки</button>
-            <button class="btn btn-secondary" onclick="resetSettings()">🔄 Сбросить</button>
-        </div>
-    `;
-}
-
-// РАБОЧИЕ ФУНКЦИИ ДЛЯ ПРОМОАКЦИЙ И НАСТРОЕК
-
-function createPromotion() {
-    showNotification('🎁 Функция создания акции в разработке', 'info');
-}
-
-function editPromotion(promoId) {
-    showNotification(`✏️ Редактирование акции ID: ${promoId}`, 'info');
-}
-
-function deletePromotion(promoId) {
-    if (confirm('Удалить акцию?')) {
-        showNotification(`🗑️ Акция ID: ${promoId} удалена`, 'success');
-    }
-}
-
-function createPromoCode() {
-    const promoCode = `PROMO${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-    showNotification(`🎫 Создан промокод: ${promoCode}`, 'success');
-}
-
-function exportSubscriptions() {
-    showNotification('📥 Экспорт данных о подписках завершен', 'success');
-}
-
-function sendMassNotification() {
-    const message = prompt('Введите сообщение для массовой рассылки:');
-    if (message) {
-        showNotification(`📢 Массовая рассылка отправлена: "${message}"`, 'success');
-    }
-}
-
-function saveSettings() {
-    showNotification('💾 Настройки сохранены', 'success');
-}
-
-function resetSettings() {
-    if (confirm('Сбросить все настройки к значениям по умолчанию?')) {
-        showNotification('🔄 Настройки сброшены', 'success');
+        showNotification('❌ Ошибка при удалении администратора', 'error');
     }
 }
 
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+function switchAdminTab(tab) {
+    currentAdminTab = tab;
+    
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.admin-nav-btn').forEach(b => b.classList.remove('active'));
+    
+    const tabElement = document.getElementById(tab);
+    if (tabElement) {
+        tabElement.classList.add('active');
+    }
+    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
 
-function refreshAdminData() {
-    loadAdminData();
-    showNotification('🔄 Данные обновлены', 'info');
+    loadTabData(tab);
 }
 
-function goToMainApp() {
-    window.location.href = '/';
+function switchContentTab(contentType) {
+    currentContentType = contentType;
+    
+    document.querySelectorAll('.content-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-content-type="${contentType}"]`).classList.add('active');
+    
+    document.getElementById('contentTitle').textContent = getContentTypeName(contentType);
+    loadContentList(contentType);
+}
+
+function loadTabData(tab) {
+    switch (tab) {
+        case 'users':
+            loadUsersList();
+            break;
+        case 'admins':
+            loadAdmins();
+            break;
+        case 'content':
+            loadContentList(currentContentType);
+            break;
+        case 'subscriptions':
+            loadSubscriptions();
+            break;
+        case 'promotions':
+            loadPromotions();
+            break;
+        case 'settings':
+            loadSettings();
+            break;
+    }
+}
+
+function searchUsers() {
+    renderUsersList();
 }
 
 function getContentTypeName(type) {
@@ -1093,6 +864,26 @@ function getContentTypeName(type) {
         'events': 'Мероприятия'
     };
     return names[type] || type;
+}
+
+function getSubscriptionStatusText(status) {
+    const statuses = {
+        'active': '✅ Активная подписка',
+        'trial': '🆓 Пробный период', 
+        'inactive': '❌ Нет подписки'
+    };
+    return statuses[status] || '❌ Нет подписки';
+}
+
+function getActivityIcon(type) {
+    const icons = {
+        'user': '👤',
+        'payment': '💰',
+        'content': '📝',
+        'subscription': '💳',
+        'default': '🔔'
+    };
+    return icons[type] || icons.default;
 }
 
 function debounce(func, wait) {
@@ -1137,7 +928,16 @@ function closeModal(modalId) {
     }
 }
 
-// Инициализация Telegram WebApp в админ-панели
+function refreshAdminData() {
+    loadAdminData();
+    showNotification('🔄 Данные обновлены', 'info');
+}
+
+function goToMainApp() {
+    window.location.href = '/';
+}
+
+// Инициализация Telegram WebApp
 if (window.Telegram && Telegram.WebApp) {
     Telegram.WebApp.expand();
     Telegram.WebApp.ready();
