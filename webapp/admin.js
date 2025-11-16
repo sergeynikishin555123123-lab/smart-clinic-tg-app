@@ -27,7 +27,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadAdminData();
 });
 
-// === ВСТАВЬТЕ ЭТУ ФУНКЦИЮ ПРЯМО ЗДЕСЬ ===
 async function checkAdminStatus() {
     try {
         console.log('🔧 Проверка прав для админ-панели...');
@@ -57,7 +56,6 @@ async function checkAdminStatus() {
         return false;
     }
 }
-// === КОНЕЦ ВСТАВКИ ===
 
 function initAdminPanel() {
     console.log('⚙️ Инициализация интерфейса админ-панели...');
@@ -243,6 +241,7 @@ async function loadContentList(contentType) {
         contentList.innerHTML = content.map(item => `
             <div class="admin-content-item" data-content-id="${item.id}" data-content-type="${contentType}">
                 <div class="content-preview">
+                    ${item.image_url ? `<img src="${item.image_url}" alt="${item.title}" class="content-image">` : ''}
                     <div class="content-info">
                         <div class="content-title">${item.title}</div>
                         <div class="content-description">${item.description || 'Нет описания'}</div>
@@ -279,7 +278,7 @@ async function showAddContentForm(defaultType = 'courses') {
                     <button class="close-btn" onclick="closeModal('addContentModal')">×</button>
                 </div>
                 <div class="modal-body">
-                    <form id="addContentForm">
+                    <form id="addContentForm" enctype="multipart/form-data">
                         <div class="form-group">
                             <label>Тип контента *</label>
                             <select id="contentTypeSelect" required>
@@ -303,38 +302,16 @@ async function showAddContentForm(defaultType = 'courses') {
                             <label>Полное описание</label>
                             <textarea id="contentFullDescriptionInput" rows="5" placeholder="Подробное описание контента"></textarea>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Длительность</label>
-                                <input type="text" id="contentDurationInput" placeholder="1:30:00">
-                            </div>
-                            <div class="form-group">
-                                <label>Цена (руб.)</label>
-                                <input type="number" id="contentPriceInput" value="0" min="0">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Количество модулей</label>
-                                <input type="number" id="contentModulesInput" value="1" min="1">
-                            </div>
-                            <div class="form-group">
-                                <label>Тип материала</label>
-                                <select id="contentMaterialType">
-                                    <option value="mri">МРТ разбор</option>
-                                    <option value="case">Клинический случай</option>
-                                    <option value="checklist">Чек-лист</option>
-                                </select>
-                            </div>
-                        </div>
+                        
                         <div class="form-group">
-                            <label>URL изображения</label>
-                            <input type="url" id="contentImageInput" placeholder="https://example.com/image.jpg">
+                            <label>Изображение (превью)</label>
+                            <input type="file" id="contentImageInput" accept="image/*">
                         </div>
-                        <div class="form-group">
-                            <label>URL контента (видео/аудио/файл)</label>
-                            <input type="url" id="contentFileInput" placeholder="https://example.com/content.mp4">
+                        
+                        <div id="additionalFields">
+                            <!-- Динамические поля в зависимости от типа контента -->
                         </div>
+                        
                         <div class="form-actions">
                             <button type="button" class="btn btn-secondary" onclick="closeModal('addContentModal')">Отмена</button>
                             <button type="submit" class="btn btn-primary">Сохранить контент</button>
@@ -348,12 +325,141 @@ async function showAddContentForm(defaultType = 'courses') {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     document.getElementById('contentTypeSelect').value = defaultType;
     
+    // Обновляем дополнительные поля при изменении типа контента
+    document.getElementById('contentTypeSelect').addEventListener('change', function() {
+        updateAdditionalFields(this.value);
+    });
+    
+    // Инициализируем дополнительные поля
+    updateAdditionalFields(defaultType);
+    
     document.getElementById('addContentForm').addEventListener('submit', function(e) {
         e.preventDefault();
         addNewContent();
     });
     
     console.log(`📝 Открыта форма добавления контента типа: ${defaultType}`);
+}
+
+function updateAdditionalFields(contentType) {
+    const additionalFields = document.getElementById('additionalFields');
+    if (!additionalFields) return;
+
+    let fieldsHTML = '';
+
+    switch(contentType) {
+        case 'courses':
+            fieldsHTML = `
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Длительность</label>
+                        <input type="text" id="contentDurationInput" placeholder="12 часов">
+                    </div>
+                    <div class="form-group">
+                        <label>Цена (руб.)</label>
+                        <input type="number" id="contentPriceInput" value="0" min="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Количество модулей</label>
+                    <input type="number" id="contentModulesInput" value="1" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Видео файл</label>
+                    <input type="file" id="contentVideoInput" accept="video/*">
+                </div>
+                <div class="form-group">
+                    <label>Дополнительные материалы (PDF, DOC)</label>
+                    <input type="file" id="contentFileInput" accept=".pdf,.doc,.docx">
+                </div>
+            `;
+            break;
+
+        case 'podcasts':
+            fieldsHTML = `
+                <div class="form-group">
+                    <label>Длительность</label>
+                    <input type="text" id="contentDurationInput" placeholder="45:20">
+                </div>
+                <div class="form-group">
+                    <label>Аудио файл</label>
+                    <input type="file" id="contentFileInput" accept="audio/*">
+                </div>
+            `;
+            break;
+
+        case 'streams':
+            fieldsHTML = `
+                <div class="form-group">
+                    <label>Дата и время проведения</label>
+                    <input type="datetime-local" id="contentEventDate">
+                </div>
+                <div class="form-group">
+                    <label>Ссылка на трансляцию</label>
+                    <input type="url" id="contentStreamUrl" placeholder="https://youtube.com/...">
+                </div>
+            `;
+            break;
+
+        case 'videos':
+            fieldsHTML = `
+                <div class="form-group">
+                    <label>Длительность</label>
+                    <input type="text" id="contentDurationInput" placeholder="15:30">
+                </div>
+                <div class="form-group">
+                    <label>Видео файл</label>
+                    <input type="file" id="contentVideoInput" accept="video/*">
+                </div>
+            `;
+            break;
+
+        case 'materials':
+            fieldsHTML = `
+                <div class="form-group">
+                    <label>Тип материала</label>
+                    <select id="contentMaterialType">
+                        <option value="mri">МРТ разбор</option>
+                        <option value="case">Клинический случай</option>
+                        <option value="checklist">Чек-лист</option>
+                        <option value="article">Статья</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Файл материала</label>
+                    <input type="file" id="contentFileInput" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                </div>
+            `;
+            break;
+
+        case 'events':
+            fieldsHTML = `
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Дата и время проведения</label>
+                        <input type="datetime-local" id="contentEventDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Тип мероприятия</label>
+                        <select id="contentEventType">
+                            <option value="online">Онлайн</option>
+                            <option value="offline">Офлайн</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Место проведения</label>
+                    <input type="text" id="contentLocation" placeholder="Москва, ул. Примерная, 1">
+                </div>
+                <div class="form-group">
+                    <label>Ссылка для регистрации</label>
+                    <input type="url" id="contentRegistrationUrl" placeholder="https://forms.google.com/...">
+                </div>
+            `;
+            break;
+    }
+
+    additionalFields.innerHTML = fieldsHTML;
 }
 
 async function addNewContent() {
@@ -366,28 +472,72 @@ async function addNewContent() {
         return;
     }
     
-    const contentData = {
-        title: title,
-        description: document.getElementById('contentDescriptionInput').value.trim(),
-        fullDescription: document.getElementById('contentFullDescriptionInput').value.trim(),
-        duration: document.getElementById('contentDurationInput').value.trim(),
-        price: parseInt(document.getElementById('contentPriceInput').value) || 0,
-        modules: parseInt(document.getElementById('contentModulesInput').value) || 1,
-        type: document.getElementById('contentMaterialType').value,
-        image: document.getElementById('contentImageInput').value.trim(),
-        file: document.getElementById('contentFileInput').value.trim(),
-        contentType: contentType
-    };
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('description', document.getElementById('contentDescriptionInput').value.trim());
+    formData.append('fullDescription', document.getElementById('contentFullDescriptionInput').value.trim());
+    formData.append('contentType', contentType);
+
+    // Добавляем файлы
+    const imageFile = document.getElementById('contentImageInput').files[0];
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
+
+    // Добавляем дополнительные поля в зависимости от типа контента
+    switch(contentType) {
+        case 'courses':
+            formData.append('duration', document.getElementById('contentDurationInput').value.trim());
+            formData.append('price', document.getElementById('contentPriceInput').value);
+            formData.append('modules', document.getElementById('contentModulesInput').value);
+            
+            const videoFile = document.getElementById('contentVideoInput').files[0];
+            if (videoFile) formData.append('video', videoFile);
+            
+            const fileFile = document.getElementById('contentFileInput').files[0];
+            if (fileFile) formData.append('file', fileFile);
+            break;
+
+        case 'podcasts':
+            formData.append('duration', document.getElementById('contentDurationInput').value.trim());
+            
+            const audioFile = document.getElementById('contentFileInput').files[0];
+            if (audioFile) formData.append('file', audioFile);
+            break;
+
+        case 'streams':
+            formData.append('eventDate', document.getElementById('contentEventDate').value);
+            formData.append('streamUrl', document.getElementById('contentStreamUrl').value.trim());
+            break;
+
+        case 'videos':
+            formData.append('duration', document.getElementById('contentDurationInput').value.trim());
+            
+            const videoFile2 = document.getElementById('contentVideoInput').files[0];
+            if (videoFile2) formData.append('video', videoFile2);
+            break;
+
+        case 'materials':
+            formData.append('materialType', document.getElementById('contentMaterialType').value);
+            
+            const materialFile = document.getElementById('contentFileInput').files[0];
+            if (materialFile) formData.append('file', materialFile);
+            break;
+
+        case 'events':
+            formData.append('eventDate', document.getElementById('contentEventDate').value);
+            formData.append('location', document.getElementById('contentLocation').value.trim());
+            formData.append('eventType', document.getElementById('contentEventType').value);
+            formData.append('registrationUrl', document.getElementById('contentRegistrationUrl').value.trim());
+            break;
+    }
     
-    console.log('📤 Отправка данных контента:', contentData);
+    console.log('📤 Отправка данных контента:', Object.fromEntries(formData));
     
     try {
         const response = await fetch('/api/content', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(contentData)
+            body: formData
         });
         
         const data = await response.json();
@@ -396,7 +546,7 @@ async function addNewContent() {
             showNotification('✅ Контент успешно добавлен', 'success');
             closeModal('addContentModal');
             await loadAdminData(); // Перезагружаем данные
-            loadContentList(contentData.contentType);
+            loadContentList(contentType);
         } else {
             throw new Error(data.error || 'Unknown error');
         }
@@ -1278,6 +1428,7 @@ adminStyle.textContent = `
         padding: 4px 8px;
         border-radius: 12px;
         font-size: 12px;
+        font-weight: 600;
     }
     
     .status-badge.trial {
@@ -1286,6 +1437,7 @@ adminStyle.textContent = `
         padding: 4px 8px;
         border-radius: 12px;
         font-size: 12px;
+        font-weight: 600;
     }
     
     .status-badge.inactive {
@@ -1294,6 +1446,7 @@ adminStyle.textContent = `
         padding: 4px 8px;
         border-radius: 12px;
         font-size: 12px;
+        font-weight: 600;
     }
     
     .main-admin-badge {
@@ -1303,6 +1456,320 @@ adminStyle.textContent = `
         border-radius: 16px;
         font-size: 12px;
         font-weight: 600;
+    }
+    
+    .upload-preview {
+        margin: 10px 0;
+        padding: 10px;
+        border: 2px dashed #58b8e7;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .upload-preview img, .upload-preview video {
+        max-width: 100%;
+        max-height: 200px;
+        border-radius: 8px;
+    }
+    
+    .file-preview {
+        padding: 8px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        margin: 5px 0;
+    }
+    
+    .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #e9ecef;
+        border-radius: 3px;
+        overflow: hidden;
+        margin: 10px 0;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: #58b8e7;
+        transition: width 0.3s ease;
+    }
+    
+    .content-preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .content-preview-item {
+        border: 2px solid #e3f2fd;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .content-preview-item:hover {
+        border-color: #58b8e7;
+        transform: translateY(-2px);
+    }
+    
+    .preview-image {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 6px;
+        margin-bottom: 10px;
+    }
+    
+    .preview-title {
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #2c3e50;
+    }
+    
+    .preview-description {
+        font-size: 12px;
+        color: #6c757d;
+        margin-bottom: 8px;
+    }
+    
+    .stats-chart {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 20px 0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .chart-container {
+        height: 300px;
+        position: relative;
+    }
+    
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .quick-action-btn {
+        background: white;
+        border: 2px solid #e3f2fd;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .quick-action-btn:hover {
+        border-color: #58b8e7;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(88, 184, 231, 0.2);
+    }
+    
+    .action-icon {
+        font-size: 24px;
+        margin-bottom: 10px;
+    }
+    
+    .action-title {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .action-description {
+        font-size: 12px;
+        color: #6c757d;
+    }
+    
+    .user-activity-chart {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    
+    .activity-bar {
+        display: flex;
+        align-items: center;
+        margin: 10px 0;
+    }
+    
+    .activity-label {
+        width: 120px;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .activity-value {
+        flex: 1;
+        height: 20px;
+        background: #e3f2fd;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .activity-fill {
+        height: 100%;
+        background: #58b8e7;
+        border-radius: 10px;
+        transition: width 0.5s ease;
+    }
+    
+    .activity-count {
+        margin-left: 10px;
+        font-weight: 600;
+        color: #2c3e50;
+        min-width: 40px;
+    }
+    
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+    }
+    
+    .modal-content-large {
+        background: white;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 800px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    .form-section {
+        margin-bottom: 25px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .form-section h4 {
+        margin-bottom: 15px;
+        color: #2c3e50;
+        border-bottom: 2px solid #58b8e7;
+        padding-bottom: 8px;
+    }
+    
+    .file-upload-area {
+        border: 2px dashed #58b8e7;
+        border-radius: 8px;
+        padding: 30px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin: 15px 0;
+    }
+    
+    .file-upload-area:hover {
+        background: #e3f2fd;
+    }
+    
+    .file-upload-area.dragover {
+        background: #58b8e7;
+        color: white;
+    }
+    
+    .upload-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+        opacity: 0.7;
+    }
+    
+    .upload-text {
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    
+    .upload-hint {
+        font-size: 14px;
+        color: #6c757d;
+    }
+    
+    .selected-files {
+        margin: 15px 0;
+    }
+    
+    .selected-file {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px;
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        margin-bottom: 8px;
+    }
+    
+    .file-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .file-icon {
+        font-size: 20px;
+    }
+    
+    .file-name {
+        font-weight: 600;
+    }
+    
+    .file-size {
+        font-size: 12px;
+        color: #6c757d;
+    }
+    
+    .remove-file {
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 8px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    
+    @media (max-width: 768px) {
+        .content-preview-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .quick-actions {
+            grid-template-columns: 1fr;
+        }
+        
+        .modal-content-large {
+            width: 95%;
+            margin: 10px;
+        }
+        
+        .form-row {
+            flex-direction: column;
+        }
     }
 `;
 document.head.appendChild(adminStyle);
