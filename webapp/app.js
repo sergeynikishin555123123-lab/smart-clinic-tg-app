@@ -284,15 +284,25 @@ let currentPage = 'home';
 async function loadUserData() {
     try {
         let userId;
+        let userData = null;
         
+        // Пробуем получить данные из Telegram WebApp
         if (window.Telegram && Telegram.WebApp) {
             const tgUser = Telegram.WebApp.initDataUnsafe.user;
+            console.log('🔑 Telegram WebApp User:', tgUser);
+            
             if (tgUser && tgUser.id) {
                 userId = tgUser.id;
-                console.log('🔑 Пользователь Telegram:', tgUser);
+                userData = {
+                    id: tgUser.id,
+                    first_name: tgUser.first_name || 'User',
+                    username: tgUser.username || '',
+                    isAdmin: false // Временно
+                };
             }
         }
 
+        // Если нет Telegram данных, используем демо-режим
         if (!userId) {
             console.log('👤 Режим без Telegram, используем демо-данные');
             currentUser = await loadDemoUser();
@@ -300,25 +310,44 @@ async function loadUserData() {
             return;
         }
 
+        // Получаем данные с сервера
         const response = await fetch(`/api/user/${userId}`);
         const data = await response.json();
+        
+        console.log('📊 Данные с сервера:', data);
         
         if (data.success) {
             currentUser = data.user;
             updateUIWithUserData();
             
-            // === ВСТАВЬТЕ ЭТУ ФУНКЦИЮ ПРЯМО ЗДЕСЬ ===
-            await checkAdminStatus();
-            
-        } else {
-            throw new Error('User not found');
+            // Проверяем права администратора
+            async function checkAdminStatus() {
+    try {
+        if (!currentUser) {
+            console.log('❌ Нет данных пользователя для проверки прав');
+            return false;
         }
+
+        console.log('🔍 Проверка админ-прав для:', currentUser.id);
         
+        // Прямой запрос к API
+        const response = await fetch(`/api/check-admin/${currentUser.id}`);
+        const data = await response.json();
+        
+        console.log('📊 Ответ от API check-admin:', data);
+        
+        if (data.success && data.isAdmin) {
+            document.getElementById('adminBadge').style.display = 'block';
+            console.log('✅ Пользователь администратор');
+            return true;
+        } else {
+            console.log('❌ Пользователь не администратор');
+            console.log('ℹ️ Причина:', data);
+            return false;
+        }
     } catch (error) {
-        console.error('❌ Ошибка загрузки пользователя:', error);
-        console.log('📦 Используем демо-данные');
-        currentUser = await loadDemoUser();
-        updateUIWithUserData();
+        console.error('❌ Ошибка проверки админа:', error);
+        return false;
     }
 }
 
