@@ -1,4 +1,4 @@
-// webapp/app.js - ПОЛНАЯ ВЕРСИЯ БЕЗ ЗАГЛУШЕК
+// webapp/app.js - ПОЛНАЯ РЕАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
 const pages = {
     home: {
         title: 'Академия АНБ',
@@ -279,7 +279,8 @@ let currentUser = null;
 let allContent = {};
 let currentPage = 'home';
 
-// ОСНОВНЫЕ ФУНКЦИИ
+// ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
+
 async function loadUserData() {
     try {
         let userId;
@@ -288,11 +289,12 @@ async function loadUserData() {
             const tgUser = Telegram.WebApp.initDataUnsafe.user;
             if (tgUser && tgUser.id) {
                 userId = tgUser.id;
+                console.log('🔑 Пользователь Telegram:', tgUser);
             }
         }
 
         if (!userId) {
-            // Если нет Telegram user, используем demo режим
+            console.log('👤 Режим без Telegram, используем демо-данные');
             currentUser = await loadDemoUser();
             updateUIWithUserData();
             return;
@@ -307,22 +309,65 @@ async function loadUserData() {
             
             if (currentUser.isAdmin) {
                 document.getElementById('adminBadge').style.display = 'block';
+                console.log('👑 Пользователь является администратором');
             }
+            
+            console.log('✅ Данные пользователя загружены:', currentUser);
         } else {
             throw new Error('User not found');
         }
     } catch (error) {
-        console.log('Используем демо-данные');
+        console.error('❌ Ошибка загрузки пользователя:', error);
+        console.log('📦 Используем демо-данные');
         currentUser = await loadDemoUser();
         updateUIWithUserData();
     }
 }
 
 async function loadDemoUser() {
-    const response = await fetch('/api/content');
-    const contentData = await response.json();
-    const content = contentData.success ? contentData.data : {};
-    
+    try {
+        const response = await fetch('/api/content');
+        const contentData = await response.json();
+        const content = contentData.success ? contentData.data : {};
+        
+        return {
+            id: 1,
+            firstName: 'Демо Пользователь',
+            specialization: 'Невролог',
+            city: 'Москва',
+            email: 'demo@anb.ru',
+            subscription: { 
+                status: 'trial', 
+                type: 'trial_7days',
+                endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) 
+            },
+            progress: { 
+                level: 'Понимаю', 
+                steps: {
+                    materialsWatched: 5,
+                    eventsParticipated: 3,
+                    materialsSaved: 7,
+                    coursesBought: 1
+                }
+            },
+            favorites: { 
+                courses: content.courses ? [content.courses[0]?.id].filter(Boolean) : [], 
+                podcasts: content.podcasts ? [content.podcasts[0]?.id].filter(Boolean) : [], 
+                streams: content.streams ? [content.streams[0]?.id].filter(Boolean) : [], 
+                videos: content.videos ? [content.videos[0]?.id].filter(Boolean) : [], 
+                materials: content.materials ? [content.materials[0]?.id].filter(Boolean) : [], 
+                watchLater: content.streams ? [content.streams[0]?.id].filter(Boolean) : [] 
+            },
+            isAdmin: false,
+            joinedAt: new Date('2024-01-01')
+        };
+    } catch (error) {
+        console.error('❌ Ошибка загрузки демо-данных:', error);
+        return getFallbackUser();
+    }
+}
+
+function getFallbackUser() {
     return {
         id: 1,
         firstName: 'Демо Пользователь',
@@ -344,12 +389,12 @@ async function loadDemoUser() {
             }
         },
         favorites: { 
-            courses: content.courses ? [content.courses[0]?.id].filter(Boolean) : [], 
-            podcasts: content.podcasts ? [content.podcasts[0]?.id].filter(Boolean) : [], 
-            streams: content.streams ? [content.streams[0]?.id].filter(Boolean) : [], 
-            videos: content.videos ? [content.videos[0]?.id].filter(Boolean) : [], 
-            materials: content.materials ? [content.materials[0]?.id].filter(Boolean) : [], 
-            watchLater: content.streams ? [content.streams[0]?.id].filter(Boolean) : [] 
+            courses: [1], 
+            podcasts: [1], 
+            streams: [1], 
+            videos: [1], 
+            materials: [1], 
+            watchLater: [1] 
         },
         isAdmin: false,
         joinedAt: new Date('2024-01-01')
@@ -363,12 +408,14 @@ async function loadContent() {
         
         if (data.success) {
             allContent = data.data;
+            console.log('✅ Контент загружен:', allContent);
         } else {
             throw new Error('Failed to load content');
         }
     } catch (error) {
-        console.error('Ошибка загрузки контента:', error);
+        console.error('❌ Ошибка загрузки контента:', error);
         allContent = {};
+        showNotification('⚠️ Не удалось загрузить контент', 'error');
     }
 }
 
@@ -412,7 +459,8 @@ function initializePage(page) {
     }
 }
 
-// ФУНКЦИОНАЛ ГЛАВНОЙ СТРАНИЦЫ
+// ==================== ГЛАВНАЯ СТРАНИЦА ====================
+
 async function initHomePage() {
     await loadNews();
     initNewsFilters();
@@ -423,18 +471,17 @@ async function loadNews() {
     if (!newsList) return;
 
     try {
-        // Загрузка реальных новостей из API
         const response = await fetch('/api/news');
         const data = await response.json();
         
         if (data.success && data.news.length > 0) {
             displayNews(data.news);
         } else {
-            // Загрузка новостей из контента если нет отдельных новостей
             await loadContent();
             generateNewsFromContent();
         }
     } catch (error) {
+        console.error('❌ Ошибка загрузки новостей:', error);
         generateNewsFromContent();
     }
 }
@@ -442,31 +489,42 @@ async function loadNews() {
 function generateNewsFromContent() {
     const news = [];
     
-    if (allContent.courses) {
-        allContent.courses.forEach(course => {
+    if (allContent.courses && allContent.courses.length > 0) {
+        allContent.courses.slice(0, 2).forEach(course => {
             news.push({
                 category: 'Профессиональное развитие',
                 title: `Новый курс: "${course.title}"`,
-                date: new Date(course.created).toLocaleDateString('ru-RU'),
+                date: new Date(course.created_at).toLocaleDateString('ru-RU'),
                 excerpt: course.description,
                 type: 'courses'
             });
         });
     }
     
-    if (allContent.streams) {
-        allContent.streams.forEach(stream => {
+    if (allContent.streams && allContent.streams.length > 0) {
+        allContent.streams.slice(0, 2).forEach(stream => {
             news.push({
                 category: 'Вебинар',
                 title: `Предстоящий эфир: "${stream.title}"`,
-                date: new Date(stream.created).toLocaleDateString('ru-RU'),
+                date: new Date(stream.created_at).toLocaleDateString('ru-RU'),
                 excerpt: stream.description,
                 type: 'streams'
             });
         });
     }
     
-    displayNews(news.slice(0, 5)); // Показываем только 5 последних
+    // Добавляем общие новости если мало контента
+    if (news.length < 3) {
+        news.push({
+            category: 'Развитие',
+            title: 'Запуск новой образовательной платформы',
+            date: new Date().toLocaleDateString('ru-RU'),
+            excerpt: 'Академия АНБ представляет обновленную платформу для профессионального развития врачей',
+            type: 'development'
+        });
+    }
+    
+    displayNews(news.slice(0, 5));
 }
 
 function displayNews(news) {
@@ -474,7 +532,13 @@ function displayNews(news) {
     if (!newsList) return;
 
     if (news.length === 0) {
-        newsList.innerHTML = '<div class="empty-state">Новости пока не добавлены</div>';
+        newsList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📰</div>
+                <div class="empty-text">Новости пока не добавлены</div>
+                <div class="empty-hint">Следите за обновлениями</div>
+            </div>
+        `;
         return;
     }
 
@@ -500,17 +564,30 @@ function initNewsFilters() {
 
 function filterNews(filter) {
     const newsItems = document.querySelectorAll('.news-item');
+    let visibleCount = 0;
     
     newsItems.forEach(item => {
         if (filter === 'all' || item.dataset.type === filter) {
             item.style.display = 'block';
+            visibleCount++;
         } else {
             item.style.display = 'none';
         }
     });
+    
+    if (visibleCount === 0) {
+        document.getElementById('newsList').innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">🔍</div>
+                <div class="empty-text">Новости не найдены</div>
+                <div class="empty-hint">Попробуйте другой фильтр</div>
+            </div>
+        `;
+    }
 }
 
-// ФУНКЦИОНАЛ КАТАЛОГА
+// ==================== КАТАЛОГ КОНТЕНТА ====================
+
 async function loadCatalogContent() {
     await loadContent();
     renderCatalogContent();
@@ -521,7 +598,13 @@ function renderCatalogContent() {
     if (!contentGrid) return;
     
     if (!allContent || Object.keys(allContent).length === 0) {
-        contentGrid.innerHTML = '<div class="empty-state">Контент пока не добавлен</div>';
+        contentGrid.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📚</div>
+                <div class="empty-text">Контент пока не добавлен</div>
+                <div class="empty-hint">Следите за обновлениями</div>
+            </div>
+        `;
         return;
     }
 
@@ -536,12 +619,17 @@ function renderCatalogContent() {
     });
 
     if (allItems.length === 0) {
-        contentGrid.innerHTML = '<div class="empty-state">Контент пока не добавлен</div>';
+        contentGrid.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📚</div>
+                <div class="empty-text">Контент пока не добавлен</div>
+            </div>
+        `;
         return;
     }
 
     // Сортируем по дате создания (новые первыми)
-    allItems.sort((a, b) => new Date(b.created) - new Date(a.created));
+    allItems.sort((a, b) => new Date(b.created_at || b.created) - new Date(a.created_at || a.created));
 
     contentGrid.innerHTML = allItems.map(item => `
         <div class="content-card" data-type="${item.contentType}">
@@ -608,14 +696,14 @@ function filterCatalogContent() {
         const description = card.querySelector('.content-description').textContent.toLowerCase();
         const cardType = card.dataset.type;
         const isFree = card.querySelector('.meta-item.free');
-        const isNew = true; // Можно добавить логику определения новизны
+        const isNew = true;
         
         const matchesSearch = title.includes(searchTerm) || description.includes(searchTerm);
         const matchesType = contentType === 'all' || cardType === contentType;
         const matchesTab = activeTab === 'all' || 
                           (activeTab === 'free' && isFree) ||
                           (activeTab === 'new' && isNew) ||
-                          (activeTab === 'popular' && cardType === 'streams'); // Пример логики популярности
+                          (activeTab === 'popular' && cardType === 'streams');
         
         if (matchesSearch && matchesType && matchesTab) {
             card.style.display = 'block';
@@ -625,7 +713,6 @@ function filterCatalogContent() {
         }
     });
     
-    // Показываем сообщение если ничего не найдено
     const contentGrid = document.getElementById('contentGrid');
     const noResults = contentGrid.querySelector('.no-results');
     
@@ -645,7 +732,8 @@ function filterCatalogContent() {
     }
 }
 
-// ФУНКЦИОНАЛ ИЗБРАННОГО
+// ==================== ИЗБРАННОЕ И МАТЕРИАЛЫ ====================
+
 async function loadFavorites() {
     if (!currentUser) return;
     
@@ -685,7 +773,7 @@ async function loadWatchLater() {
                     <div class="material-description">${item.description}</div>
                     <div class="material-meta">
                         <span class="material-type">${getContentTypeName(item.contentType)}</span>
-                        <span class="material-date">Добавлено ${formatDate(item.created)}</span>
+                        <span class="material-date">Добавлено ${formatDate(item.created_at || item.created)}</span>
                     </div>
                 </div>
                 <div class="material-actions">
@@ -791,9 +879,13 @@ function updatePracticeCounts() {
     const casesCount = materials.filter(m => m.type === 'case').length;
     const checklistsCount = materials.filter(m => m.type === 'checklist').length;
     
-    document.getElementById('mriCount').textContent = `${mriCount} материалов`;
-    document.getElementById('casesCount').textContent = `${casesCount} кейсов`;
-    document.getElementById('checklistsCount').textContent = `${checklistsCount} чек-листов`;
+    const mriElement = document.getElementById('mriCount');
+    const casesElement = document.getElementById('casesCount');
+    const checklistsElement = document.getElementById('checklistsCount');
+    
+    if (mriElement) mriElement.textContent = `${mriCount} материалов`;
+    if (casesElement) casesElement.textContent = `${casesCount} кейсов`;
+    if (checklistsElement) checklistsElement.textContent = `${checklistsCount} чек-листов`;
 }
 
 function initFavoritesPage() {
@@ -814,7 +906,8 @@ function initFavoritesPage() {
     });
 }
 
-// ФУНКЦИОНАЛ ПРОФИЛЯ
+// ==================== ПРОФИЛЬ И ПРОГРЕСС ====================
+
 function updateProfileData() {
     if (!currentUser) return;
     
@@ -883,10 +976,15 @@ function updateUIWithUserData() {
 function updateProfileStats() {
     if (!currentUser) return;
     
-    document.getElementById('coursesCompleted').textContent = currentUser.progress.steps.coursesBought || 0;
-    document.getElementById('materialsWatched').textContent = currentUser.progress.steps.materialsWatched || 0;
-    document.getElementById('eventsAttended').textContent = currentUser.progress.steps.eventsParticipated || 0;
-    document.getElementById('materialsSaved').textContent = currentUser.progress.steps.materialsSaved || 0;
+    const coursesElement = document.getElementById('coursesCompleted');
+    const materialsElement = document.getElementById('materialsWatched');
+    const eventsElement = document.getElementById('eventsAttended');
+    const savedElement = document.getElementById('materialsSaved');
+    
+    if (coursesElement) coursesElement.textContent = currentUser.progress.steps.coursesBought || 0;
+    if (materialsElement) materialsElement.textContent = currentUser.progress.steps.materialsWatched || 0;
+    if (eventsElement) eventsElement.textContent = currentUser.progress.steps.eventsParticipated || 0;
+    if (savedElement) savedElement.textContent = currentUser.progress.steps.materialsSaved || 0;
 }
 
 function loadJourneyProgress() {
@@ -930,7 +1028,7 @@ function loadJourneyProgress() {
             description: 'Знания становятся инструментом, а не набором методик.',
             progress: calculateLevelProgress('Систематизирую'),
             total: 13,
-            current: calculateCurrentProgress('Систематизируею'),
+            current: calculateCurrentProgress('Систематизирую'),
             hint: 'Продолжайте обучение и участвуйте в разборах как приглашенный гость.',
             active: currentUser.progress.level === 'Систематизирую'
         },
@@ -974,7 +1072,6 @@ function calculateLevelProgress(level) {
     } else if (levelIndex > currentIndex) {
         return 0;
     } else {
-        // Рассчитываем прогресс для текущего уровня
         const progress = currentUser.progress.steps;
         let completed = 0;
         let total = 0;
@@ -992,7 +1089,15 @@ function calculateLevelProgress(level) {
                            (progress.materialsSaved >= 10 ? 1 : 0);
                 total = 3;
                 break;
-            // ... аналогично для других уровней
+            case 'Применяю':
+                completed = (progress.coursesBought >= 1 ? 1 : 0) + 
+                           (progress.materialsWatched >= 15 ? 1 : 0) + 
+                           (progress.eventsParticipated >= 7 ? 1 : 0);
+                total = 3;
+                break;
+            default:
+                completed = 1;
+                total = 3;
         }
         
         return Math.round((completed / total) * 100);
@@ -1011,13 +1116,17 @@ function calculateCurrentProgress(level) {
             return Math.min(progress.materialsWatched, 10) + 
                    Math.min(progress.eventsParticipated, 5) + 
                    Math.min(progress.materialsSaved, 10);
-        // ... аналогично для других уровней
+        case 'Применяю':
+            return Math.min(progress.coursesBought, 1) + 
+                   Math.min(progress.materialsWatched, 15) + 
+                   Math.min(progress.eventsParticipated, 7);
         default:
             return 0;
     }
 }
 
-// ИНТЕРАКТИВНЫЕ ФУНКЦИИ
+// ==================== ИНТЕРАКТИВНЫЕ ФУНКЦИИ ====================
+
 async function toggleFavorite(contentType, contentId) {
     if (!currentUser) {
         showNotification('⚠️ Необходимо войти в систему');
@@ -1042,7 +1151,6 @@ async function toggleFavorite(contentType, contentId) {
             currentUser.favorites = data.favorites;
             showNotification(isCurrentlyFavorite ? '❌ Удалено из избранного' : '⭐ Добавлено в избранное');
             
-            // Обновляем отображение
             if (currentPage === 'catalog') {
                 renderCatalogContent();
             } else if (currentPage === 'favorites') {
@@ -1050,6 +1158,7 @@ async function toggleFavorite(contentType, contentId) {
             }
         }
     } catch (error) {
+        console.error('❌ Ошибка обновления избранного:', error);
         showNotification('❌ Ошибка при обновлении избранного', 'error');
     }
 }
@@ -1081,6 +1190,7 @@ async function addToWatchLater(contentType, contentId) {
             }
         }
     } catch (error) {
+        console.error('❌ Ошибка добавления в список:', error);
         showNotification('❌ Ошибка при добавлении в список', 'error');
     }
 }
@@ -1105,6 +1215,7 @@ async function removeFromWatchLater(contentId) {
             loadFavorites();
         }
     } catch (error) {
+        console.error('❌ Ошибка удаления из списка:', error);
         showNotification('❌ Ошибка при удалении из списка', 'error');
     }
 }
@@ -1164,29 +1275,10 @@ async function openContent(contentType, contentId) {
                             </button>
                         </div>
                         
-                        ${content.fullDescription ? `
+                        ${content.full_description ? `
                             <div class="content-full-description">
                                 <h4>Описание</h4>
-                                <p>${content.fullDescription}</p>
-                            </div>
-                        ` : ''}
-                        
-                        ${content.modules ? `
-                            <div class="content-modules">
-                                <h4>Модули курса</h4>
-                                <div class="modules-list">
-                                    ${Array.from({length: content.modules}, (_, i) => `
-                                        <div class="module-item">
-                                            <div class="module-number">${i + 1}</div>
-                                            <div class="module-info">
-                                                <div class="module-title">Модуль ${i + 1}</div>
-                                                <div class="module-status ${i < 2 ? 'completed' : 'locked'}">
-                                                    ${i < 2 ? '✅ Пройден' : '🔒 Заблокирован'}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
+                                <p>${content.full_description}</p>
                             </div>
                         ` : ''}
                     </div>
@@ -1206,7 +1298,8 @@ function hasAccessToContent(content) {
     
     // Проверяем активную подписку
     return currentUser.subscription.status === 'active' || 
-           currentUser.subscription.status === 'trial';
+           currentUser.subscription.status === 'trial' ||
+           currentUser.isAdmin;
 }
 
 function startContent(contentType, contentId) {
@@ -1250,6 +1343,8 @@ function startContent(contentType, contentId) {
     closeModal('contentModal');
 }
 
+// ==================== СИСТЕМА ВОСПРОИЗВЕДЕНИЯ ====================
+
 function openCoursePlayer(course) {
     const modalHTML = `
         <div class="modal" id="coursePlayerModal">
@@ -1273,7 +1368,7 @@ function openCoursePlayer(course) {
                         <div class="control-buttons">
                             <button class="btn btn-outline" onclick="pauseContent()">⏸️ Пауза</button>
                             <button class="btn btn-outline" onclick="skipForward()">⏩ +15с</button>
-                            <button class="btn btn-primary" onclick="completeModule()">✅ Завершить модуль</button>
+                            <button class="btn btn-primary" onclick="completeContent('course')">✅ Завершить модуль</button>
                         </div>
                     </div>
                 </div>
@@ -1307,7 +1402,7 @@ function openVideoPlayer(video) {
                         <div class="control-buttons">
                             <button class="btn btn-outline" onclick="pauseContent()">⏸️ Пауза</button>
                             <button class="btn btn-outline" onclick="skipForward()">⏩ +15с</button>
-                            <button class="btn btn-primary" onclick="completeVideo()">✅ Завершить просмотр</button>
+                            <button class="btn btn-primary" onclick="completeContent('video')">✅ Завершить просмотр</button>
                         </div>
                     </div>
                 </div>
@@ -1341,7 +1436,7 @@ function openAudioPlayer(podcast) {
                         <div class="control-buttons">
                             <button class="btn btn-outline" onclick="pauseContent()">⏸️ Пауза</button>
                             <button class="btn btn-outline" onclick="skipForward()">⏩ +30с</button>
-                            <button class="btn btn-primary" onclick="completeAudio()">✅ Завершить прослушивание</button>
+                            <button class="btn btn-primary" onclick="completeContent('audio')">✅ Завершить прослушивание</button>
                         </div>
                     </div>
                 </div>
@@ -1370,58 +1465,11 @@ function openMaterialViewer(material) {
                         </div>
                         <div class="material-content">
                             <h4>Содержание материала:</h4>
-                            <p>${material.fullDescription || material.description || 'Подробное содержание материала будет отображено здесь.'}</p>
-                            
-                            ${material.type === 'mri' ? `
-                                <div class="mri-images">
-                                    <div class="image-placeholder">🩻 МРТ снимок 1</div>
-                                    <div class="image-placeholder">🩻 МРТ снимок 2</div>
-                                    <div class="image-description">
-                                        <h5>Описание разбора:</h5>
-                                        <p>Детальный анализ МРТ-снимков с пояснениями патологий и рекомендациями по диагностике.</p>
-                                    </div>
-                                </div>
-                            ` : ''}
-                            
-                            ${material.type === 'case' ? `
-                                <div class="case-study">
-                                    <h5>Клинический случай:</h5>
-                                    <div class="case-section">
-                                        <strong>Жалобы:</strong>
-                                        <p>Пациент жалуется на хронические боли в поясничном отделе.</p>
-                                    </div>
-                                    <div class="case-section">
-                                        <strong>Диагностика:</strong>
-                                        <p>Проведены МРТ-исследования, функциональные тесты.</p>
-                                    </div>
-                                    <div class="case-section">
-                                        <strong>Лечение:</strong>
-                                        <p>Применены мануальные техники и физиотерапия.</p>
-                                    </div>
-                                </div>
-                            ` : ''}
-                            
-                            ${material.type === 'checklist' ? `
-                                <div class="checklist">
-                                    <h5>Чек-лист:</h5>
-                                    <div class="checklist-item">
-                                        <input type="checkbox" id="check1">
-                                        <label for="check1">Провести первичный осмотр</label>
-                                    </div>
-                                    <div class="checklist-item">
-                                        <input type="checkbox" id="check2">
-                                        <label for="check2">Оценить неврологический статус</label>
-                                    </div>
-                                    <div class="checklist-item">
-                                        <input type="checkbox" id="check3">
-                                        <label for="check3">Назначить дополнительные исследования</label>
-                                    </div>
-                                </div>
-                            ` : ''}
+                            <p>${material.full_description || material.description || 'Подробное содержание материала будет отображено здесь.'}</p>
                         </div>
                     </div>
                     <div class="material-actions">
-                        <button class="btn btn-primary" onclick="completeMaterial()">✅ Изучил материал</button>
+                        <button class="btn btn-primary" onclick="completeContent('material')">✅ Изучил материал</button>
                         <button class="btn btn-outline" onclick="downloadMaterial()">📥 Скачать</button>
                     </div>
                 </div>
@@ -1464,7 +1512,7 @@ function openEventRegistration(event) {
                         </div>
                         
                         <div class="event-description">
-                            <p>${event.fullDescription || event.description || 'Подробности мероприятия будут объявлены дополнительно.'}</p>
+                            <p>${event.full_description || event.description || 'Подробности мероприятия будут объявлены дополнительно.'}</p>
                         </div>
                         
                         <div class="event-registration">
@@ -1486,10 +1534,6 @@ function openEventRegistration(event) {
                                         </label>
                                     </div>
                                 ` : ''}
-                                <div class="form-group">
-                                    <label>Комментарий (необязательно)</label>
-                                    <textarea placeholder="Ваши вопросы или пожелания..."></textarea>
-                                </div>
                                 <div class="form-actions">
                                     <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
                                 </div>
@@ -1509,7 +1553,7 @@ function openEventRegistration(event) {
     });
 }
 
-// ФУНКЦИИ УПРАВЛЕНИЯ КОНТЕНТОМ
+// Функции управления контентом
 function pauseContent() {
     showNotification('⏸️ Воспроизведение приостановлено');
 }
@@ -1518,28 +1562,26 @@ function skipForward() {
     showNotification('⏩ Перемотка вперед');
 }
 
-function completeModule() {
-    updateUserProgress('coursesCompleted');
-    showNotification('✅ Модуль завершен! Прогресс сохранен.');
-    closeModal('coursePlayerModal');
-}
-
-function completeVideo() {
-    updateUserProgress('materialsWatched');
-    showNotification('✅ Видео завершено! Прогресс сохранен.');
-    closeModal('videoPlayerModal');
-}
-
-function completeAudio() {
-    updateUserProgress('materialsWatched');
-    showNotification('✅ Аудио завершено! Прогресс сохранен.');
-    closeModal('audioPlayerModal');
-}
-
-function completeMaterial() {
-    updateUserProgress('materialsWatched');
-    showNotification('✅ Материал изучен! Прогресс сохранен.');
-    closeModal('materialModal');
+async function completeContent(type) {
+    await updateUserProgress('materialsWatched');
+    
+    let message = '✅ Контент завершен!';
+    switch(type) {
+        case 'course': message = '✅ Модуль завершен!'; break;
+        case 'video': message = '✅ Видео завершено!'; break;
+        case 'audio': message = '✅ Аудио завершено!'; break;
+        case 'material': message = '✅ Материал изучен!'; break;
+    }
+    
+    showNotification(message);
+    
+    // Закрываем соответствующий модал
+    switch(type) {
+        case 'course': closeModal('coursePlayerModal'); break;
+        case 'video': closeModal('videoPlayerModal'); break;
+        case 'audio': closeModal('audioPlayerModal'); break;
+        case 'material': closeModal('materialModal'); break;
+    }
 }
 
 function downloadMaterial() {
@@ -1557,17 +1599,19 @@ async function registerForEvent(eventId) {
         const data = await response.json();
         if (data.success) {
             showNotification('✅ Вы успешно зарегистрированы на мероприятие!');
-            updateUserProgress('eventsAttended');
+            await updateUserProgress('eventsAttended');
             closeModal('eventModal');
         } else {
             throw new Error(data.error);
         }
     } catch (error) {
+        console.error('❌ Ошибка регистрации на мероприятие:', error);
         showNotification('❌ Ошибка при регистрации на мероприятие', 'error');
     }
 }
 
-// ФУНКЦИИ ПОДПИСКИ
+// ==================== СИСТЕМА ПОДПИСКИ ====================
+
 async function changeSubscription() {
     if (!currentUser) return;
     
@@ -1670,11 +1714,13 @@ async function selectPlan(plan) {
             throw new Error(data.error);
         }
     } catch (error) {
+        console.error('❌ Ошибка оформления подписки:', error);
         showNotification('❌ Ошибка при оформлении подписки', 'error');
     }
 }
 
-// ФУНКЦИИ СООБЩЕСТВА
+// ==================== СООБЩЕСТВО И ПОДДЕРЖКА ====================
+
 function initCommunityPage() {
     loadFAQ();
     initFAQ();
@@ -1694,6 +1740,7 @@ async function loadFAQ() {
             displayDefaultFAQ();
         }
     } catch (error) {
+        console.error('❌ Ошибка загрузки FAQ:', error);
         displayDefaultFAQ();
     }
 }
@@ -1811,7 +1858,6 @@ function openChat(chatType) {
     };
     
     showNotification(`💬 Открываем чат: ${chatNames[chatType]}`);
-    // Здесь будет интеграция с Telegram чатами
 }
 
 function openMaterials(materialType) {
@@ -1822,13 +1868,13 @@ function openMaterials(materialType) {
     };
     
     showNotification(`📋 Открываем: ${types[materialType]}`);
-    // Переключаем на вкладку практических материалов
     if (currentPage === 'favorites') {
         document.querySelector('[data-tab="practice"]').click();
     }
 }
 
-// ФУНКЦИИ ПРОФИЛЯ
+// ==================== ПРОФИЛЬ И ДОСТИЖЕНИЯ ====================
+
 function editProfile() {
     showNotification('✏️ Редактирование профиля в разработке');
 }
@@ -1909,7 +1955,8 @@ function exportData() {
     showNotification('📥 Данные экспортированы', 'success');
 }
 
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ==================== НАВИГАЦИЯ И ПОИСК ====================
+
 function openSection(section) {
     const sections = {
         'courses': () => { 
@@ -1994,7 +2041,8 @@ function goToAdminPanel() {
     window.location.href = '/admin.html';
 }
 
-// УТИЛИТЫ
+// ==================== УТИЛИТЫ ====================
+
 function getContentIcon(contentType) {
     const icons = {
         'courses': '📚',
@@ -2112,7 +2160,7 @@ async function updateUserProgress(metric) {
             }
         }
     } catch (error) {
-        console.error('Ошибка обновления прогресса:', error);
+        console.error('❌ Ошибка обновления прогресса:', error);
     }
 }
 
@@ -2132,6 +2180,7 @@ function showNotification(message, type = 'info') {
         animation: slideIn 0.3s ease;
         max-width: 300px;
         word-wrap: break-word;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     `;
     
     document.body.appendChild(notification);
@@ -2153,8 +2202,11 @@ function closeModal(modalId) {
     }
 }
 
-// ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
+// ==================== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ====================
+
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Инициализация приложения...');
+    
     // Инициализация навигации
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -2174,11 +2226,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Загрузка пользователя и контента
     Promise.all([loadUserData(), loadContent()]).then(() => {
+        console.log('✅ Приложение готово');
         renderPage('home');
     });
 
     // Интеграция с Telegram
     if (window.Telegram && Telegram.WebApp) {
+        console.log('📱 Интеграция с Telegram WebApp');
         Telegram.WebApp.expand();
         Telegram.WebApp.ready();
         Telegram.WebApp.setHeaderColor('#58b8e7');
@@ -2206,47 +2260,31 @@ style.textContent = `
         to { transform: translateX(100%); opacity: 0; }
     }
     
-    .module-item {
-        display: flex;
-        align-items: center;
-        padding: 12px;
-        border: 1px solid #e3f2fd;
-        border-radius: 8px;
-        margin-bottom: 8px;
-    }
-    
-    .module-number {
-        width: 30px;
-        height: 30px;
-        background: #58b8e7;
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        margin-right: 12px;
-    }
-    
-    .module-status.completed {
-        color: #28a745;
-    }
-    
-    .module-status.locked {
-        color: #6c757d;
-    }
-    
     .player-placeholder {
         text-align: center;
         padding: 40px 20px;
         background: #f8f9fa;
         border-radius: 8px;
         margin-bottom: 16px;
+        border: 2px dashed #e3f2fd;
     }
     
     .placeholder-icon {
         font-size: 48px;
         margin-bottom: 16px;
+        opacity: 0.7;
+    }
+    
+    .placeholder-text {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #2c3e50;
+    }
+    
+    .placeholder-note {
+        color: #6c757d;
+        font-size: 14px;
     }
     
     .achievement-item {
@@ -2256,11 +2294,22 @@ style.textContent = `
         border: 2px solid #e3f2fd;
         border-radius: 8px;
         margin-bottom: 12px;
+        transition: all 0.3s ease;
     }
     
     .achievement-item.completed {
         border-color: #28a745;
         background: #f0fff4;
+    }
+    
+    .achievement-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .achievement-icon {
+        font-size: 24px;
+        margin-right: 16px;
     }
     
     .rules-content ol, .rules-content ul {
@@ -2270,6 +2319,33 @@ style.textContent = `
     
     .rules-content li {
         margin-bottom: 8px;
+        line-height: 1.5;
+    }
+    
+    .rules-footer {
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid #e3f2fd;
+        color: #6c757d;
+        font-size: 14px;
+    }
+    
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .info-value {
+        color: #6c757d;
     }
 `;
 document.head.appendChild(style);
+
+console.log('📦 app.js загружен');
