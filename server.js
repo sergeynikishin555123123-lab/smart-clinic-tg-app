@@ -18,10 +18,26 @@ const ADMIN_IDS = new Set([898508164]); // Главный администрат
 console.log('🚀 Starting Smart Clinic Bot...');
 
 // ==================== БАЗА ДАННЫХ ====================
+// ==================== БАЗА ДАННЫХ ====================
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
+
+// Проверка подключения к базе данных
+async function testDatabaseConnection() {
+    try {
+        const client = await pool.connect();
+        console.log('✅ Успешное подключение к PostgreSQL');
+        client.release();
+        return true;
+    } catch (error) {
+        console.error('❌ Ошибка подключения к PostgreSQL:', error.message);
+        return false;
+    }
+}
 
 // Инициализация базы данных
 async function initDatabase() {
@@ -258,7 +274,7 @@ async function getUser(userId) {
             progress_level: 'Понимаю',
             progress_data: {steps: {materialsWatched: 0, eventsParticipated: 0, materialsSaved: 0, coursesBought: 0}},
             favorites_data: {courses: [], podcasts: [], streams: [], videos: [], materials: [], watchLater: []},
-            is_admin: ADMIN_IDS.has(userId),
+            is_admin: ADMIN_IDS.has(parseInt(userId)),
             joined_at: new Date(),
             last_activity: new Date(),
             survey_completed: false
@@ -272,36 +288,44 @@ async function getUser(userId) {
         
         return newUser;
     } catch (error) {
-        console.error('❌ Ошибка получения пользователя:', error);
-        return null;
-    }
-}
-
-async function updateUser(userId, updates) {
-    try {
-        const setClause = Object.keys(updates).map((key, index) => `${key} = $${index + 2}`).join(', ');
-        const values = [userId, ...Object.values(updates)];
+        console.error('❌ Ошибка получения пользователя:', error.message);
         
-        await pool.query(
-            `UPDATE users SET ${setClause}, last_activity = NOW() WHERE id = $1`,
-            values
-        );
-        return true;
-    } catch (error) {
-        console.error('❌ Ошибка обновления пользователя:', error);
-        return false;
+        // Возвращаем временного пользователя при ошибке БД
+        return {
+            id: userId,
+            first_name: 'User',
+            username: '',
+            specialization: '',
+            city: '',
+            email: '',
+            subscription_status: 'inactive',
+            subscription_type: null,
+            subscription_end_date: null,
+            progress_level: 'Понимаю',
+            progress_data: {steps: {materialsWatched: 0, eventsParticipated: 0, materialsSaved: 0, coursesBought: 0}},
+            favorites_data: {courses: [], podcasts: [], streams: [], videos: [], materials: [], watchLater: []},
+            is_admin: ADMIN_IDS.has(parseInt(userId)),
+            joined_at: new Date(),
+            last_activity: new Date(),
+            survey_completed: false
+        };
     }
 }
 
 // Обработчики бота
 bot.start(async (ctx) => {
     try {
+        console.log('🔄 Обработка команды /start для пользователя:', ctx.from.id);
+        
         const user = await getUser(ctx.from.id);
-        if (!user) return;
+        if (!user) {
+            await ctx.reply('❌ Произошла ошибка при создании профиля. Попробуйте еще раз.');
+            return;
+        }
 
         await updateUser(ctx.from.id, {
-            first_name: ctx.from.first_name,
-            username: ctx.from.username
+            first_name: ctx.from.first_name || 'User',
+            username: ctx.from.username || ''
         });
 
         if (user.survey_completed) {
@@ -1035,8 +1059,16 @@ app.get('*', (req, res) => {
 // ==================== ЗАПУСК СЕРВЕРА ====================
 async function startApp() {
     try {
-        // Инициализируем базу данных
-        await initDatabase();
+        console.log('🚀 Запуск приложения...');
+        
+        // Проверяем подключение к базе данных
+        const dbConnected = await testDatabaseConnection();
+        if (!dbConnected) {
+            console.log('⚠️  База данных недоступна, работаем в ограниченном режиме');
+        } else {
+            // Инициализируем базу данных
+            await initDatabase();
+        }
         
         // Запускаем Express сервер
         const server = app.listen(PORT, '0.0.0.0', () => {
