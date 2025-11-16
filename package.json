@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "build": "echo 'No build step required'",
     "setup": "mkdir -p uploads webapp admin-panel && echo 'Директории созданы'",
     "deploy": "npm run setup && npm start"
   },
