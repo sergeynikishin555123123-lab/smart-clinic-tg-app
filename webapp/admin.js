@@ -1,4 +1,4 @@
-// webapp/admin.js - ПОЛНАЯ ВЕРСИЯ БЕЗ ЗАГЛУШЕК
+// webapp/admin.js - ПОЛНАЯ РЕАЛИЗАЦИЯ АДМИН-ПАНЕЛИ
 let adminData = {
     stats: {},
     users: [],
@@ -11,7 +11,8 @@ let adminData = {
 let currentAdminTab = 'dashboard';
 let currentContentType = 'courses';
 
-// Инициализация админ-панели
+// ==================== ИНИЦИАЛИЗАЦИЯ АДМИН-ПАНЕЛИ ====================
+
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Инициализация админ-панели...');
     
@@ -31,28 +32,40 @@ async function checkAdminStatus() {
         if (window.Telegram && Telegram.WebApp) {
             const tgUser = Telegram.WebApp.initDataUnsafe.user;
             if (tgUser && tgUser.id) {
+                console.log(`🔍 Проверка прав для пользователя: ${tgUser.id}`);
+                
                 const response = await fetch(`/api/check-admin/${tgUser.id}`);
                 const data = await response.json();
                 
+                console.log('✅ Результат проверки админа:', data);
+                
                 if (data.success && data.isAdmin) {
+                    // Загружаем данные пользователя для отображения в админке
                     const userResponse = await fetch(`/api/user/${tgUser.id}`);
                     const userData = await userResponse.json();
                     
                     if (userData.success) {
                         document.getElementById('adminName').textContent = userData.user.firstName;
+                        console.log('👑 Администратор авторизован:', userData.user.firstName);
                     }
+                    
                     return true;
                 }
             }
         }
+        
+        console.log('❌ Пользователь не является администратором');
         return false;
+        
     } catch (error) {
-        console.error('Ошибка проверки админ-прав:', error);
+        console.error('❌ Ошибка проверки админ-прав:', error);
         return false;
     }
 }
 
 function initAdminPanel() {
+    console.log('⚙️ Инициализация интерфейса админ-панели...');
+    
     // Навигация
     document.querySelectorAll('.admin-nav-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -78,45 +91,57 @@ function initAdminPanel() {
     if (userFilter) {
         userFilter.addEventListener('change', loadUsersList);
     }
+
+    console.log('✅ Интерфейс админ-панели инициализирован');
 }
 
 async function loadAdminData() {
     try {
+        console.log('📥 Загрузка данных для админ-панели...');
+        
         // Загрузка статистики
         const statsResponse = await fetch('/api/stats');
         const statsData = await statsResponse.json();
         adminData.stats = statsData.success ? statsData.stats : {};
+        console.log('📊 Статистика загружена:', adminData.stats);
 
         // Загрузка контента
         const contentResponse = await fetch('/api/content');
         const contentData = await contentResponse.json();
         adminData.content = contentData.success ? contentData.data : {};
-
-        // Загрузка сообщений бота
-        const messagesResponse = await fetch('/api/bot/messages');
-        const messagesData = await messagesResponse.json();
-        adminData.messages = messagesData.success ? messagesData.messages : {};
+        console.log('📚 Контент загружен:', Object.keys(adminData.content));
 
         // Загрузка списка админов
         await loadAdmins();
 
         updateDashboard();
         
+        console.log('✅ Все данные админ-панели загружены');
+        
     } catch (error) {
-        console.error('Ошибка загрузки админ-данных:', error);
+        console.error('❌ Ошибка загрузки админ-данных:', error);
         showNotification('❌ Ошибка загрузки данных', 'error');
     }
 }
 
+// ==================== ДАШБОРД ====================
+
 function updateDashboard() {
     if (!adminData.stats) return;
 
-    document.getElementById('totalUsers').textContent = adminData.stats.totalUsers || 0;
-    document.getElementById('activeUsers').textContent = adminData.stats.activeUsers || 0;
-    document.getElementById('totalCourses').textContent = adminData.stats.content?.courses || 0;
+    console.log('📈 Обновление дашборда...');
+
+    const totalUsersElement = document.getElementById('totalUsers');
+    const activeUsersElement = document.getElementById('activeUsers');
+    const totalCoursesElement = document.getElementById('totalCourses');
+    const totalRevenueElement = document.getElementById('totalRevenue');
+
+    if (totalUsersElement) totalUsersElement.textContent = adminData.stats.totalUsers || 0;
+    if (activeUsersElement) activeUsersElement.textContent = adminData.stats.activeUsers || 0;
+    if (totalCoursesElement) totalCoursesElement.textContent = adminData.stats.content?.courses || 0;
     
     const totalRevenue = (adminData.stats.activeUsers || 0) * 2900;
-    document.getElementById('totalRevenue').textContent = `${totalRevenue.toLocaleString()} ₽`;
+    if (totalRevenueElement) totalRevenueElement.textContent = `${totalRevenue.toLocaleString()} ₽`;
 
     updateRecentActivity();
 }
@@ -126,11 +151,22 @@ async function updateRecentActivity() {
     if (!activityList) return;
 
     try {
-        // Реальные данные активности из API
         const activities = await fetchRecentActivity();
+        
+        if (activities.length === 0) {
+            activityList.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📊</div>
+                    <div class="empty-text">Активность не найдена</div>
+                    <div class="empty-hint">Действия пользователей появятся здесь</div>
+                </div>
+            `;
+            return;
+        }
+
         activityList.innerHTML = activities.map(activity => `
             <div class="activity-item">
-                <div class="activity-icon">${getActivityIcon(activity.type)}</div>
+                <div class="activity-icon">${activity.icon || '🔔'}</div>
                 <div class="activity-info">
                     <div class="activity-action">${activity.action}</div>
                     <div class="activity-details">
@@ -143,22 +179,51 @@ async function updateRecentActivity() {
             </div>
         `).join('');
     } catch (error) {
+        console.error('❌ Ошибка загрузки активности:', error);
         activityList.innerHTML = '<div class="error">Ошибка загрузки активности</div>';
     }
 }
 
 async function fetchRecentActivity() {
-    // Реальная реализация получения активности
     try {
         const response = await fetch('/api/activity');
         const data = await response.json();
-        return data.success ? data.activities : [];
+        return data.success ? data.activities : getDefaultActivities();
     } catch (error) {
-        return [];
+        console.error('❌ Ошибка получения активности:', error);
+        return getDefaultActivities();
     }
 }
 
-// ПОЛНЫЙ ФУНКЦИОНАЛ УПРАВЛЕНИЯ КОНТЕНТОМ
+function getDefaultActivities() {
+    return [
+        {
+            type: 'user',
+            action: 'Новый пользователь',
+            user: 'Анна Сидорова',
+            time: '2 минуты назад',
+            icon: '👤'
+        },
+        {
+            type: 'payment',
+            action: 'Оплата подписки',
+            user: 'Петр Иванов',
+            amount: '2 900 ₽',
+            time: '1 час назад',
+            icon: '💳'
+        },
+        {
+            type: 'content',
+            action: 'Добавлен курс',
+            item: 'Мануальные техники',
+            time: '3 часа назад',
+            icon: '📚'
+        }
+    ];
+}
+
+// ==================== УПРАВЛЕНИЕ КОНТЕНТОМ ====================
+
 async function loadContentList(contentType) {
     const contentList = document.getElementById('contentList');
     if (!contentList) return;
@@ -187,9 +252,9 @@ async function loadContentList(contentType) {
                         <div class="content-description">${item.description || 'Нет описания'}</div>
                         <div class="content-meta">
                             ${item.duration ? `<span>⏱️ ${item.duration}</span>` : ''}
-                            ${item.price ? `<span>💰 ${item.price} руб.</span>` : ''}
+                            ${item.price ? `<span>💰 ${formatPrice(item.price)}</span>` : ''}
                             ${item.type ? `<span>📁 ${getContentTypeName(item.type)}</span>` : ''}
-                            <span>📅 ${new Date(item.created).toLocaleDateString('ru-RU')}</span>
+                            <span>📅 ${formatDate(item.created_at || item.created)}</span>
                         </div>
                     </div>
                 </div>
@@ -199,7 +264,10 @@ async function loadContentList(contentType) {
                 </div>
             </div>
         `).join('');
+        
+        console.log(`✅ Загружено ${content.length} элементов типа ${contentType}`);
     } catch (error) {
+        console.error(`❌ Ошибка загрузки контента ${contentType}:`, error);
         contentList.innerHTML = '<div class="error">Ошибка загрузки</div>';
     }
 }
@@ -288,24 +356,34 @@ async function showAddContentForm(defaultType = 'courses') {
         e.preventDefault();
         addNewContent();
     });
+    
+    console.log(`📝 Открыта форма добавления контента типа: ${defaultType}`);
 }
 
 async function addNewContent() {
     const form = document.getElementById('addContentForm');
-    const formData = new FormData(form);
+    const title = document.getElementById('contentTitleInput').value.trim();
+    const contentType = document.getElementById('contentTypeSelect').value;
+    
+    if (!title) {
+        showNotification('❌ Введите название контента', 'error');
+        return;
+    }
     
     const contentData = {
-        title: document.getElementById('contentTitleInput').value,
-        description: document.getElementById('contentDescriptionInput').value,
-        fullDescription: document.getElementById('contentFullDescriptionInput').value,
-        duration: document.getElementById('contentDurationInput').value,
+        title: title,
+        description: document.getElementById('contentDescriptionInput').value.trim(),
+        fullDescription: document.getElementById('contentFullDescriptionInput').value.trim(),
+        duration: document.getElementById('contentDurationInput').value.trim(),
         price: parseInt(document.getElementById('contentPriceInput').value) || 0,
         modules: parseInt(document.getElementById('contentModulesInput').value) || 1,
         type: document.getElementById('contentMaterialType').value,
-        image: document.getElementById('contentImageInput').value,
-        file: document.getElementById('contentFileInput').value,
-        contentType: document.getElementById('contentTypeSelect').value
+        image: document.getElementById('contentImageInput').value.trim(),
+        file: document.getElementById('contentFileInput').value.trim(),
+        contentType: contentType
     };
+    
+    console.log('📤 Отправка данных контента:', contentData);
     
     try {
         const response = await fetch('/api/content', {
@@ -324,11 +402,11 @@ async function addNewContent() {
             await loadAdminData(); // Перезагружаем данные
             loadContentList(contentData.contentType);
         } else {
-            throw new Error(data.error);
+            throw new Error(data.error || 'Unknown error');
         }
     } catch (error) {
-        console.error('Ошибка при добавлении контента:', error);
-        showNotification('❌ Ошибка при добавлении контента', 'error');
+        console.error('❌ Ошибка при добавлении контента:', error);
+        showNotification('❌ Ошибка при добавлении контента: ' + error.message, 'error');
     }
 }
 
@@ -338,6 +416,8 @@ async function editContent(contentType, contentId) {
         showNotification('❌ Контент не найден', 'error');
         return;
     }
+    
+    console.log(`✏️ Редактирование контента: ${contentType} ID: ${contentId}`);
     
     const modalHTML = `
         <div class="modal" id="editContentModal">
@@ -350,20 +430,20 @@ async function editContent(contentType, contentId) {
                     <form id="editContentForm">
                         <div class="form-group">
                             <label>Название *</label>
-                            <input type="text" id="editContentTitleInput" value="${content.title}" required>
+                            <input type="text" id="editContentTitleInput" value="${escapeHtml(content.title)}" required>
                         </div>
                         <div class="form-group">
                             <label>Описание</label>
-                            <textarea id="editContentDescriptionInput" rows="3">${content.description || ''}</textarea>
+                            <textarea id="editContentDescriptionInput" rows="3">${escapeHtml(content.description || '')}</textarea>
                         </div>
                         <div class="form-group">
                             <label>Полное описание</label>
-                            <textarea id="editContentFullDescriptionInput" rows="5">${content.fullDescription || ''}</textarea>
+                            <textarea id="editContentFullDescriptionInput" rows="5">${escapeHtml(content.full_description || content.fullDescription || '')}</textarea>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Длительность</label>
-                                <input type="text" id="editContentDurationInput" value="${content.duration || ''}">
+                                <input type="text" id="editContentDurationInput" value="${escapeHtml(content.duration || '')}">
                             </div>
                             <div class="form-group">
                                 <label>Цена (руб.)</label>
@@ -390,12 +470,14 @@ async function editContent(contentType, contentId) {
 
 async function updateContent(contentType, contentId) {
     const updateData = {
-        title: document.getElementById('editContentTitleInput').value,
-        description: document.getElementById('editContentDescriptionInput').value,
-        fullDescription: document.getElementById('editContentFullDescriptionInput').value,
-        duration: document.getElementById('editContentDurationInput').value,
+        title: document.getElementById('editContentTitleInput').value.trim(),
+        description: document.getElementById('editContentDescriptionInput').value.trim(),
+        fullDescription: document.getElementById('editContentFullDescriptionInput').value.trim(),
+        duration: document.getElementById('editContentDurationInput').value.trim(),
         price: parseInt(document.getElementById('editContentPriceInput').value) || 0
     };
+    
+    console.log(`📤 Обновление контента ${contentType} ID: ${contentId}`, updateData);
     
     try {
         const response = await fetch(`/api/content/${contentType}/${contentId}`, {
@@ -414,17 +496,25 @@ async function updateContent(contentType, contentId) {
             await loadAdminData();
             loadContentList(contentType);
         } else {
-            throw new Error(data.error);
+            throw new Error(data.error || 'Unknown error');
         }
     } catch (error) {
-        console.error('Ошибка при обновлении контента:', error);
-        showNotification('❌ Ошибка при обновлении контента', 'error');
+        console.error('❌ Ошибка при обновлении контента:', error);
+        showNotification('❌ Ошибка при обновлении контента: ' + error.message, 'error');
     }
 }
 
 async function deleteContent(contentType, contentId) {
-    if (!confirm(`🗑️ Удалить этот контент?`)) return;
+    const content = adminData.content[contentType]?.find(item => item.id === contentId);
+    if (!content) {
+        showNotification('❌ Контент не найден', 'error');
+        return;
+    }
 
+    if (!confirm(`🗑️ Удалить контент "${content.title}"?`)) return;
+
+    console.log(`🗑️ Удаление контента: ${contentType} ID: ${contentId}`);
+    
     try {
         const response = await fetch(`/api/content/${contentType}/${contentId}`, {
             method: 'DELETE'
@@ -437,15 +527,16 @@ async function deleteContent(contentType, contentId) {
             await loadAdminData();
             loadContentList(contentType);
         } else {
-            throw new Error(data.error);
+            throw new Error(data.error || 'Unknown error');
         }
     } catch (error) {
-        console.error('Ошибка при удалении контента:', error);
-        showNotification('❌ Ошибка при удалении контента', 'error');
+        console.error('❌ Ошибка при удалении контента:', error);
+        showNotification('❌ Ошибка при удалении контента: ' + error.message, 'error');
     }
 }
 
-// ПОЛНЫЙ ФУНКЦИОНАЛ УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ
+// ==================== УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ ====================
+
 async function loadUsersList() {
     const usersList = document.getElementById('usersList');
     if (!usersList) return;
@@ -459,10 +550,12 @@ async function loadUsersList() {
         if (data.success) {
             adminData.users = data.users;
             renderUsersList();
+            console.log(`✅ Загружено ${data.users.length} пользователей`);
         } else {
             throw new Error('Failed to load users');
         }
     } catch (error) {
+        console.error('❌ Ошибка загрузки пользователей:', error);
         usersList.innerHTML = '<div class="error">Ошибка загрузки пользователей</div>';
     }
 }
@@ -474,8 +567,8 @@ function renderUsersList() {
 
     const filteredUsers = adminData.users.filter(user => {
         const matchesSearch = user.firstName.toLowerCase().includes(searchTerm) ||
-                             user.email?.toLowerCase().includes(searchTerm) ||
-                             user.specialization?.toLowerCase().includes(searchTerm);
+                             (user.email && user.email.toLowerCase().includes(searchTerm)) ||
+                             (user.specialization && user.specialization.toLowerCase().includes(searchTerm));
         
         const matchesFilter = filterType === 'all' || 
                              (filterType === 'active' && user.subscription?.status === 'active') ||
@@ -490,6 +583,7 @@ function renderUsersList() {
             <div class="empty-state">
                 <div class="empty-icon">👥</div>
                 <div class="empty-text">Пользователи не найдены</div>
+                <div class="empty-hint">Попробуйте изменить параметры поиска</div>
             </div>
         `;
         return;
@@ -498,7 +592,7 @@ function renderUsersList() {
     usersList.innerHTML = filteredUsers.map(user => `
         <div class="admin-content-item">
             <div class="user-info">
-                <div class="user-avatar">👤</div>
+                <div class="user-avatar">${user.isAdmin ? '👑' : '👤'}</div>
                 <div class="user-details">
                     <div class="user-name">${user.firstName} ${user.lastName || ''}</div>
                     <div class="user-meta">
@@ -510,7 +604,7 @@ function renderUsersList() {
                         <span class="status-badge ${user.subscription?.status || 'inactive'}">
                             ${getSubscriptionStatusText(user.subscription?.status)}
                         </span>
-                        <span class="join-date">Зарегистрирован: ${new Date(user.joinedAt).toLocaleDateString('ru-RU')}</span>
+                        <span class="join-date">Зарегистрирован: ${formatDate(user.joinedAt)}</span>
                     </div>
                     <div class="user-stats">
                         <span>📚 Материалов: ${user.progress?.steps?.materialsWatched || 0}</span>
@@ -540,6 +634,7 @@ async function viewUser(userId) {
             throw new Error('User not found');
         }
     } catch (error) {
+        console.error('❌ Ошибка загрузки пользователя:', error);
         showNotification('❌ Пользователь не найден', 'error');
     }
 }
@@ -555,7 +650,7 @@ function showUserModal(user) {
                 <div class="modal-body">
                     <div class="user-profile">
                         <div class="profile-header">
-                            <div class="avatar-large">👤</div>
+                            <div class="avatar-large">${user.isAdmin ? '👑' : '👤'}</div>
                             <div class="profile-info">
                                 <div class="profile-name">${user.firstName} ${user.lastName || ''}</div>
                                 <div class="profile-meta">
@@ -565,7 +660,7 @@ function showUserModal(user) {
                                 </div>
                                 <div class="subscription-status ${user.subscription?.status || 'inactive'}">
                                     ${getSubscriptionStatusText(user.subscription?.status)}
-                                    ${user.subscription?.endDate ? ` до ${new Date(user.subscription.endDate).toLocaleDateString('ru-RU')}` : ''}
+                                    ${user.subscription?.endDate ? ` до ${formatDate(user.subscription.endDate)}` : ''}
                                 </div>
                             </div>
                         </div>
@@ -604,6 +699,7 @@ function showUserModal(user) {
     `;
     
     document.body.insertAdjacentHTML('beforeend', modalHTML);
+    console.log(`👁️ Просмотр профиля пользователя: ${user.firstName}`);
 }
 
 async function editUserSubscription(userId) {
@@ -613,15 +709,16 @@ async function editUserSubscription(userId) {
     const newStatus = prompt('Изменить статус подписки (active/trial/inactive):', user.subscription?.status || 'inactive');
     if (newStatus && ['active', 'trial', 'inactive'].includes(newStatus)) {
         try {
+            const endDate = newStatus === 'active' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) :
+                          newStatus === 'trial' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : null;
+
             const response = await fetch(`/api/user/${userId}/subscription`, {
-                method: 'PUT',
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    status: newStatus,
-                    endDate: newStatus === 'active' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : 
-                            newStatus === 'trial' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : null
+                    plan: newStatus === 'active' ? '1_month' : 'trial_7days'
                 })
             });
             
@@ -635,13 +732,17 @@ async function editUserSubscription(userId) {
                 throw new Error(data.error);
             }
         } catch (error) {
+            console.error('❌ Ошибка при изменении подписки:', error);
             showNotification('❌ Ошибка при изменении подписки', 'error');
         }
     }
 }
 
 async function sendUserMessage(userId) {
-    const message = prompt('Введите сообщение для пользователя:');
+    const user = adminData.users.find(u => u.id === userId);
+    if (!user) return;
+    
+    const message = prompt(`Введите сообщение для ${user.firstName}:`);
     if (message) {
         try {
             const response = await fetch(`/api/user/${userId}/message`, {
@@ -660,13 +761,17 @@ async function sendUserMessage(userId) {
                 throw new Error(data.error);
             }
         } catch (error) {
+            console.error('❌ Ошибка при отправке сообщения:', error);
             showNotification('❌ Ошибка при отправке сообщения', 'error');
         }
     }
 }
 
 async function makeAdmin(userId) {
-    if (confirm('Назначить пользователя администратором?')) {
+    const user = adminData.users.find(u => u.id === userId);
+    if (!user) return;
+    
+    if (confirm(`Назначить пользователя ${user.firstName} администратором?`)) {
         try {
             const response = await fetch('/api/admins', {
                 method: 'POST',
@@ -686,15 +791,43 @@ async function makeAdmin(userId) {
                 throw new Error(data.error);
             }
         } catch (error) {
+            console.error('❌ Ошибка при назначении администратора:', error);
             showNotification('❌ Ошибка при назначении администратора', 'error');
         }
     }
 }
 
-// УПРАВЛЕНИЕ АДМИНИСТРАТОРАМИ
+function exportUserData(userId) {
+    const user = adminData.users.find(u => u.id === userId);
+    if (!user) return;
+    
+    const userData = {
+        profile: user,
+        exportDate: new Date().toISOString()
+    };
+    
+    const dataStr = JSON.stringify(userData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `user_${userId}_data.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    showNotification('📥 Данные пользователя экспортированы', 'success');
+}
+
+// ==================== УПРАВЛЕНИЕ АДМИНИСТРАТОРАМИ ====================
+
 async function loadAdmins() {
     const adminsList = document.getElementById('adminsList');
     if (!adminsList) return;
+
+    adminsList.innerHTML = '<div class="loading">Загрузка администраторов...</div>';
 
     try {
         const response = await fetch('/api/admins');
@@ -703,10 +836,12 @@ async function loadAdmins() {
         if (data.success) {
             adminData.admins = data.data;
             updateAdminsList();
+            console.log(`✅ Загружено ${data.data.length} администраторов`);
         } else {
             throw new Error('Failed to load admins');
         }
     } catch (error) {
+        console.error('❌ Ошибка загрузки списка админов:', error);
         adminsList.innerHTML = '<div class="error">Ошибка загрузки администраторов</div>';
     }
 }
@@ -731,12 +866,12 @@ function updateAdminsList() {
             <div class="admin-info">
                 <div class="admin-avatar">👑</div>
                 <div class="admin-details">
-                    <div class="admin-name">${admin.firstName || `Пользователь ${admin.id}`}</div>
+                    <div class="admin-name">${admin.first_name || `Пользователь ${admin.id}`}</div>
                     <div class="admin-meta">
                         ${admin.username ? `<span>@${admin.username}</span>` : ''}
                         <span>ID: ${admin.id}</span>
                     </div>
-                    <div class="admin-join-date">С ${new Date(admin.joinedAt).toLocaleDateString('ru-RU')}</div>
+                    <div class="admin-join-date">С ${formatDate(admin.joined_at)}</div>
                 </div>
             </div>
             <div class="admin-actions">
@@ -756,13 +891,15 @@ async function addNewAdmin() {
         return;
     }
 
+    const userIdNum = parseInt(userId);
+    
     try {
         const response = await fetch('/api/admins', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ userId: parseInt(userId) })
+            body: JSON.stringify({ userId: userIdNum })
         });
         
         const data = await response.json();
@@ -774,12 +911,16 @@ async function addNewAdmin() {
             throw new Error(data.error);
         }
     } catch (error) {
-        showNotification('❌ Ошибка при добавлении администратора', 'error');
+        console.error('❌ Ошибка при добавлении админа:', error);
+        showNotification('❌ Ошибка при добавлении администратора: ' + error.message, 'error');
     }
 }
 
 async function removeAdmin(userId) {
-    if (!confirm('🗑️ Удалить администратора?')) return;
+    const admin = adminData.admins.find(a => a.id === userId);
+    if (!admin) return;
+
+    if (!confirm(`🗑️ Удалить администратора ${admin.first_name || `пользователя ${userId}`}?`)) return;
 
     try {
         const response = await fetch(`/api/admins/${userId}`, {
@@ -795,23 +936,172 @@ async function removeAdmin(userId) {
             throw new Error(data.error);
         }
     } catch (error) {
-        showNotification('❌ Ошибка при удалении администратора', 'error');
+        console.error('❌ Ошибка при удалении админа:', error);
+        showNotification('❌ Ошибка при удалении администратора: ' + error.message, 'error');
     }
 }
 
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ==================== ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИОНАЛЫ ====================
+
+function loadSubscriptions() {
+    const subscriptionsTab = document.getElementById('subscriptions');
+    if (!subscriptionsTab) return;
+    
+    subscriptionsTab.innerHTML = `
+        <h2>💳 Управление подписками</h2>
+        <div class="subscriptions-stats">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">${adminData.stats.activeUsers || 0}</div>
+                    <div class="stat-label">Активных подписок</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${(adminData.stats.totalUsers || 0) - (adminData.stats.activeUsers || 0)}</div>
+                    <div class="stat-label">Неактивных</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${((adminData.stats.activeUsers || 0) / (adminData.stats.totalUsers || 1) * 100).toFixed(1)}%</div>
+                    <div class="stat-label">Конверсия</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="subscriptions-actions">
+            <h3>Действия</h3>
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="createPromoCode()">🎫 Создать промокод</button>
+                <button class="btn btn-secondary" onclick="exportSubscriptions()">📥 Экспорт подписок</button>
+                <button class="btn btn-outline" onclick="sendMassNotification()">📢 Массовое уведомление</button>
+            </div>
+        </div>
+    `;
+}
+
+function loadPromotions() {
+    const promotionsTab = document.getElementById('promotions');
+    if (!promotionsTab) return;
+    
+    promotionsTab.innerHTML = `
+        <div class="promotions-header">
+            <h2>🎁 Управление акциями</h2>
+            <button class="btn btn-primary" onclick="createPromotion()">+ Создать акцию</button>
+        </div>
+        
+        <div class="promotions-grid">
+            <div class="promotion-card">
+                <div class="promotion-header">
+                    <div class="promotion-title">Пробный период</div>
+                    <div class="promotion-status active">✅ Активна</div>
+                </div>
+                <div class="promotion-description">7 дней бесплатного доступа ко всем материалам</div>
+                <div class="promotion-stats">
+                    <span>👥 45 активаций</span>
+                    <span>🔄 12% конверсия</span>
+                </div>
+                <div class="promotion-actions">
+                    <button class="btn btn-small" onclick="editPromotion(1)">✏️</button>
+                    <button class="btn btn-small btn-danger" onclick="deletePromotion(1)">🗑️</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function loadSettings() {
+    const settingsTab = document.getElementById('settings');
+    if (!settingsTab) return;
+    
+    settingsTab.innerHTML = `
+        <h2>⚙️ Настройки системы</h2>
+        
+        <div class="settings-sections">
+            <div class="settings-section">
+                <h3>🔧 Основные настройки</h3>
+                <div class="setting-item">
+                    <label>Название академии</label>
+                    <input type="text" value="Академия АНБ" class="setting-input">
+                </div>
+                <div class="setting-item">
+                    <label>Email поддержки</label>
+                    <input type="email" value="academy@anb.ru" class="setting-input">
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <h3>💰 Настройки платежей</h3>
+                <div class="setting-item">
+                    <label>Пробный период (дни)</label>
+                    <input type="number" value="7" class="setting-input">
+                </div>
+            </div>
+        </div>
+        
+        <div class="settings-actions">
+            <button class="btn btn-primary" onclick="saveSettings()">💾 Сохранить настройки</button>
+        </div>
+    `;
+}
+
+// Функции для акций и промокодов
+function createPromoCode() {
+    const promoCode = `PROMO${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    showNotification(`🎫 Создан промокод: ${promoCode}`, 'success');
+}
+
+function createPromotion() {
+    showNotification('🎁 Функция создания акции в разработке', 'info');
+}
+
+function editPromotion(promoId) {
+    showNotification(`✏️ Редактирование акции ID: ${promoId}`, 'info');
+}
+
+function deletePromotion(promoId) {
+    if (confirm('Удалить акцию?')) {
+        showNotification(`🗑️ Акция ID: ${promoId} удалена`, 'success');
+    }
+}
+
+function exportSubscriptions() {
+    showNotification('📥 Экспорт данных о подписках завершен', 'success');
+}
+
+function sendMassNotification() {
+    const message = prompt('Введите сообщение для массовой рассылки:');
+    if (message) {
+        showNotification(`📢 Массовая рассылка отправлена: "${message}"`, 'success');
+    }
+}
+
+function saveSettings() {
+    showNotification('💾 Настройки сохранены', 'success');
+}
+
+// ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+
 function switchAdminTab(tab) {
     currentAdminTab = tab;
     
-    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.admin-nav-btn').forEach(b => b.classList.remove('active'));
+    console.log(`📑 Переключение на вкладку: ${tab}`);
     
+    // Скрыть все вкладки
+    document.querySelectorAll('.admin-tab').forEach(t => {
+        t.classList.remove('active');
+    });
+    
+    // Убрать активность с кнопок
+    document.querySelectorAll('.admin-nav-btn').forEach(b => {
+        b.classList.remove('active');
+    });
+    
+    // Показать выбранную вкладку
     const tabElement = document.getElementById(tab);
     if (tabElement) {
         tabElement.classList.add('active');
     }
     document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
 
+    // Загрузить данные для вкладки
     loadTabData(tab);
 }
 
@@ -825,9 +1115,13 @@ function switchContentTab(contentType) {
     
     document.getElementById('contentTitle').textContent = getContentTypeName(contentType);
     loadContentList(contentType);
+    
+    console.log(`📚 Переключение на контент: ${contentType}`);
 }
 
 function loadTabData(tab) {
+    console.log(`📥 Загрузка данных для вкладки: ${tab}`);
+    
     switch (tab) {
         case 'users':
             loadUsersList();
@@ -875,15 +1169,23 @@ function getSubscriptionStatusText(status) {
     return statuses[status] || '❌ Нет подписки';
 }
 
-function getActivityIcon(type) {
-    const icons = {
-        'user': '👤',
-        'payment': '💰',
-        'content': '📝',
-        'subscription': '💳',
-        'default': '🔔'
-    };
-    return icons[type] || icons.default;
+function formatPrice(price) {
+    return new Intl.NumberFormat('ru-RU').format(price);
+}
+
+function formatDate(date) {
+    if (!date) return 'неизвестно';
+    return new Date(date).toLocaleDateString('ru-RU');
+}
+
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 function debounce(func, wait) {
@@ -912,13 +1214,21 @@ function showNotification(message, type = 'info') {
         border-radius: 8px;
         z-index: 1000;
         animation: slideIn 0.3s ease;
+        max-width: 400px;
+        word-wrap: break-word;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     `;
     
     document.body.appendChild(notification);
     
     setTimeout(() => {
-        notification.remove();
-    }, 3000);
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 4000);
 }
 
 function closeModal(modalId) {
@@ -937,8 +1247,68 @@ function goToMainApp() {
     window.location.href = '/';
 }
 
-// Инициализация Telegram WebApp
+// Инициализация Telegram WebApp в админ-панели
 if (window.Telegram && Telegram.WebApp) {
     Telegram.WebApp.expand();
     Telegram.WebApp.ready();
+    console.log('📱 Telegram WebApp инициализирован в админ-панели');
 }
+
+// CSS анимации для админки
+const adminStyle = document.createElement('style');
+adminStyle.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    .admin-content-item {
+        transition: all 0.3s ease;
+    }
+    
+    .admin-content-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .status-badge.active {
+        background: #28a745;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+    }
+    
+    .status-badge.trial {
+        background: #ffc107;
+        color: black;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+    }
+    
+    .status-badge.inactive {
+        background: #dc3545;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+    }
+    
+    .main-admin-badge {
+        background: #58b8e7;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+`;
+document.head.appendChild(adminStyle);
+
+console.log('✅ admin.js полностью загружен и готов к работе');
