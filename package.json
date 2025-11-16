@@ -4,10 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "setup": "mkdir -p uploads webapp admin-panel && echo 'Директории созданы'",
-    "db:init": "node -e \"import('./server.js').then(m => console.log('DB initialized'))\"",
-    "deploy": "npm run setup && npm start"
+    "dev": "node server.js"
   },
   "dependencies": {
     "telegraf": "^4.16.3",
