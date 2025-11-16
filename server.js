@@ -16,6 +16,39 @@ const ADMIN_IDS = [898508164];
 
 console.log('🚀 Starting Smart Clinic Bot...');
 
+// ==================== УТИЛИТЫ ДЛЯ ОБРАБОТКИ КОНФЛИКТОВ ====================
+let isShuttingDown = false;
+
+// Функция для graceful shutdown
+async function gracefulShutdown() {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    
+    console.log('🛑 Starting graceful shutdown...');
+    
+    try {
+        if (bot) {
+            console.log('Stopping Telegram bot...');
+            await bot.stop();
+        }
+        console.log('✅ Shutdown completed');
+        process.exit(0);
+    } catch (error) {
+        console.error('❌ Error during shutdown:', error);
+        process.exit(1);
+    }
+}
+
+// Обработчики сигналов
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);
+process.on('uncaughtException', (error) => {
+    console.error('🔥 Uncaught Exception:', error);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('🔥 Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 // ==================== БАЗА ДАННЫХ В ПАМЯТИ ====================
 const users = new Map();
 const userSurveys = new Map();
@@ -28,25 +61,12 @@ const contentDB = {
             id: 1,
             title: "Мануальные техники в практике",
             description: "6 модулей по современным мануальным методикам",
-            fullDescription: "Комплексный курс, охватывающий основные мануальные техники, применяемые в неврологической практике. Изучите диагностику и коррекцию функциональных нарушений.",
+            fullDescription: "Комплексный курс, охватывающий основные мануальные техники, применяемые в неврологической практике.",
             price: 15000,
             duration: "12 часов",
             modules: 6,
             image: "/images/course-1.jpg",
-            created: new Date('2024-01-15'),
-            updated: new Date('2024-01-15')
-        },
-        {
-            id: 2,
-            title: "Неврология для практикующих врачей",
-            description: "Основы неврологической диагностики и лечения",
-            fullDescription: "Фундаментальный курс по неврологии для врачей различных специальностей.",
-            price: 12000,
-            duration: "10 часов",
-            modules: 5,
-            image: "/images/course-2.jpg",
-            created: new Date('2024-01-20'),
-            updated: new Date('2024-01-20')
+            created: new Date('2024-01-15')
         }
     ],
     podcasts: [
@@ -92,15 +112,6 @@ const contentDB = {
             file: "/materials/mri-1.pdf",
             image: "/images/mri-preview-1.jpg",
             created: new Date('2024-01-08')
-        },
-        {
-            id: 2,
-            title: "Клинический случай: мигрень",
-            description: "Разбор диагностики и лечения пациента с мигренью",
-            type: "case",
-            file: "/materials/case-1.pdf",
-            image: "/images/case-preview-1.jpg",
-            created: new Date('2024-01-12')
         }
     ],
     events: [
@@ -174,10 +185,8 @@ function getUser(id) {
 }
 
 function isAdmin(userId) {
-    console.log(`🔍 Checking admin rights for ${userId}`);
-    console.log(`👑 Admin IDs: ${Array.from(admins)}`);
     const result = admins.has(userId);
-    console.log(`✅ Result: ${result}`);
+    console.log(`🔍 Admin check: ${userId} -> ${result}`);
     return result;
 }
 
@@ -213,520 +222,673 @@ const surveySteps = [
 // ==================== ТЕЛЕГРАМ БОТ ====================
 const bot = new Telegraf(BOT_TOKEN);
 
+// Обработка ошибок бота
+bot.catch((err, ctx) => {
+    console.error(`🔥 Bot error for ${ctx.updateType}:`, err);
+});
+
 // ==================== ОБРАБОТКА КОМАНД ====================
 bot.start(async (ctx) => {
-    const user = getUser(ctx.from.id);
-    user.firstName = ctx.from.first_name;
-    user.username = ctx.from.username;
-    user.isAdmin = isAdmin(ctx.from.id);
+    try {
+        const user = getUser(ctx.from.id);
+        user.firstName = ctx.from.first_name;
+        user.username = ctx.from.username;
+        user.isAdmin = isAdmin(ctx.from.id);
 
-    console.log('=== DEBUG ADMIN CHECK ===');
-    console.log('User ID:', ctx.from.id);
-    console.log('Admin IDs:', Array.from(admins));
-    console.log('Is admin:', user.isAdmin);
-    console.log('User object:', user);
-    console.log('=========================');
+        console.log(`👋 START: ${user.firstName} (${ctx.from.id}) ${user.isAdmin ? '👑 ADMIN' : ''}`);
 
-    if (user.surveyCompleted) {
-        await showMainMenu(ctx);
-        return;
+        if (user.surveyCompleted) {
+            await showMainMenu(ctx);
+            return;
+        }
+
+        userSurveys.set(ctx.from.id, { step: 0, answers: {} });
+        await sendSurveyStep(ctx, ctx.from.id);
+    } catch (error) {
+        console.error('Error in start command:', error);
+        await ctx.reply('❌ Произошла ошибка. Попробуйте еще раз.');
     }
-
-    userSurveys.set(ctx.from.id, { step: 0, answers: {} });
-    await sendSurveyStep(ctx, ctx.from.id);
 });
 
 bot.command('menu', async (ctx) => {
-    await showMainMenu(ctx);
+    try {
+        await showMainMenu(ctx);
+    } catch (error) {
+        console.error('Error in menu command:', error);
+        await ctx.reply('❌ Произошла ошибка.');
+    }
 });
 
 bot.command('admin', async (ctx) => {
-    const user = getUser(ctx.from.id);
-    if (!user.isAdmin) {
-        await ctx.reply('❌ Нет прав доступа');
-        return;
-    }
-
-    await ctx.reply('🔧 <b>Панель управления ботом</b>', {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [
-                    { text: '📊 Статистика бота', callback_data: 'bot_stats' }
-                ],
-                [
-                    { text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin.html` } }
-                ]
-            ]
+    try {
+        const user = getUser(ctx.from.id);
+        if (!user.isAdmin) {
+            await ctx.reply('❌ Нет прав доступа');
+            return;
         }
-    });
+
+        await ctx.reply('🔧 <b>Панель управления ботом</b>', {
+            parse_mode: 'HTML',
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: '📊 Статистика бота', callback_data: 'bot_stats' }
+                    ],
+                    [
+                        { text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin.html` } }
+                    ]
+                ]
+            }
+        });
+    } catch (error) {
+        console.error('Error in admin command:', error);
+        await ctx.reply('❌ Произошла ошибка.');
+    }
 });
 
 // ==================== ОБРАБОТКА КНОПОК ====================
 bot.on('text', async (ctx) => {
-    const userId = ctx.from.id;
-    const text = ctx.message.text;
-    const user = getUser(userId);
+    try {
+        const userId = ctx.from.id;
+        const text = ctx.message.text;
+        const user = getUser(userId);
 
-    console.log(`📨 TEXT: ${user.firstName} - "${text}"`);
+        console.log(`📨 TEXT: ${user.firstName} - "${text}"`);
 
-    const survey = userSurveys.get(userId);
-    if (survey) {
-        await handleSurvey(ctx, survey, text);
-        return;
+        const survey = userSurveys.get(userId);
+        if (survey) {
+            await handleSurvey(ctx, survey, text);
+            return;
+        }
+
+        await handleMenuButton(ctx, text);
+    } catch (error) {
+        console.error('Error handling text:', error);
     }
-
-    await handleMenuButton(ctx, text);
 });
 
 // ==================== ОБРАБОТКА INLINE КНОПОК ====================
 bot.on('callback_query', async (ctx) => {
-    const data = ctx.callbackQuery.data;
-    const user = getUser(ctx.from.id);
-    
-    console.log(`🔘 CALLBACK: ${user.firstName} - ${data}`);
-    
-    await ctx.answerCbQuery();
-    
-    switch (data) {
-        case 'bot_stats':
-            const totalUsers = users.size;
-            const activeUsers = Array.from(users.values()).filter(u => 
-                u.subscription.status === 'trial' || u.subscription.status === 'active'
-            ).length;
-            
-            await ctx.editMessageText(
-                `📊 <b>Статистика бота</b>\n\n` +
-                `👥 Всего пользователей: <b>${totalUsers}</b>\n` +
-                `✅ Активных подписок: <b>${activeUsers}</b>\n` +
-                `📝 Завершенных опросов: <b>${Array.from(users.values()).filter(u => u.surveyCompleted).length}</b>`,
-                {
-                    parse_mode: 'HTML'
-                }
-            );
-            break;
+    try {
+        const data = ctx.callbackQuery.data;
+        const user = getUser(ctx.from.id);
+        
+        console.log(`🔘 CALLBACK: ${user.firstName} - ${data}`);
+        
+        await ctx.answerCbQuery();
+        
+        switch (data) {
+            case 'bot_stats':
+                const totalUsers = users.size;
+                const activeUsers = Array.from(users.values()).filter(u => 
+                    u.subscription.status === 'trial' || u.subscription.status === 'active'
+                ).length;
+                
+                await ctx.editMessageText(
+                    `📊 <b>Статистика бота</b>\n\n` +
+                    `👥 Всего пользователей: <b>${totalUsers}</b>\n` +
+                    `✅ Активных подписок: <b>${activeUsers}</b>\n` +
+                    `📝 Завершенных опросов: <b>${Array.from(users.values()).filter(u => u.surveyCompleted).length}</b>`,
+                    {
+                        parse_mode: 'HTML'
+                    }
+                );
+                break;
+        }
+    } catch (error) {
+        console.error('Error handling callback:', error);
     }
 });
 
 // ==================== ОПРОС ====================
 async function handleSurvey(ctx, survey, text) {
-    const userId = ctx.from.id;
-    const currentStep = surveySteps[survey.step];
+    try {
+        const userId = ctx.from.id;
+        const currentStep = surveySteps[survey.step];
 
-    if (currentStep.isTextInput) {
-        if (currentStep.field === 'email' && !text.includes('@')) {
-            await ctx.reply('❌ Введите корректный email:');
-            return;
-        }
-        survey.answers[currentStep.field] = text;
-    } else {
-        if (text !== '🚫 Пропустить вопрос') {
+        if (currentStep.isTextInput) {
+            if (currentStep.field === 'email' && !text.includes('@')) {
+                await ctx.reply('❌ Введите корректный email:');
+                return;
+            }
             survey.answers[currentStep.field] = text;
+        } else {
+            if (text !== '🚫 Пропустить вопрос') {
+                survey.answers[currentStep.field] = text;
+            }
         }
-    }
 
-    survey.step++;
+        survey.step++;
 
-    if (survey.step < surveySteps.length) {
-        await sendSurveyStep(ctx, userId);
-    } else {
-        await finishSurvey(ctx, userId, survey.answers);
+        if (survey.step < surveySteps.length) {
+            await sendSurveyStep(ctx, userId);
+        } else {
+            await finishSurvey(ctx, userId, survey.answers);
+        }
+    } catch (error) {
+        console.error('Error in survey:', error);
+        await ctx.reply('❌ Произошла ошибка в опросе.');
     }
 }
 
 async function sendSurveyStep(ctx, userId) {
-    const survey = userSurveys.get(userId);
-    const step = surveySteps[survey.step];
+    try {
+        const survey = userSurveys.get(userId);
+        const step = surveySteps[survey.step];
 
-    if (step.isTextInput) {
-        await ctx.reply(
-            `📝 ${step.question}\nВведите ваш ответ:`,
-            Markup.removeKeyboard()
-        );
-    } else {
-        const buttons = step.options.map(opt => [opt]);
-        buttons.push(['🚫 Пропустить вопрос']);
-        
-        await ctx.reply(
-            `📝 ${step.question}\nВыберите вариант:`,
-            Markup.keyboard(buttons).resize().oneTime()
-        );
+        if (step.isTextInput) {
+            await ctx.reply(
+                `📝 ${step.question}\nВведите ваш ответ:`,
+                Markup.removeKeyboard()
+            );
+        } else {
+            const buttons = step.options.map(opt => [opt]);
+            buttons.push(['🚫 Пропустить вопрос']);
+            
+            await ctx.reply(
+                `📝 ${step.question}\nВыберите вариант:`,
+                Markup.keyboard(buttons).resize().oneTime()
+            );
+        }
+    } catch (error) {
+        console.error('Error sending survey step:', error);
     }
 }
 
 async function finishSurvey(ctx, userId, answers) {
-    const user = getUser(userId);
-    
-    user.specialization = answers.specialization || 'Не указано';
-    user.city = answers.city || 'Не указан';
-    user.email = answers.email || 'Не указан';
-    
-    completeSurvey(userId);
-    userSurveys.delete(userId);
+    try {
+        const user = getUser(userId);
+        
+        user.specialization = answers.specialization || 'Не указано';
+        user.city = answers.city || 'Не указан';
+        user.email = answers.email || 'Не указан';
+        
+        completeSurvey(userId);
+        userSurveys.delete(userId);
 
-    await ctx.reply(
-        `🎉 Спасибо за опрос, ${user.firstName}!\n\n` +
-        `✅ Ваш профиль:\n` +
-        `🎯 Специализация: ${user.specialization}\n` +
-        `🏙️ Город: ${user.city}\n` +
-        `📧 Email: ${user.email}\n\n` +
-        `🎁 Пробный доступ на 7 дней активирован!\n\n` +
-        `Теперь вы можете пользоваться всеми возможностями Академии.`,
-        Markup.removeKeyboard()
-    );
+        await ctx.reply(
+            `🎉 Спасибо за опрос, ${user.firstName}!\n\n` +
+            `✅ Ваш профиль:\n` +
+            `🎯 Специализация: ${user.specialization}\n` +
+            `🏙️ Город: ${user.city}\n` +
+            `📧 Email: ${user.email}\n\n` +
+            `🎁 Пробный доступ на 7 дней активирован!\n\n` +
+            `Теперь вы можете пользоваться всеми возможностями Академии.`,
+            Markup.removeKeyboard()
+        );
 
-    await showMainMenu(ctx);
+        await showMainMenu(ctx);
+    } catch (error) {
+        console.error('Error finishing survey:', error);
+        await ctx.reply('❌ Ошибка завершения опроса.');
+    }
 }
 
 // ==================== ОСНОВНЫЕ КНОПКИ МЕНЮ ====================
 async function handleMenuButton(ctx, text) {
-    const user = getUser(ctx.from.id);
-    user.lastActivity = new Date();
+    try {
+        const user = getUser(ctx.from.id);
+        user.lastActivity = new Date();
 
-    console.log(`🔘 BUTTON: ${user.firstName} - "${text}"`);
+        console.log(`🔘 BUTTON: ${user.firstName} - "${text}"`);
 
-    switch (text) {
-        case '📱 Навигация':
-            await ctx.reply(botMessages.navigation, {
-                parse_mode: 'HTML',
-                reply_markup: {
-                    inline_keyboard: [[
-                        { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
-                    ]]
-                }
-            });
-            break;
-
-        case '🎁 Акции':
-            await ctx.reply(botMessages.promotions, {
-                parse_mode: 'HTML',
-                reply_markup: {
-                    inline_keyboard: [[
-                        { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
-                    ]]
-                }
-            });
-            break;
-
-        case '❓ Задать вопрос':
-            await ctx.reply(botMessages.question, {
-                parse_mode: 'HTML',
-                reply_markup: {
-                    inline_keyboard: [[
-                        { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
-                    ]]
-                }
-            });
-            break;
-
-        case '💬 Поддержка':
-            await ctx.reply(botMessages.support, {
-                parse_mode: 'HTML'
-            });
-            break;
-
-        case '👤 Мой профиль':
-            await ctx.reply(botMessages.profile, {
-                parse_mode: 'HTML',
-                reply_markup: {
-                    inline_keyboard: [[
-                        { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
-                    ]]
-                }
-            });
-            break;
-
-        case '🔄 Продлить подписку':
-            await ctx.reply(botMessages.renew, {
-                parse_mode: 'HTML',
-                reply_markup: {
-                    inline_keyboard: [[
-                        { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
-                    ]]
-                }
-            });
-            break;
-
-        case '🔧 Управление ботом':
-            if (user.isAdmin) {
-                await ctx.reply('🔧 <b>Панель управления ботом</b>', {
+        switch (text) {
+            case '📱 Навигация':
+                await ctx.reply(botMessages.navigation, {
                     parse_mode: 'HTML',
                     reply_markup: {
-                        inline_keyboard: [
-                            [
-                                { text: '📊 Статистика бота', callback_data: 'bot_stats' }
-                            ],
-                            [
-                                { text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin.html` } }
-                            ]
-                        ]
+                        inline_keyboard: [[
+                            { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
+                        ]]
                     }
                 });
-            } else {
-                await ctx.reply('❌ Нет прав доступа');
-            }
-            break;
+                break;
 
-        default:
-            await ctx.reply('🤔 Используйте кнопки меню для навигации');
-            await showMainMenu(ctx);
-            break;
+            case '🎁 Акции':
+                await ctx.reply(botMessages.promotions, {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
+                        ]]
+                    }
+                });
+                break;
+
+            case '❓ Задать вопрос':
+                await ctx.reply(botMessages.question, {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
+                        ]]
+                    }
+                });
+                break;
+
+            case '💬 Поддержка':
+                await ctx.reply(botMessages.support, {
+                    parse_mode: 'HTML'
+                });
+                break;
+
+            case '👤 Мой профиль':
+                await ctx.reply(botMessages.profile, {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
+                        ]]
+                    }
+                });
+                break;
+
+            case '🔄 Продлить подписку':
+                await ctx.reply(botMessages.renew, {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '📱 Открыть приложение', web_app: { url: WEBAPP_URL } }
+                        ]]
+                    }
+                });
+                break;
+
+            case '🔧 Управление ботом':
+                if (user.isAdmin) {
+                    await ctx.reply('🔧 <b>Панель управления ботом</b>', {
+                        parse_mode: 'HTML',
+                        reply_markup: {
+                            inline_keyboard: [
+                                [
+                                    { text: '📊 Статистика бота', callback_data: 'bot_stats' }
+                                ],
+                                [
+                                    { text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin.html` } }
+                                ]
+                            ]
+                        }
+                    });
+                } else {
+                    await ctx.reply('❌ Нет прав доступа');
+                }
+                break;
+
+            default:
+                await ctx.reply('🤔 Используйте кнопки меню для навигации');
+                await showMainMenu(ctx);
+                break;
+        }
+    } catch (error) {
+        console.error('Error handling menu button:', error);
+        await ctx.reply('❌ Произошла ошибка.');
     }
 }
 
 // Главное меню
 async function showMainMenu(ctx) {
-    const user = getUser(ctx.from.id);
-    
-    let message = `👋 Добро пожаловать в Академию АНБ, ${user.firstName}!\n\n`;
-    
-    if (user.subscription.status === 'trial') {
-        message += `🕒 Пробный доступ до: ${user.subscription.endDate.toLocaleDateString('ru-RU')}\n\n`;
-    } else if (user.isAdmin) {
-        message += `👑 Вы администратор системы\n\n`;
-    }
-    
-    message += `Выберите раздел для получения информации:`;
-
-    const keyboard = [
-        ['📱 Навигация', '🎁 Акции'],
-        ['❓ Задать вопрос', '💬 Поддержка'],
-        ['👤 Мой профиль', '🔄 Продлить подписку']
-    ];
-
-    if (user.isAdmin) {
-        keyboard.push(['🔧 Управление ботом']);
-    }
-
-    await ctx.reply(message, {
-        reply_markup: {
-            keyboard: keyboard,
-            resize_keyboard: true
+    try {
+        const user = getUser(ctx.from.id);
+        
+        let message = `👋 Добро пожаловать в Академию АНБ, ${user.firstName}!\n\n`;
+        
+        if (user.subscription.status === 'trial') {
+            message += `🕒 Пробный доступ до: ${user.subscription.endDate.toLocaleDateString('ru-RU')}\n\n`;
+        } else if (user.isAdmin) {
+            message += `👑 Вы администратор системы\n\n`;
         }
-    });
+        
+        message += `Выберите раздел для получения информации:`;
+
+        const keyboard = [
+            ['📱 Навигация', '🎁 Акции'],
+            ['❓ Задать вопрос', '💬 Поддержка'],
+            ['👤 Мой профиль', '🔄 Продлить подписку']
+        ];
+
+        if (user.isAdmin) {
+            keyboard.push(['🔧 Управление ботом']);
+        }
+
+        await ctx.reply(message, {
+            reply_markup: {
+                keyboard: keyboard,
+                resize_keyboard: true
+            }
+        });
+    } catch (error) {
+        console.error('Error showing main menu:', error);
+        await ctx.reply('❌ Ошибка отображения меню.');
+    }
 }
 
 // ==================== WEB APP SERVER ====================
 const app = express();
-app.use(express.json());
+
+// Middleware для обработки ошибок
+app.use((req, res, next) => {
+    console.log(`🌐 ${req.method} ${req.url}`);
+    next();
+});
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(join(__dirname, 'webapp')));
+
+// Middleware для обработки CORS
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+});
 
 // API для WebApp
 app.get('/api/user/:id', (req, res) => {
-    const userId = parseInt(req.params.id);
-    const user = users.get(userId);
-    
-    if (user) {
-        // Для админов делаем подписку активной
-        if (user.isAdmin) {
-            user.subscription = {
-                status: 'active',
-                type: 'admin',
-                endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-            };
-        }
+    try {
+        const userId = parseInt(req.params.id);
+        const user = users.get(userId);
         
-        res.json({
-            success: true,
-            user: {
-                id: user.id,
-                firstName: user.firstName,
-                specialization: user.specialization,
-                city: user.city,
-                email: user.email,
-                subscription: user.subscription,
-                progress: user.progress,
-                favorites: user.favorites,
-                isAdmin: user.isAdmin,
-                joinedAt: user.joinedAt
+        if (user) {
+            // Для админов делаем подписку активной
+            if (user.isAdmin) {
+                user.subscription = {
+                    status: 'active',
+                    type: 'admin',
+                    endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+                };
             }
-        });
-    } else {
-        res.json({ success: false, error: 'User not found' });
+            
+            res.json({
+                success: true,
+                user: {
+                    id: user.id,
+                    firstName: user.firstName,
+                    specialization: user.specialization,
+                    city: user.city,
+                    email: user.email,
+                    subscription: user.subscription,
+                    progress: user.progress,
+                    favorites: user.favorites,
+                    isAdmin: user.isAdmin,
+                    joinedAt: user.joinedAt
+                }
+            });
+        } else {
+            res.status(404).json({ success: false, error: 'User not found' });
+        }
+    } catch (error) {
+        console.error('Error in /api/user:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
 
 app.get('/api/content/:type', (req, res) => {
-    const contentType = req.params.type;
-    if (contentDB[contentType]) {
-        res.json({ success: true, data: contentDB[contentType] });
-    } else {
-        res.status(404).json({ success: false, error: 'Content type not found' });
+    try {
+        const contentType = req.params.type;
+        if (contentDB[contentType]) {
+            res.json({ success: true, data: contentDB[contentType] });
+        } else {
+            res.status(404).json({ success: false, error: 'Content type not found' });
+        }
+    } catch (error) {
+        console.error('Error in /api/content/:type:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
 
 app.get('/api/content', (req, res) => {
-    res.json({ success: true, data: contentDB });
+    try {
+        res.json({ success: true, data: contentDB });
+    } catch (error) {
+        console.error('Error in /api/content:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
 });
 
 // API для избранного
 app.post('/api/user/:id/favorites', express.json(), (req, res) => {
-    const userId = parseInt(req.params.id);
-    const { contentType, contentId, action } = req.body;
-    const user = users.get(userId);
-    
-    if (!user) {
-        return res.json({ success: false, error: 'User not found' });
-    }
-    
-    if (action === 'add') {
-        if (!user.favorites[contentType].includes(contentId)) {
-            user.favorites[contentType].push(contentId);
+    try {
+        const userId = parseInt(req.params.id);
+        const { contentType, contentId, action } = req.body;
+        const user = users.get(userId);
+        
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found' });
         }
-    } else if (action === 'remove') {
-        user.favorites[contentType] = user.favorites[contentType].filter(id => id !== contentId);
+        
+        if (action === 'add') {
+            if (!user.favorites[contentType].includes(contentId)) {
+                user.favorites[contentType].push(contentId);
+            }
+        } else if (action === 'remove') {
+            user.favorites[contentType] = user.favorites[contentType].filter(id => id !== contentId);
+        }
+        
+        res.json({ success: true, favorites: user.favorites });
+    } catch (error) {
+        console.error('Error in /api/user/:id/favorites:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
     }
-    
-    res.json({ success: true, favorites: user.favorites });
 });
 
 app.get('/api/user/:id/favorites', (req, res) => {
-    const userId = parseInt(req.params.id);
-    const user = users.get(userId);
-    
-    if (!user) {
-        return res.json({ success: false, error: 'User not found' });
+    try {
+        const userId = parseInt(req.params.id);
+        const user = users.get(userId);
+        
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+        
+        res.json({ success: true, favorites: user.favorites });
+    } catch (error) {
+        console.error('Error in /api/user/:id/favorites:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
     }
-    
-    res.json({ success: true, favorites: user.favorites });
 });
 
 // API для проверки админ-прав
 app.get('/api/check-admin/:id', (req, res) => {
-    const userId = parseInt(req.params.id);
-    const isAdminUser = isAdmin(userId);
-    
-    console.log(`🔍 API проверка админа: ${userId} -> ${isAdminUser}`);
-    
-    res.json({ 
-        success: true, 
-        isAdmin: isAdminUser 
-    });
+    try {
+        const userId = parseInt(req.params.id);
+        const isAdminUser = isAdmin(userId);
+        
+        console.log(`🔍 API проверка админа: ${userId} -> ${isAdminUser}`);
+        
+        res.json({ 
+            success: true, 
+            isAdmin: isAdminUser 
+        });
+    } catch (error) {
+        console.error('Error in /api/check-admin:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
 });
 
 // API для получения списка админов
 app.get('/api/admins', (req, res) => {
-    const adminUsers = Array.from(admins).map(adminId => {
-        const user = users.get(adminId);
-        return user ? {
-            id: user.id,
-            firstName: user.firstName,
-            username: user.username,
-            joinedAt: user.joinedAt
-        } : { id: adminId };
-    });
-    
-    res.json({ success: true, data: adminUsers });
+    try {
+        const adminUsers = Array.from(admins).map(adminId => {
+            const user = users.get(adminId);
+            return user ? {
+                id: user.id,
+                firstName: user.firstName,
+                username: user.username,
+                joinedAt: user.joinedAt
+            } : { id: adminId };
+        });
+        
+        res.json({ success: true, data: adminUsers });
+    } catch (error) {
+        console.error('Error in /api/admins:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
 });
 
 // API для добавления админа
 app.post('/api/admins', express.json(), (req, res) => {
-    const { userId } = req.body;
-    
-    if (!userId) {
-        return res.status(400).json({ success: false, error: 'User ID is required' });
-    }
+    try {
+        const { userId } = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({ success: false, error: 'User ID is required' });
+        }
 
-    const userIdNum = parseInt(userId);
-    admins.add(userIdNum);
-    
-    // Обновляем пользователя если он существует
-    const user = users.get(userIdNum);
-    if (user) {
-        user.isAdmin = true;
-    }
+        const userIdNum = parseInt(userId);
+        admins.add(userIdNum);
+        
+        // Обновляем пользователя если он существует
+        const user = users.get(userIdNum);
+        if (user) {
+            user.isAdmin = true;
+        }
 
-    console.log(`✅ Добавлен админ: ${userIdNum}`);
-    
-    res.json({ success: true, data: { userId: userIdNum } });
+        console.log(`✅ Добавлен админ: ${userIdNum}`);
+        
+        res.json({ success: true, data: { userId: userIdNum } });
+    } catch (error) {
+        console.error('Error in POST /api/admins:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
 });
 
 // API для удаления админа
 app.delete('/api/admins/:userId', (req, res) => {
-    const userId = parseInt(req.params.userId);
-    
-    // Не позволяем удалить самого себя если это главный админ
-    if (userId === ADMIN_IDS[0]) {
-        return res.status(400).json({ success: false, error: 'Cannot remove main admin' });
-    }
+    try {
+        const userId = parseInt(req.params.userId);
+        
+        // Не позволяем удалить самого себя если это главный админ
+        if (userId === ADMIN_IDS[0]) {
+            return res.status(400).json({ success: false, error: 'Cannot remove main admin' });
+        }
 
-    admins.delete(userId);
-    
-    // Обновляем пользователя если он существует
-    const user = users.get(userId);
-    if (user) {
-        user.isAdmin = false;
-    }
+        admins.delete(userId);
+        
+        // Обновляем пользователя если он существует
+        const user = users.get(userId);
+        if (user) {
+            user.isAdmin = false;
+        }
 
-    console.log(`🗑️ Удален админ: ${userId}`);
-    
-    res.json({ success: true, data: { userId } });
+        console.log(`🗑️ Удален админ: ${userId}`);
+        
+        res.json({ success: true, data: { userId } });
+    } catch (error) {
+        console.error('Error in DELETE /api/admins:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
 });
 
 app.get('/api/bot/messages', (req, res) => {
-    res.json({ success: true, messages: botMessages });
+    try {
+        res.json({ success: true, messages: botMessages });
+    } catch (error) {
+        console.error('Error in /api/bot/messages:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
 });
 
 app.put('/api/bot/messages', express.json(), (req, res) => {
-    if (req.body.messages) {
-        Object.assign(botMessages, req.body.messages);
+    try {
+        if (req.body.messages) {
+            Object.assign(botMessages, req.body.messages);
+        }
+        res.json({ success: true, messages: botMessages });
+    } catch (error) {
+        console.error('Error in PUT /api/bot/messages:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
     }
-    res.json({ success: true, messages: botMessages });
 });
 
 app.get('/api/stats', (req, res) => {
-    const totalUsers = users.size;
-    const activeUsers = Array.from(users.values()).filter(u => 
-        u.subscription.status === 'trial' || u.subscription.status === 'active'
-    ).length;
-    const completedSurveys = Array.from(users.values()).filter(u => u.surveyCompleted).length;
-    
-    // Статистика по контенту
-    const contentStats = {};
-    Object.keys(contentDB).forEach(type => {
-        contentStats[type] = contentDB[type].length;
-    });
-    
-    res.json({ 
-        success: true, 
-        stats: { 
-            totalUsers, 
-            activeUsers, 
-            completedSurveys,
-            content: contentStats
-        } 
-    });
+    try {
+        const totalUsers = users.size;
+        const activeUsers = Array.from(users.values()).filter(u => 
+            u.subscription.status === 'trial' || u.subscription.status === 'active'
+        ).length;
+        const completedSurveys = Array.from(users.values()).filter(u => u.surveyCompleted).length;
+        
+        // Статистика по контенту
+        const contentStats = {};
+        Object.keys(contentDB).forEach(type => {
+            contentStats[type] = contentDB[type].length;
+        });
+        
+        res.json({ 
+            success: true, 
+            stats: { 
+                totalUsers, 
+                activeUsers, 
+                completedSurveys,
+                content: contentStats
+            } 
+        });
+    } catch (error) {
+        console.error('Error in /api/stats:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
 });
 
 // Обновление подписки
 app.post('/api/user/:id/subscription', express.json(), (req, res) => {
-    const userId = parseInt(req.params.id);
-    const { plan } = req.body;
-    const user = users.get(userId);
-    
-    if (!user) {
-        return res.json({ success: false, error: 'User not found' });
-    }
-    
-    const plans = {
-        '1_month': { months: 1, price: 2900 },
-        '3_months': { months: 3, price: 7500 },
-        '12_months': { months: 12, price: 24000 }
-    };
-    
-    const selectedPlan = plans[plan];
-    if (selectedPlan) {
-        user.subscription = {
-            status: 'active',
-            type: plan,
-            endDate: new Date(Date.now() + selectedPlan.months * 30 * 24 * 60 * 60 * 1000)
+    try {
+        const userId = parseInt(req.params.id);
+        const { plan } = req.body;
+        const user = users.get(userId);
+        
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+        
+        const plans = {
+            '1_month': { months: 1, price: 2900 },
+            '3_months': { months: 3, price: 7500 },
+            '12_months': { months: 12, price: 24000 }
         };
         
-        // Обновляем прогресс
-        user.progress.steps.coursesBought++;
+        const selectedPlan = plans[plan];
+        if (selectedPlan) {
+            user.subscription = {
+                status: 'active',
+                type: plan,
+                endDate: new Date(Date.now() + selectedPlan.months * 30 * 24 * 60 * 60 * 1000)
+            };
+            
+            // Обновляем прогресс
+            user.progress.steps.coursesBought++;
+        }
+        
+        res.json({ success: true, subscription: user.subscription });
+    } catch (error) {
+        console.error('Error in /api/user/:id/subscription:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
     }
-    
-    res.json({ success: true, subscription: user.subscription });
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        success: true, 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        users: users.size,
+        admins: admins.size
+    });
+});
+
+// Обработка 404
+app.use((req, res) => {
+    res.status(404).json({ success: false, error: 'Route not found' });
+});
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+    console.error('🔥 Server error:', error);
+    res.status(500).json({ 
+        success: false, 
+        error: 'Internal server error',
+        message: error.message 
+    });
 });
 
 app.get('*', (req, res) => {
@@ -736,13 +898,32 @@ app.get('*', (req, res) => {
 // ==================== ЗАПУСК ====================
 async function startApp() {
     try {
+        // Проверяем, не запущен ли уже бот
+        const isAlreadyRunning = await checkIfBotRunning();
+        if (isAlreadyRunning) {
+            console.log('⚠️ Bot might be already running. Trying to stop previous instance...');
+            await gracefulShutdown();
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+
         // Запускаем Express сервер
-        app.listen(PORT, '0.0.0.0', () => {
+        const server = app.listen(PORT, '0.0.0.0', () => {
             console.log(`🌐 WebApp сервер запущен на порту ${PORT}`);
             console.log(`📱 WebApp: ${WEBAPP_URL}`);
             console.log(`📱 Admin Panel: ${WEBAPP_URL}/admin.html`);
             console.log(`👑 Админ ID: ${ADMIN_IDS[0]}`);
             console.log(`✅ Приложение готово к работе!`);
+        });
+
+        // Обработка ошибок сервера
+        server.on('error', (error) => {
+            if (error.code === 'EADDRINUSE') {
+                console.log(`❌ Port ${PORT} is already in use. You might have another instance running.`);
+                console.log('💡 Try: killall -9 node');
+                process.exit(1);
+            } else {
+                console.error('Server error:', error);
+            }
         });
 
         // Запускаем бота
@@ -752,22 +933,44 @@ async function startApp() {
 
     } catch (error) {
         console.error('❌ Ошибка при запуске:', error);
+        
+        if (error.code === 409) {
+            console.log('💡 Conflict detected. Try stopping previous bot instance.');
+            console.log('💡 Command to stop: pkill -f "node.*server.js"');
+        }
+        
         process.exit(1);
     }
 }
 
-// Обработка graceful shutdown
-process.once('SIGINT', () => {
-    console.log('🛑 Останавливаем бота...');
-    bot.stop('SIGINT');
-    process.exit(0);
-});
+// Функция для проверки запущен ли бот
+async function checkIfBotRunning() {
+    try {
+        // Простая проверка - пытаемся получить информацию о боте
+        const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`);
+        const data = await response.json();
+        return data.ok;
+    } catch (error) {
+        return false;
+    }
+}
 
-process.once('SIGTERM', () => {
-    console.log('🛑 Останавливаем бота...');
-    bot.stop('SIGTERM');
-    process.exit(0);
-});
+// Функция для принудительной остановки
+async function forceStop() {
+    console.log('🛑 Force stopping...');
+    try {
+        if (bot) {
+            await bot.stop();
+        }
+        process.exit(0);
+    } catch (error) {
+        console.error('Error during force stop:', error);
+        process.exit(1);
+    }
+}
+
+// Экспортируем функции для внешнего использования
+export { gracefulShutdown, forceStop };
 
 // Запускаем приложение
 startApp();
