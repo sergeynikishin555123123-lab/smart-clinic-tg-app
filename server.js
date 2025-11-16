@@ -1,4 +1,4 @@
-// server.js - ПОЛНОСТЬЮ ПЕРЕРАБОТАННАЯ ВЕРСИЯ
+// server.js - ПОЛНОСТЬЮ РАБОЧАЯ ВЕРСИЯ
 import { Telegraf, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -18,7 +18,7 @@ const __dirname = dirname(__filename);
 const BOT_TOKEN = process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4';
 const PORT = process.env.PORT || 3000;
 const WEBAPP_URL = process.env.WEBAPP_URL || `https://sergeynikishin555123123-lab-smart-clinic-tg-app-a472.twc1.net`;
-const ADMIN_IDS = new Set([898508164, 123456789]); // Добавьте свои ID
+const ADMIN_IDS = new Set([898508164, 123456789].map(id => parseInt(id)));
 
 console.log('🚀 Starting Smart Clinic Bot...');
 
@@ -43,7 +43,7 @@ const upload = multer({
     fileSize: 50 * 1024 * 1024 // 50MB limit
   },
   fileFilter: function (req, file, cb) {
-    const allowedTypes = /jpeg|jpg|png|gif|mp4|avi|mov|pdf|doc|docx/;
+    const allowedTypes = /jpeg|jpg|png|gif|mp4|avi|mov|pdf|doc|docx|mp3|wav/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
 
