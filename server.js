@@ -1,4 +1,4 @@
-// server.js - ПОЛНАЯ ВЕРСИЯ С АВТОСТОПОМ ПРОЦЕССОВ
+// server.js - ИСПРАВЛЕННАЯ ВЕРСИЯ С ПРАВИЛЬНЫМ URL БД
 import { Telegraf, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -16,7 +16,7 @@ const BOT_TOKEN = process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoN
 const PORT = process.env.PORT || 3000;
 const WEBAPP_URL = process.env.WEBAPP_URL || `https://sergeynikishin555123123-lab-smart-clinic-tg-app-a472.twc1.net`;
 
-const ADMIN_IDS = new Set([898508164]); // Главный администратор
+const ADMIN_IDS = new Set([898508164]);
 
 console.log('🚀 Starting Smart Clinic Bot...');
 
@@ -25,15 +25,13 @@ async function killPreviousProcesses() {
     try {
         console.log('🔫 Останавливаем предыдущие процессы...');
         
-        // Останавливаем процессы на том же порту
         try {
-            const { stdout } = await execAsync(`fuser -k ${PORT}/tcp`);
+            const { stdout } = await execAsync(`fuser -k ${PORT}/tcp || true`);
             console.log(`✅ Освобожден порт ${PORT}`);
         } catch (e) {
             console.log(`ℹ️  Порт ${PORT} уже свободен`);
         }
 
-        // Останавливаем Node.js процессы с этим файлом
         try {
             await execAsync('pkill -f "node.*server.js" || true');
             console.log('✅ Остановлены предыдущие Node.js процессы');
@@ -41,7 +39,6 @@ async function killPreviousProcesses() {
             console.log('ℹ️  Нет предыдущих Node.js процессов для остановки');
         }
 
-        // Даем время на завершение процессов
         await new Promise(resolve => setTimeout(resolve, 2000));
         
     } catch (error) {
@@ -53,43 +50,63 @@ async function killPreviousProcesses() {
 let pool;
 let dbConnected = false;
 
+// Функция для создания корректного connection string
+function getDatabaseUrl() {
+    const rawUrl = process.env.DATABASE_URL;
+    if (!rawUrl) return null;
+    
+    // Декодируем URL и заменяем проблемные символы
+    let decodedUrl;
+    try {
+        decodedUrl = decodeURIComponent(rawUrl);
+    } catch (e) {
+        decodedUrl = rawUrl;
+    }
+    
+    // Заменяем проблемные символы в пароле
+    decodedUrl = decodedUrl.replace(/:/g, '%3A')
+                          .replace(/;/g, '%3B')
+                          .replace(/</g, '%3C')
+                          .replace(/>/g, '%3E')
+                          .replace(/\?/g, '%3F');
+    
+    console.log('🔗 Используем URL БД:', decodedUrl.replace(/:[^@]*@/, ':****@'));
+    return decodedUrl;
+}
+
 async function initDatabase() {
     try {
         const { Pool } = await import('pg');
         
-        // Улучшенная конфигурация подключения
+        const databaseUrl = getDatabaseUrl();
+        if (!databaseUrl) {
+            throw new Error('DATABASE_URL не установлен');
+        }
+        
+        // Упрощенная конфигурация для тестирования
         pool = new Pool({
-            connectionString: process.env.DATABASE_URL,
+            connectionString: databaseUrl,
             ssl: {
                 rejectUnauthorized: false
             },
-            // Оптимизированные настройки для ограниченных ресурсов
-            max: 5, // Меньше соединений для shared hosting
+            // Минимальные настройки для теста
+            max: 2,
             idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 15000, // Увеличили таймаут
-            maxUses: 5000,
+            connectionTimeoutMillis: 10000,
         });
 
         console.log('🔌 Тестируем подключение к PostgreSQL...');
         
-        // Тестируем подключение с повторными попытками
-        let retries = 3;
-        while (retries > 0) {
-            try {
-                const client = await pool.connect();
-                console.log('✅ Успешное подключение к PostgreSQL');
-                client.release();
-                dbConnected = true;
-                break;
-            } catch (error) {
-                retries--;
-                if (retries === 0) {
-                    throw error;
-                }
-                console.log(`🔄 Повторная попытка подключения... (${retries} осталось)`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-        }
+        // Простой тест подключения
+        const client = await pool.connect();
+        console.log('✅ Успешное подключение к PostgreSQL');
+        
+        // Проверяем версию PostgreSQL
+        const versionResult = await client.query('SELECT version()');
+        console.log('📊 Версия PostgreSQL:', versionResult.rows[0].version.split(',')[0]);
+        
+        client.release();
+        dbConnected = true;
 
         await createTables();
         await addDemoData();
@@ -105,6 +122,7 @@ async function createTables() {
     try {
         console.log('📦 Создание таблиц...');
         
+        // Только основные таблицы для начала
         const tables = [
             `CREATE TABLE IF NOT EXISTS users (
                 id BIGINT PRIMARY KEY,
@@ -134,64 +152,6 @@ async function createTables() {
                 modules INTEGER DEFAULT 1,
                 image_url TEXT,
                 file_url TEXT,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
-            )`,
-            `CREATE TABLE IF NOT EXISTS podcasts (
-                id SERIAL PRIMARY KEY,
-                title TEXT NOT NULL,
-                description TEXT,
-                duration TEXT,
-                audio_url TEXT,
-                image_url TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            )`,
-            `CREATE TABLE IF NOT EXISTS streams (
-                id SERIAL PRIMARY KEY,
-                title TEXT NOT NULL,
-                description TEXT,
-                duration TEXT,
-                video_url TEXT,
-                image_url TEXT,
-                scheduled TIMESTAMP,
-                created_at TIMESTAMP DEFAULT NOW()
-            )`,
-            `CREATE TABLE IF NOT EXISTS videos (
-                id SERIAL PRIMARY KEY,
-                title TEXT NOT NULL,
-                description TEXT,
-                duration TEXT,
-                video_url TEXT,
-                image_url TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            )`,
-            `CREATE TABLE IF NOT EXISTS materials (
-                id SERIAL PRIMARY KEY,
-                title TEXT NOT NULL,
-                description TEXT,
-                type TEXT,
-                file_url TEXT,
-                image_url TEXT,
-                duration TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            )`,
-            `CREATE TABLE IF NOT EXISTS events (
-                id SERIAL PRIMARY KEY,
-                title TEXT NOT NULL,
-                description TEXT,
-                type TEXT,
-                date TEXT,
-                time TEXT,
-                location TEXT,
-                image_url TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            )`,
-            `CREATE TABLE IF NOT EXISTS news (
-                id SERIAL PRIMARY KEY,
-                title TEXT NOT NULL,
-                content TEXT,
-                category TEXT,
-                image_url TEXT,
                 created_at TIMESTAMP DEFAULT NOW()
             )`
         ];
@@ -199,11 +159,12 @@ async function createTables() {
         for (const tableQuery of tables) {
             try {
                 await pool.query(tableQuery);
+                console.log(`✅ Таблица создана: ${tableQuery.split('(')[0].split('IF NOT EXISTS ')[1]}`);
             } catch (error) {
                 console.error(`❌ Ошибка создания таблицы: ${error.message}`);
             }
         }
-        console.log('✅ Таблицы созданы/проверены');
+        console.log('✅ Все таблицы созданы/проверены');
 
     } catch (error) {
         console.error('❌ Ошибка создания таблиц:', error.message);
@@ -221,54 +182,11 @@ async function addDemoData() {
 
         console.log('📝 Добавление демо-данных...');
 
-        // Демо-курсы
+        // Только основные демо-данные
         await pool.query(`
             INSERT INTO courses (title, description, full_description, price, duration, modules) VALUES
-            ('Мануальные техники в практике', '6 модулей по современным мануальным методикам', 'Комплексный курс, охватывающий основные мануальные техники, применяемые в неврологической практике.', 15000, '12 часов', 6),
-            ('Неврология для практикующих врачей', 'Основы неврологической диагностики и лечения', 'Фундаментальный курс по неврологии для врачей различных специальностей.', 12000, '10 часов', 5)
-        `);
-
-        // Демо-подкасты
-        await pool.query(`
-            INSERT INTO podcasts (title, description, duration) VALUES
-            ('АНБ FM: Основы неврологии', 'Подкаст о современных подходах в неврологии', '45:20'),
-            ('АНБ FM: Реабилитация', 'Современные методы восстановительного лечения', '38:15')
-        `);
-
-        // Демо-эфиры
-        await pool.query(`
-            INSERT INTO streams (title, description, duration, scheduled) VALUES
-            ('Разбор клинического случая: боль в пояснице', 'Подробный разбор с Ильей Чистяковым', '1:15:30', NOW() + INTERVAL '2 days'),
-            ('Современные методы диагностики', 'Новые подходы в диагностике неврологических заболеваний', '1:30:00', NOW() + INTERVAL '5 days')
-        `);
-
-        // Демо-видео
-        await pool.query(`
-            INSERT INTO videos (title, description, duration) VALUES
-            ('Техника миофасциального релиза', 'Короткая видео-шпаргалка по технике МФР', '08:15'),
-            ('Основы кинезиотейпирования', 'Базовые техники наложения тейпов', '12:30')
-        `);
-
-        // Демо-материалы
-        await pool.query(`
-            INSERT INTO materials (title, description, type, duration) VALUES
-            ('МРТ разбор: грыжа позвоночника L4-L5', 'Детальный анализ МРТ снимков пациента с грыжей', 'mri', '25 мин'),
-            ('Клинический случай: мигрень', 'Разбор диагностики и лечения пациента с мигренью', 'case', '20 мин'),
-            ('Чек-лист: первичный осмотр неврологического пациента', 'Структурированный подход к осмотру', 'checklist', '15 мин')
-        `);
-
-        // Демо-мероприятия
-        await pool.query(`
-            INSERT INTO events (title, description, type, date, location) VALUES
-            ('Онлайн-вебинар по современной реабилитации', 'Современные методы восстановительного лечения', 'online', '2024-12-15', 'Zoom'),
-            ('Офлайн-семинар: мануальные техники', 'Практический семинар с отработкой навыков', 'offline', '2024-12-20', 'Москва, ул. Профессиональная, 15')
-        `);
-
-        // Демо-новости
-        await pool.query(`
-            INSERT INTO news (title, content, category) VALUES
-            ('Запуск новой образовательной платформы', 'Академия АНБ представляет обновленную платформу для профессионального развития врачей', 'development'),
-            ('Новый курс по мануальным техникам', 'Доступен для записи комплексный курс из 6 модулей', 'courses')
+            ('Мануальные техники в практике', '6 модулей по современным мануальным методикам', 'Комплексный курс по мануальным техникам', 15000, '12 часов', 6),
+            ('Неврология для практикующих врачей', 'Основы неврологической диагностики', 'Фундаментальный курс по неврологии', 12000, '10 часов', 5)
         `);
 
         console.log('✅ Демо-данные добавлены');
@@ -291,16 +209,17 @@ const tempContent = {
             price: 15000,
             duration: '12 часов',
             modules: 6
-        }
-    ],
-    podcasts: [
+        },
         {
-            id: 1,
-            title: 'АНБ FM: Основы неврологии',
-            description: 'Подкаст о современных подходах в неврологии',
-            duration: '45:20'
+            id: 2,
+            title: 'Неврология для практикующих врачей',
+            description: 'Основы неврологической диагностики и лечения',
+            price: 12000,
+            duration: '10 часов',
+            modules: 5
         }
     ],
+    podcasts: [],
     streams: [],
     videos: [],
     materials: [],
@@ -1263,15 +1182,9 @@ async function startApp() {
         // Останавливаем предыдущие процессы
         await killPreviousProcesses();
         
-        // Инициализируем базу данных (не блокируем запуск)
-        initDatabase().then(() => {
-            if (dbConnected) {
-                console.log('✅ База данных готова');
-            } else {
-                console.log('⚠️  База данных недоступна, используем временное хранилище');
-            }
-        });
-
+        // Инициализируем базу данных
+        await initDatabase();
+        
         // Запускаем Express сервер
         const server = app.listen(PORT, '0.0.0.0', () => {
             console.log(`🌐 WebApp сервер запущен на порту ${PORT}`);
