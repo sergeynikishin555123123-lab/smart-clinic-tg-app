@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "setup": "mkdir -p uploads webapp admin-panel && echo 'Директории созданы'",
+    "deploy": "npm run setup && npm start"
   },
   "dependencies": {
     "telegraf": "^4.16.3",
