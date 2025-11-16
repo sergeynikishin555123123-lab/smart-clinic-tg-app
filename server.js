@@ -277,9 +277,35 @@ async function addDemoData() {
     }
 }
 
-
 // ==================== TELEGRAM BOT ====================
 const bot = new Telegraf(BOT_TOKEN);
+
+// Временное хранилище (если БД недоступна)
+const tempUsers = new Map();
+const tempContent = {
+    courses: [
+        {
+            id: 1,
+            title: 'Мануальные техники в практике',
+            description: '6 модулей по современным мануальным методикам',
+            price: 15000,
+            duration: '12 часов',
+            modules: 6
+        }
+    ],
+    podcasts: [
+        {
+            id: 1,
+            title: 'АНБ FM: Основы неврологии',
+            description: 'Подкаст о современных подходах в неврологии',
+            duration: '45:20'
+        }
+    ],
+    streams: [],
+    videos: [],
+    materials: [],
+    events: []
+};
 
 // Сообщения бота
 const botMessages = {
@@ -310,6 +336,35 @@ const surveySteps = [
 
 // Функции для работы с пользователями
 async function getUser(userId) {
+    if (!dbConnected || !pool) {
+        // Используем временное хранилище
+        if (tempUsers.has(userId)) {
+            return tempUsers.get(userId);
+        }
+        
+        const newUser = {
+            id: userId,
+            first_name: 'User',
+            username: '',
+            specialization: '',
+            city: '',
+            email: '',
+            subscription_status: 'inactive',
+            subscription_type: null,
+            subscription_end_date: null,
+            progress_level: 'Понимаю',
+            progress_data: {steps: {materialsWatched: 0, eventsParticipated: 0, materialsSaved: 0, coursesBought: 0}},
+            favorites_data: {courses: [], podcasts: [], streams: [], videos: [], materials: [], watchLater: []},
+            is_admin: ADMIN_IDS.has(parseInt(userId)),
+            joined_at: new Date(),
+            last_activity: new Date(),
+            survey_completed: false
+        };
+        
+        tempUsers.set(userId, newUser);
+        return newUser;
+    }
+
     try {
         const result = await pool.query(
             'SELECT * FROM users WHERE id = $1',
@@ -350,8 +405,8 @@ async function getUser(userId) {
     } catch (error) {
         console.error('❌ Ошибка получения пользователя:', error.message);
         
-        // Возвращаем временного пользователя при ошибке БД
-        return {
+        // Возвращаем временного пользователя
+        const tempUser = {
             id: userId,
             first_name: 'User',
             username: '',
@@ -369,10 +424,23 @@ async function getUser(userId) {
             last_activity: new Date(),
             survey_completed: false
         };
+        
+        tempUsers.set(userId, tempUser);
+        return tempUser;
     }
 }
 
 async function updateUser(userId, updates) {
+    if (!dbConnected || !pool) {
+        // Обновляем во временном хранилище
+        if (tempUsers.has(userId)) {
+            const user = tempUsers.get(userId);
+            Object.assign(user, updates, { last_activity: new Date() });
+            tempUsers.set(userId, user);
+        }
+        return true;
+    }
+
     try {
         const setClause = Object.keys(updates).map((key, index) => `${key} = $${index + 2}`).join(', ');
         const values = [userId, ...Object.values(updates)];
@@ -730,6 +798,13 @@ app.get('/api/user/:id', async (req, res) => {
 
 // 📚 Получение контента
 app.get('/api/content', async (req, res) => {
+    if (!dbConnected) {
+        return res.json({
+            success: true,
+            data: tempContent
+        });
+    }
+
     try {
         const [courses, podcasts, streams, videos, materials, events] = await Promise.all([
             pool.query('SELECT * FROM courses ORDER BY created_at DESC'),
@@ -753,7 +828,10 @@ app.get('/api/content', async (req, res) => {
         });
     } catch (error) {
         console.error('❌ Ошибка получения контента:', error);
-        res.status(500).json({ success: false, error: 'Internal server error' });
+        res.json({
+            success: true,
+            data: tempContent
+        });
     }
 });
 
@@ -819,6 +897,25 @@ app.post('/api/user/:id/watch-later', async (req, res) => {
 
 // 📊 Статистика системы
 app.get('/api/stats', async (req, res) => {
+    if (!dbConnected) {
+        return res.json({
+            success: true,
+            stats: {
+                totalUsers: tempUsers.size,
+                activeUsers: Array.from(tempUsers.values()).filter(u => u.subscription_status === 'active').length,
+                completedSurveys: 0,
+                content: {
+                    courses: tempContent.courses.length,
+                    podcasts: tempContent.podcasts.length,
+                    streams: 0,
+                    videos: 0,
+                    materials: 0,
+                    events: 0
+                }
+            }
+        });
+    }
+
     try {
         const usersCount = await pool.query('SELECT COUNT(*) FROM users');
         const activeUsers = await pool.query('SELECT COUNT(*) FROM users WHERE subscription_status IN ($1, $2)', ['active', 'trial']);
@@ -853,6 +950,27 @@ app.get('/api/stats', async (req, res) => {
 
 // 👥 Получение списка пользователей (для админки)
 app.get('/api/users', async (req, res) => {
+    if (!dbConnected) {
+        const users = Array.from(tempUsers.values()).map(user => ({
+            id: user.id,
+            firstName: user.first_name,
+            username: user.username,
+            specialization: user.specialization,
+            city: user.city,
+            email: user.email,
+            subscription: {
+                status: user.subscription_status || 'inactive',
+                type: user.subscription_type,
+                endDate: user.subscription_end_date
+            },
+            progress: user.progress_data,
+            isAdmin: user.is_admin,
+            joinedAt: user.joined_at
+        }));
+        
+        return res.json({ success: true, users });
+    }
+
     try {
         const result = await pool.query(`
             SELECT id, first_name, username, specialization, city, email,
@@ -1111,6 +1229,7 @@ app.get('/api/health', (req, res) => {
     res.json({ 
         success: true, 
         status: 'OK', 
+        dbConnected,
         timestamp: new Date().toISOString(),
         version: '1.0.0'
     });
@@ -1141,27 +1260,30 @@ async function startApp() {
     try {
         console.log('🚀 Запуск приложения...');
         
-        // Проверяем подключение к базе данных
-        const dbConnected = await testDatabaseConnection();
-        if (!dbConnected) {
-            console.log('⚠️  База данных недоступна, работаем в ограниченном режиме');
-        } else {
-            // Инициализируем базу данных
-            await initDatabase();
-        }
+        // Останавливаем предыдущие процессы
+        await killPreviousProcesses();
         
+        // Инициализируем базу данных (не блокируем запуск)
+        initDatabase().then(() => {
+            if (dbConnected) {
+                console.log('✅ База данных готова');
+            } else {
+                console.log('⚠️  База данных недоступна, используем временное хранилище');
+            }
+        });
+
         // Запускаем Express сервер
         const server = app.listen(PORT, '0.0.0.0', () => {
             console.log(`🌐 WebApp сервер запущен на порту ${PORT}`);
             console.log(`📱 WebApp: ${WEBAPP_URL}`);
             console.log(`🔧 Admin: ${WEBAPP_URL}/admin.html`);
             console.log(`👑 Админ ID: ${Array.from(ADMIN_IDS).join(', ')}`);
+            console.log(`🗄️  База данных: ${dbConnected ? '✅ Подключена' : '❌ Не подключена'}`);
         });
 
-        // Запускаем бота
-        await bot.launch();
-        console.log('✅ Telegram Bot запущен!');
-        console.log('🔧 Команды: /start, /menu, /admin');
+        // Запускаем бота с обработкой ошибки 409
+        await startBotWithRetry();
+        
         console.log('🚀 Приложение полностью готово к работе!');
 
     } catch (error) {
@@ -1170,9 +1292,56 @@ async function startApp() {
     }
 }
 
+async function startBotWithRetry() {
+    let retries = 3;
+    
+    while (retries > 0) {
+        try {
+            await bot.launch();
+            console.log('✅ Telegram Bot запущен!');
+            console.log('🔧 Команды: /start, /menu, /admin');
+            return;
+        } catch (error) {
+            if (error.response?.error_code === 409) {
+                console.log(`⚠️  Конфликт бота (409). Повторная попытка... (${retries-1} осталось)`);
+                retries--;
+                
+                // Ждем перед повторной попыткой
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                // Пробуем остановить бота перед перезапуском
+                try {
+                    await bot.stop();
+                } catch (e) {
+                    // Игнорируем ошибки остановки
+                }
+            } else {
+                throw error;
+            }
+        }
+    }
+    
+    throw new Error('Не удалось запустить бота после нескольких попыток');
+}
+
 // Graceful shutdown
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+process.once('SIGINT', () => {
+    console.log('🛑 Остановка приложения...');
+    bot.stop('SIGINT');
+    if (pool) {
+        pool.end();
+    }
+    process.exit(0);
+});
+
+process.once('SIGTERM', () => {
+    console.log('🛑 Остановка приложения...');
+    bot.stop('SIGTERM');
+    if (pool) {
+        pool.end();
+    }
+    process.exit(0);
+});
 
 // Запускаем приложение
 startApp();
