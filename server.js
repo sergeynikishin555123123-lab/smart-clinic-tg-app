@@ -567,6 +567,8 @@ bot.command('menu', async (ctx) => {
     await showMainMenu(ctx);
 });
 
+// ... существующий код ...
+
 bot.command('admin', async (ctx) => {
     const user = await getUser(ctx.from.id);
     if (!user || !user.is_admin) {
@@ -582,8 +584,9 @@ bot.command('admin', async (ctx) => {
             ]
         }
     });
+});
 
-// Добавьте эту команду рядом с другими командами бота
+// === ВСТАВЬТЕ ЭТУ КОМАНДУ ПРЯМО ЗДЕСЬ ===
 bot.command('testadmin', async (ctx) => {
     const user = await getUser(ctx.from.id);
     
@@ -605,7 +608,8 @@ is_admin в БД: ${user.is_admin}
         });
     }
 });
-    
+// === КОНЕЦ ВСТАВКИ ===
+
 // Опрос
 const userSurveys = new Map();
 
