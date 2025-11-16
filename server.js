@@ -1,4 +1,4 @@
-// server.js - ПОЛНАЯ РАБОЧАЯ ВЕРСИЯ
+// server.js - ОСНОВНОЙ СЕРВЕР
 import { Telegraf, session } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -8,6 +8,7 @@ import fs from 'fs';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import { Pool } from 'pg';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -36,10 +37,9 @@ class Database {
 
     async connect() {
         try {
-            const { Pool } = await import('pg');
             this.pool = new Pool({
                 connectionString: config.DATABASE_URL,
-                ssl: { rejectUnauthorized: false },
+                ssl: config.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
                 max: 20,
                 idleTimeoutMillis: 30000,
                 connectionTimeoutMillis: 10000,
@@ -224,17 +224,6 @@ class Database {
                     category: 'Неврология',
                     level: 'intermediate',
                     tags: ['неврология', 'диагностика', 'базовый']
-                },
-                {
-                    title: 'Современные методы реабилитации',
-                    description: 'Инновационные подходы в медицинской реабилитации',
-                    full_description: 'Курс охватывает современные методики и технологии в области медицинской реабилитации.',
-                    price: 18000,
-                    duration: '15 часов',
-                    modules: 8,
-                    category: 'Реабилитация',
-                    level: 'advanced',
-                    tags: ['реабилитация', 'инновации', 'практика']
                 }
             ];
 
@@ -747,6 +736,10 @@ class TelegramBot {
             console.error('❌ Ошибка запуска бота:', error);
         }
     }
+
+    stop() {
+        this.bot.stop();
+    }
 }
 
 const telegramBot = new TelegramBot();
@@ -1038,13 +1031,15 @@ app.get('/admin', (req, res) => {
 });
 
 // ==================== ЗАПУСК СЕРВЕРА ====================
+let server;
+
 async function startServer() {
     try {
         console.log('🚀 Запуск сервера...');
         
         await db.connect();
         
-        app.listen(config.PORT, '0.0.0.0', () => {
+        server = app.listen(config.PORT, '0.0.0.0', () => {
             console.log(`🌐 Сервер запущен на порту ${config.PORT}`);
             console.log(`📱 WebApp: ${config.WEBAPP_URL}`);
             console.log(`🔧 Admin: ${config.WEBAPP_URL}/admin.html`);
@@ -1061,22 +1056,33 @@ async function startServer() {
 }
 
 // Graceful shutdown
-process.once('SIGINT', () => {
-    console.log('🛑 Остановка системы...');
-    telegramBot.bot.stop('SIGINT');
-    if (db.pool) {
-        db.pool.end();
-    }
-    process.exit(0);
-});
+function shutdown(signal) {
+    return () => {
+        console.log(`\n🛑 Получен сигнал ${signal}. Остановка системы...`);
+        
+        if (server) {
+            server.close(() => {
+                console.log('✅ HTTP сервер остановлен');
+            });
+        }
+        
+        telegramBot.stop();
+        console.log('✅ Telegram Bot остановлен');
+        
+        if (db.pool) {
+            db.pool.end();
+            console.log('✅ Подключение к БД закрыто');
+        }
+        
+        setTimeout(() => {
+            console.log('✅ Система остановлена');
+            process.exit(0);
+        }, 1000);
+    };
+}
 
-process.once('SIGTERM', () => {
-    console.log('🛑 Остановка системы...');
-    telegramBot.bot.stop('SIGTERM');
-    if (db.pool) {
-        db.pool.end();
-    }
-    process.exit(0);
-});
+process.once('SIGINT', shutdown('SIGINT'));
+process.once('SIGTERM', shutdown('SIGTERM'));
 
+// Запускаем приложение
 startServer();
