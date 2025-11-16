@@ -842,15 +842,29 @@ app.use((req, res, next) => {
 app.get('/api/check-admin/:id', async (req, res) => {
     try {
         const userId = parseInt(req.params.id);
+        console.log('🔍 Проверка админ-прав для:', userId);
         
         // Сначала проверяем главных админов
         if (ADMIN_IDS.has(userId)) {
+            console.log('✅ Пользователь в ADMIN_IDS');
             return res.json({ success: true, isAdmin: true });
         }
         
         // Затем проверяем в базе
         const user = await getUser(userId);
-        res.json({ success: true, isAdmin: user ? user.is_admin : false });
+        const isAdmin = user ? user.is_admin : false;
+        
+        console.log('📊 Результат проверки:', {
+            userId,
+            inAdminIds: ADMIN_IDS.has(userId),
+            dbIsAdmin: user?.is_admin,
+            finalResult: isAdmin || ADMIN_IDS.has(userId)
+        });
+        
+        res.json({ 
+            success: true, 
+            isAdmin: isAdmin || ADMIN_IDS.has(userId)
+        });
     } catch (error) {
         console.error('❌ Ошибка проверки админа:', error);
         res.status(500).json({ success: false, error: 'Internal server error' });
