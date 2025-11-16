@@ -1,11 +1,13 @@
 {
   "name": "smart-clinic-tg-app",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "build": "echo 'Build completed' && exit 0"
+    "build": "echo 'Build completed' && exit 0",
+    "setup": "mkdir -p uploads && echo 'Uploads directory created'",
+    "db:init": "node -e \"import('./server.js').then(m => m.initDatabase())\""
   },
   "dependencies": {
     "telegraf": "^4.16.3",
@@ -15,5 +17,14 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "keywords": [
+    "telegram",
+    "webapp",
+    "education",
+    "medicine",
+    "neurology"
+  ],
+  "author": "Академия АНБ",
+  "license": "MIT"
 }
