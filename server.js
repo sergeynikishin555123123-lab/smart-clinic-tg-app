@@ -1,4 +1,4 @@
-// server.js - ПОЛНАЯ РЕАЛИЗАЦИЯ С АДМИНКОЙ И БАЗОЙ ДАННЫХ
+// server.js - ПОЛНАЯ ИСПРАВЛЕННАЯ РЕАЛИЗАЦИЯ
 import { Telegraf, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -17,7 +17,6 @@ const ADMIN_IDS = new Set([898508164]); // Главный администрат
 
 console.log('🚀 Starting Smart Clinic Bot...');
 
-// ==================== БАЗА ДАННЫХ ====================
 // ==================== БАЗА ДАННЫХ ====================
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -158,7 +157,7 @@ async function addDemoData() {
     try {
         // Проверяем, есть ли уже данные
         const coursesCount = await pool.query('SELECT COUNT(*) FROM courses');
-        if (coursesCount.rows[0].count > 0) return;
+        if (parseInt(coursesCount.rows[0].count) > 0) return;
 
         console.log('📝 Добавление демо-данных...');
 
@@ -312,6 +311,22 @@ async function getUser(userId) {
     }
 }
 
+async function updateUser(userId, updates) {
+    try {
+        const setClause = Object.keys(updates).map((key, index) => `${key} = $${index + 2}`).join(', ');
+        const values = [userId, ...Object.values(updates)];
+        
+        await pool.query(
+            `UPDATE users SET ${setClause}, last_activity = NOW() WHERE id = $1`,
+            values
+        );
+        return true;
+    } catch (error) {
+        console.error('❌ Ошибка обновления пользователя:', error.message);
+        return false;
+    }
+}
+
 // Обработчики бота
 bot.start(async (ctx) => {
     try {
@@ -385,10 +400,13 @@ async function sendSurveyStep(ctx, userId, step) {
     }
 }
 
+// Обработчик текстовых сообщений
 bot.on('text', async (ctx) => {
     try {
         const userId = ctx.from.id;
         const text = ctx.message.text;
+        
+        console.log(`📨 Получено сообщение от ${userId}: ${text}`);
         
         const survey = userSurveys.get(userId);
         if (survey) {
@@ -399,6 +417,7 @@ bot.on('text', async (ctx) => {
         await handleMenuButton(ctx, text);
     } catch (error) {
         console.error('❌ Ошибка обработки текста:', error);
+        await ctx.reply('❌ Произошла ошибка. Попробуйте еще раз.');
     }
 });
 
@@ -754,7 +773,7 @@ app.get('/api/stats', async (req, res) => {
             stats: {
                 totalUsers: parseInt(usersCount.rows[0].count),
                 activeUsers: parseInt(activeUsers.rows[0].count),
-                completedSurveys: 0, // Можно добавить подсчет
+                completedSurveys: 0,
                 content: {
                     courses: parseInt(coursesCount.rows[0].count),
                     podcasts: parseInt(podcastsCount.rows[0].count),
