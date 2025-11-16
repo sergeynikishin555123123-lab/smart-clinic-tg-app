@@ -1,317 +1,359 @@
-/* webapp/style.css - ДОПОЛНЕНИЯ ДЛЯ НОВЫХ МОДУЛЕЙ */
-
-/* Учителя */
-.teachers-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.teacher-card {
-    background: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-}
-
-.teacher-avatar {
-    font-size: 48px;
-    width: 80px;
-    height: 80px;
-    background: var(--surface-light);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.teacher-info {
-    flex: 1;
-}
-
-.teacher-name {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 4px;
-    color: var(--text-primary);
-}
-
-.teacher-specialization {
-    color: var(--text-secondary);
-    margin-bottom: 8px;
-    font-size: 14px;
-}
-
-.teacher-experience,
-.teacher-rating {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-bottom: 4px;
-}
-
-.teacher-bio {
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin-top: 8px;
-    line-height: 1.4;
-}
-
-.teacher-actions {
-    display: flex;
-    gap: 8px;
-    flex-shrink: 0;
-}
-
-/* Чаты */
-.chats-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.chat-item {
-    background: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.chat-item:hover {
-    border-color: var(--primary);
-    transform: translateY(-2px);
-}
-
-.chat-avatar {
-    font-size: 24px;
-    width: 50px;
-    height: 50px;
-    background: var(--surface-light);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.chat-info {
-    flex: 1;
-}
-
-.chat-name {
-    font-weight: 700;
-    margin-bottom: 4px;
-    color: var(--text-primary);
-}
-
-.chat-last-message {
-    color: var(--text-secondary);
-    font-size: 14px;
-    margin-bottom: 4px;
-}
-
-.chat-meta {
-    display: flex;
-    gap: 12px;
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-.unread-badge {
-    background: var(--primary);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-/* Мероприятия */
-.events-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.event-card {
-    background: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-}
-
-.event-icon {
-    font-size: 32px;
-    width: 60px;
-    height: 60px;
-    background: var(--surface-light);
-    border-radius: var(--radius-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.event-info {
-    flex: 1;
-}
-
-.event-title {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: var(--text-primary);
-}
-
-.event-description {
-    color: var(--text-secondary);
-    margin-bottom: 12px;
-    font-size: 14px;
-    line-height: 1.4;
-}
-
-.event-details {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
-}
-
-.event-details div {
-    font-size: 13px;
-    color: var(--text-muted);
-}
-
-.event-participants {
-    font-size: 13px;
-    color: var(--text-muted);
-}
-
-.event-actions {
-    flex-shrink: 0;
-}
-
-/* Админка */
-.admin-tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 24px;
-    overflow-x: auto;
-    padding-bottom: 8px;
-}
-
-.admin-tab-btn {
-    background: var(--surface-light);
-    border: 2px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px 20px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-    white-space: nowrap;
-}
-
-.admin-tab-btn.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-}
-
-.admin-tab-content {
-    display: none;
-}
-
-.admin-tab-content.active {
-    display: block;
-}
-
-.admin-section {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: 24px;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow);
-}
-
-.admin-content-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px;
-    border: 2px solid var(--border);
-    border-radius: var(--radius-sm);
-    margin-bottom: 12px;
-    transition: var(--transition);
-}
-
-.admin-content-item:hover {
-    border-color: var(--primary);
-}
-
-.content-section {
-    margin-bottom: 32px;
-}
-
-.content-section h3 {
-    margin-bottom: 16px;
-    color: var(--text-primary);
-}
-
-.live-badge {
-    background: var(--error);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 16px;
-}
-
-.page-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-/* Адаптивность */
-@media (max-width: 768px) {
-    .teacher-card,
-    .event-card {
-        flex-direction: column;
-        text-align: center;
+// webapp/app.js - ПРОСТАЯ РАБОЧАЯ ВЕРСИЯ
+class AcademyApp {
+    constructor() {
+        this.currentUser = null;
+        this.allContent = {};
+        this.currentPage = 'home';
+        this.init();
     }
-    
-    .teacher-actions,
-    .event-actions {
-        align-self: stretch;
+
+    async init() {
+        console.log('🚀 Инициализация приложения...');
+        
+        // Показываем loading
+        this.showLoading();
+        
+        try {
+            await this.loadUserData();
+            await this.loadContent();
+            
+            this.renderPage('home');
+            this.setupNavigation();
+            
+            console.log('✅ Приложение готово');
+            this.hideLoading();
+            
+        } catch (error) {
+            console.error('❌ Ошибка инициализации:', error);
+            this.showError('Ошибка загрузки приложения');
+        }
     }
-    
-    .page-header {
-        flex-direction: column;
-        align-items: flex-start;
+
+    showLoading() {
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) {
+            mainContent.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner">⏳</div>
+                    <div>Загрузка Академии АНБ...</div>
+                </div>
+            `;
+        }
     }
-    
-    .admin-tabs {
-        flex-direction: column;
+
+    hideLoading() {
+        // Loading скроется при рендере страницы
     }
+
+    showError(message) {
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) {
+            mainContent.innerHTML = `
+                <div class="error">
+                    <div class="error-icon">❌</div>
+                    <div class="error-text">${message}</div>
+                    <button class="btn btn-primary" onclick="app.init()">Повторить</button>
+                </div>
+            `;
+        }
+    }
+
+    setupNavigation() {
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = btn.dataset.page;
+                this.renderPage(page);
+            });
+        });
+    }
+
+    async loadUserData() {
+        try {
+            const response = await fetch('/api/user', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ id: 898508164 })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                this.currentUser = data.user;
+                console.log('✅ Пользователь загружен:', this.currentUser);
+            } else {
+                throw new Error('Failed to load user');
+            }
+        } catch (error) {
+            console.error('❌ Ошибка загрузки пользователя:', error);
+            // Создаем демо-пользователя
+            this.currentUser = {
+                id: 898508164,
+                firstName: 'Демо Пользователь',
+                isAdmin: true
+            };
+        }
+    }
+
+    async loadContent() {
+        try {
+            const response = await fetch('/api/content');
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                this.allContent = data.data;
+                console.log('✅ Контент загружен:', this.allContent);
+            } else {
+                throw new Error('Failed to load content');
+            }
+        } catch (error) {
+            console.error('❌ Ошибка загрузки контента:', error);
+            // Создаем демо-контент
+            this.allContent = {
+                courses: [
+                    {
+                        id: 1,
+                        title: 'Мануальные техники в практике',
+                        description: '6 модулей по современным мануальным методикам',
+                        price: 15000,
+                        duration: '12 часов'
+                    },
+                    {
+                        id: 2,
+                        title: 'Неврология для практикующих врачей',
+                        description: 'Основы неврологической диагностики',
+                        price: 12000,
+                        duration: '10 часов'
+                    }
+                ]
+            };
+        }
+    }
+
+    renderPage(page) {
+        this.currentPage = page;
+        const mainContent = document.getElementById('mainContent');
+        
+        if (!mainContent) {
+            console.error('❌ mainContent не найден');
+            return;
+        }
+
+        // Обновляем активные кнопки навигации
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.page === page);
+        });
+
+        let pageHTML = '';
+        
+        try {
+            switch(page) {
+                case 'home':
+                    pageHTML = this.createHomePage();
+                    break;
+                case 'courses':
+                    pageHTML = this.createCoursesPage();
+                    break;
+                case 'profile':
+                    pageHTML = this.createProfilePage();
+                    break;
+                default:
+                    pageHTML = this.createHomePage();
+            }
+            
+            mainContent.innerHTML = pageHTML;
+            console.log(`✅ Страница "${page}" отображена`);
+            
+        } catch (error) {
+            console.error('❌ Ошибка рендера страницы:', error);
+            this.showError('Ошибка отображения страницы');
+        }
+    }
+
+    createHomePage() {
+        const courses = this.allContent.courses || [];
+        
+        return `
+            <div class="page">
+                <div class="hero-section">
+                    <div class="hero-text">
+                        <h2>Академия АНБ</h2>
+                        <p>Современное образование для врачей</p>
+                    </div>
+                </div>
+
+                <div class="quick-nav">
+                    <h3>Быстрый старт</h3>
+                    <div class="grid">
+                        <div class="card" onclick="app.renderPage('courses')">
+                            <div class="card-icon">📚</div>
+                            <div class="card-title">Курсы</div>
+                            <div class="card-desc">${courses.length} курсов доступно</div>
+                        </div>
+                        <div class="card" onclick="app.showNotification('Материалы скоро будут доступны 🚀')">
+                            <div class="card-icon">📋</div>
+                            <div class="card-title">Материалы</div>
+                            <div class="card-desc">Практические руководства</div>
+                        </div>
+                        <div class="card" onclick="app.renderPage('profile')">
+                            <div class="card-icon">👤</div>
+                            <div class="card-title">Профиль</div>
+                            <div class="card-desc">Ваш прогресс</div>
+                        </div>
+                        <div class="card" onclick="app.showNotification('Чат с преподавателями скоро будет доступен 💬')">
+                            <div class="card-icon">💬</div>
+                            <div class="card-title">Чаты</div>
+                            <div class="card-desc">Общение с коллегами</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-section">
+                    <h3>🎯 Популярные курсы</h3>
+                    <div class="content-grid">
+                        ${courses.map(course => `
+                            <div class="content-card">
+                                <div class="content-card-header">
+                                    <div class="content-icon">📚</div>
+                                </div>
+                                <div class="content-card-body">
+                                    <div class="content-title">${course.title}</div>
+                                    <div class="content-description">${course.description}</div>
+                                    <div class="content-meta">
+                                        <span class="meta-item">⏱️ ${course.duration}</span>
+                                        <span class="meta-item">💰 ${this.formatPrice(course.price)}</span>
+                                    </div>
+                                </div>
+                                <div class="content-card-actions">
+                                    <button class="btn btn-primary" onclick="app.startCourse(${course.id})">
+                                        Начать обучение
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createCoursesPage() {
+        const courses = this.allContent.courses || [];
+        
+        return `
+            <div class="page">
+                <h2>📚 Все курсы</h2>
+                <div class="content-grid">
+                    ${courses.map(course => `
+                        <div class="content-card">
+                            <div class="content-title">${course.title}</div>
+                            <div class="content-description">${course.description}</div>
+                            <div class="content-meta">
+                                <span>⏱️ ${course.duration}</span>
+                                <span>💰 ${this.formatPrice(course.price)}</span>
+                            </div>
+                            <button class="btn btn-primary" onclick="app.startCourse(${course.id})">
+                                Начать обучение
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createProfilePage() {
+        return `
+            <div class="page">
+                <div class="profile-header">
+                    <div class="avatar-large">👤</div>
+                    <div class="profile-name">${this.currentUser?.firstName || 'Пользователь'}</div>
+                    <div class="profile-status">Участник Академии АНБ</div>
+                </div>
+
+                <div class="profile-stats">
+                    <h3>📊 Ваша активность</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📚</div>
+                            <div class="stat-info">
+                                <div class="stat-value">2</div>
+                                <div class="stat-label">Курсов начато</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🎯</div>
+                            <div class="stat-info">
+                                <div class="stat-value">12</div>
+                                <div class="stat-label">Материалов изучено</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-actions">
+                    <button class="btn btn-primary" onclick="app.showNotification('Редактирование профиля скоро будет доступно ✏️')">
+                        ✏️ Редактировать профиль
+                    </button>
+                    <button class="btn btn-outline" onclick="app.showNotification('Настройки скоро будут доступны ⚙️')">
+                        ⚙️ Настройки
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    startCourse(courseId) {
+        this.showNotification(`🎓 Начинаем курс "${this.allContent.courses.find(c => c.id === courseId)?.title}"`);
+    }
+
+    formatPrice(price) {
+        return new Intl.NumberFormat('ru-RU').format(price) + ' ₽';
+    }
+
+    showNotification(message) {
+        // Простое уведомление
+        alert(message);
+    }
+}
+
+// Глобальные функции
+window.toggleSearch = function() {
+    const searchContainer = document.getElementById('searchContainer');
+    if (searchContainer) {
+        const isVisible = searchContainer.style.display !== 'none';
+        searchContainer.style.display = isVisible ? 'none' : 'block';
+        
+        if (!isVisible) {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.focus();
+            }
+        }
+    }
+};
+
+// Инициализация приложения когда DOM загружен
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 DOM загружен, инициализируем приложение...');
+    window.app = new AcademyApp();
+});
+
+// Также инициализируем если DOM уже загружен
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.app = new AcademyApp();
+    });
+} else {
+    window.app = new AcademyApp();
 }
