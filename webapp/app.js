@@ -1,4 +1,4 @@
-// webapp/app.js - ПОЛНАЯ РЕАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
+// webapp/app.js - ПОЛНОСТЬЮ ПЕРЕРАБОТАННАЯ ВЕРСИЯ
 const pages = {
     home: {
         title: 'Академия АНБ',
@@ -296,9 +296,31 @@ async function loadUserData() {
                 userData = {
                     id: tgUser.id,
                     first_name: tgUser.first_name || 'User',
-                    username: tgUser.username || '',
-                    isAdmin: false // Временно
+                    last_name: tgUser.last_name || '',
+                    username: tgUser.username || ''
                 };
+
+                // Создаем или получаем пользователя
+                const response = await fetch('/api/user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id: userData.id,
+                        firstName: userData.first_name,
+                        lastName: userData.last_name,
+                        username: userData.username
+                    })
+                });
+
+                const userResponse = await response.json();
+                if (userResponse.success) {
+                    currentUser = userResponse.user;
+                    console.log('✅ Пользователь загружен:', currentUser);
+                } else {
+                    throw new Error('Failed to load user');
+                }
             }
         }
 
@@ -306,80 +328,16 @@ async function loadUserData() {
         if (!userId) {
             console.log('👤 Режим без Telegram, используем демо-данные');
             currentUser = await loadDemoUser();
-            updateUIWithUserData();
-            return;
         }
 
-        // Получаем данные с сервера
-        const response = await fetch(`/api/user/${userId}`);
-        const data = await response.json();
+        updateUIWithUserData();
         
-        console.log('📊 Данные с сервера:', data);
-        
-        if (data.success) {
-            currentUser = data.user;
-            updateUIWithUserData();
-            
-            // Проверяем права администратора
-            async function checkAdminStatus() {
-    try {
-        if (!currentUser) {
-            console.log('❌ Нет данных пользователя для проверки прав');
-            return false;
-        }
-
-        console.log('🔍 Проверка админ-прав для:', currentUser.id);
-        
-        // Прямой запрос к API
-        const response = await fetch(`/api/check-admin/${currentUser.id}`);
-        const data = await response.json();
-        
-        console.log('📊 Ответ от API check-admin:', data);
-        
-        if (data.success && data.isAdmin) {
-            document.getElementById('adminBadge').style.display = 'block';
-            console.log('✅ Пользователь администратор');
-            return true;
-        } else {
-            console.log('❌ Пользователь не администратор');
-            console.log('ℹ️ Причина:', data);
-            return false;
-        }
     } catch (error) {
-        console.error('❌ Ошибка проверки админа:', error);
-        return false;
+        console.error('❌ Ошибка загрузки пользователя:', error);
+        currentUser = await loadDemoUser();
+        updateUIWithUserData();
     }
 }
-
-// === ВСТАВЬТЕ ФУНКЦИЮ checkAdminStatus ПРЯМО ЗДЕСЬ ===
-async function checkAdminStatus() {
-    try {
-        if (!currentUser) {
-            console.log('❌ Нет данных пользователя');
-            return false;
-        }
-
-        console.log('🔍 Проверка админ-прав для:', currentUser.id);
-        
-        const response = await fetch(`/api/check-admin/${currentUser.id}`);
-        const data = await response.json();
-        
-        console.log('📊 Ответ от сервера:', data);
-        
-        if (data.success && data.isAdmin) {
-            document.getElementById('adminBadge').style.display = 'block';
-            console.log('✅ Пользователь администратор');
-            return true;
-        } else {
-            console.log('❌ Пользователь не администратор');
-            return false;
-        }
-    } catch (error) {
-        console.error('❌ Ошибка проверки админа:', error);
-        return false;
-    }
-}
-// === КОНЕЦ ВСТАВКИ ===
 
 async function loadDemoUser() {
     try {
@@ -390,6 +348,7 @@ async function loadDemoUser() {
         return {
             id: 1,
             firstName: 'Демо Пользователь',
+            lastName: '',
             specialization: 'Невролог',
             city: 'Москва',
             email: 'demo@anb.ru',
@@ -416,7 +375,8 @@ async function loadDemoUser() {
                 watchLater: content.streams ? [content.streams[0]?.id].filter(Boolean) : [] 
             },
             isAdmin: false,
-            joinedAt: new Date('2024-01-01')
+            joinedAt: new Date('2024-01-01'),
+            surveyCompleted: true
         };
     } catch (error) {
         console.error('❌ Ошибка загрузки демо-данных:', error);
@@ -428,6 +388,7 @@ function getFallbackUser() {
     return {
         id: 1,
         firstName: 'Демо Пользователь',
+        lastName: '',
         specialization: 'Невролог',
         city: 'Москва',
         email: 'demo@anb.ru',
@@ -454,7 +415,8 @@ function getFallbackUser() {
             watchLater: [1] 
         },
         isAdmin: false,
-        joinedAt: new Date('2024-01-01')
+        joinedAt: new Date('2024-01-01'),
+        surveyCompleted: true
     };
 }
 
@@ -982,7 +944,7 @@ function updateUIWithUserData() {
     const userBadgeElement = document.getElementById('userBadge');
     
     if (userNameElement) {
-        userNameElement.textContent = currentUser.firstName;
+        userNameElement.textContent = currentUser.firstName + (currentUser.lastName ? ' ' + currentUser.lastName : '');
     }
     
     if (joinDateElement && currentUser.joinedAt) {
@@ -1122,7 +1084,7 @@ function loadJourneyProgress() {
 function calculateLevelProgress(level) {
     const currentLevel = currentUser.progress.level;
     const levelIndex = ['Понимаю', 'Связываю', 'Применяю', 'Систематизирую', 'Делюсь'].indexOf(level);
-    const currentIndex = ['Понимаю', 'Связываю', 'Применяю', 'Систематизирую', 'Делюсь'].indexOf(currentLevel);
+    const currentIndex = ['Понимаю', 'Связываю', 'Применяешь', 'Систематизирую', 'Делюсь'].indexOf(currentLevel);
     
     if (levelIndex < currentIndex) {
         return 100;
@@ -2019,37 +1981,43 @@ function openSection(section) {
         'courses': () => { 
             renderPage('catalog');
             setTimeout(() => {
-                document.querySelector('[data-content-type="courses"]').click();
+                document.getElementById('contentTypeFilter').value = 'courses';
+                filterCatalogContent();
             }, 100);
         },
         'podcasts': () => { 
             renderPage('catalog');
             setTimeout(() => {
-                document.querySelector('[data-content-type="podcasts"]').click();
+                document.getElementById('contentTypeFilter').value = 'podcasts';
+                filterCatalogContent();
             }, 100);
         },
         'streams': () => { 
             renderPage('catalog');
             setTimeout(() => {
-                document.querySelector('[data-content-type="streams"]').click();
+                document.getElementById('contentTypeFilter').value = 'streams';
+                filterCatalogContent();
             }, 100);
         },
         'videos': () => { 
             renderPage('catalog');
             setTimeout(() => {
-                document.querySelector('[data-content-type="videos"]').click();
+                document.getElementById('contentTypeFilter').value = 'videos';
+                filterCatalogContent();
             }, 100);
         },
         'materials': () => { 
             renderPage('catalog');
             setTimeout(() => {
-                document.querySelector('[data-content-type="materials"]').click();
+                document.getElementById('contentTypeFilter').value = 'materials';
+                filterCatalogContent();
             }, 100);
         },
         'events': () => { 
             renderPage('catalog');
             setTimeout(() => {
-                document.querySelector('[data-content-type="events"]').click();
+                document.getElementById('contentTypeFilter').value = 'events';
+                filterCatalogContent();
             }, 100);
         },
         'offers': () => { 
