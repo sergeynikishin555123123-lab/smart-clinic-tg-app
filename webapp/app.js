@@ -307,15 +307,13 @@ async function loadUserData() {
             currentUser = data.user;
             updateUIWithUserData();
             
-            if (currentUser.isAdmin) {
-                document.getElementById('adminBadge').style.display = 'block';
-                console.log('👑 Пользователь является администратором');
-            }
+            // === ВСТАВЬТЕ ЭТУ ФУНКЦИЮ ПРЯМО ЗДЕСЬ ===
+            await checkAdminStatus();
             
-            console.log('✅ Данные пользователя загружены:', currentUser);
         } else {
             throw new Error('User not found');
         }
+        
     } catch (error) {
         console.error('❌ Ошибка загрузки пользователя:', error);
         console.log('📦 Используем демо-данные');
@@ -323,6 +321,36 @@ async function loadUserData() {
         updateUIWithUserData();
     }
 }
+
+// === ВСТАВЬТЕ ФУНКЦИЮ checkAdminStatus ПРЯМО ЗДЕСЬ ===
+async function checkAdminStatus() {
+    try {
+        if (!currentUser) {
+            console.log('❌ Нет данных пользователя');
+            return false;
+        }
+
+        console.log('🔍 Проверка админ-прав для:', currentUser.id);
+        
+        const response = await fetch(`/api/check-admin/${currentUser.id}`);
+        const data = await response.json();
+        
+        console.log('📊 Ответ от сервера:', data);
+        
+        if (data.success && data.isAdmin) {
+            document.getElementById('adminBadge').style.display = 'block';
+            console.log('✅ Пользователь администратор');
+            return true;
+        } else {
+            console.log('❌ Пользователь не администратор');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Ошибка проверки админа:', error);
+        return false;
+    }
+}
+// === КОНЕЦ ВСТАВКИ ===
 
 async function loadDemoUser() {
     try {
