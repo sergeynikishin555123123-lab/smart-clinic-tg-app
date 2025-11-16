@@ -88,14 +88,153 @@ async function initDatabase() {
         client.release();
         dbConnected = true;
 
-        // Создаем таблицы
-        await createTables();
-        await addDemoData();
+        // === ВСТАВЬТЕ ЭТО ВМЕСТО СТАРОГО КОДА ===
+        console.log('🔨 Принудительно создаем таблицы...');
+        
+        // Создаем таблицу news
+        const createNewsTable = `
+            CREATE TABLE IF NOT EXISTS news (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                content TEXT,
+                category TEXT,
+                image_url TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `;
+        
+        await pool.query(createNewsTable);
+        console.log('✅ Таблица news создана/проверена');
+        
+        // Создаем остальные таблицы
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id BIGINT PRIMARY KEY,
+                first_name TEXT NOT NULL,
+                username TEXT,
+                specialization TEXT,
+                city TEXT,
+                email TEXT,
+                subscription_status TEXT DEFAULT 'inactive',
+                subscription_type TEXT,
+                subscription_end_date TIMESTAMP,
+                progress_level TEXT DEFAULT 'Понимаю',
+                progress_data JSONB DEFAULT '{"steps": {"materialsWatched": 0, "eventsParticipated": 0, "materialsSaved": 0, "coursesBought": 0}}',
+                favorites_data JSONB DEFAULT '{"courses": [], "podcasts": [], "streams": [], "videos": [], "materials": [], "watchLater": []}',
+                is_admin BOOLEAN DEFAULT FALSE,
+                joined_at TIMESTAMP DEFAULT NOW(),
+                last_activity TIMESTAMP DEFAULT NOW(),
+                survey_completed BOOLEAN DEFAULT FALSE
+            )
+        `);
+        console.log('✅ Таблица users создана/проверена');
+        
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS courses (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                full_description TEXT,
+                price INTEGER DEFAULT 0,
+                duration TEXT,
+                modules INTEGER DEFAULT 1,
+                image_url TEXT,
+                file_url TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('✅ Таблица courses создана/проверена');
+        
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS podcasts (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                duration TEXT,
+                audio_url TEXT,
+                image_url TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('✅ Таблица podcasts создана/проверена');
+
+        // Добавляем демо-данные
+        console.log('📝 Добавление демо-данных...');
+        
+        // Демо-новости
+        const newsCount = await pool.query('SELECT COUNT(*) FROM news');
+        if (parseInt(newsCount.rows[0].count) === 0) {
+            await pool.query(`
+                INSERT INTO news (title, content, category) VALUES
+                ('Запуск платформы Академии АНБ', 'Новая образовательная платформа для врачей', 'development'),
+                ('Новый курс по мануальным техникам', 'Доступен курс из 6 модулей', 'courses'),
+                ('Вебинар по реабилитации', 'Онлайн-вебинар 15 декабря', 'events')
+            `);
+            console.log('✅ Демо-новости добавлены');
+        }
+
+        // Демо-курсы
+        const coursesCount = await pool.query('SELECT COUNT(*) FROM courses');
+        if (parseInt(coursesCount.rows[0].count) === 0) {
+            await pool.query(`
+                INSERT INTO courses (title, description, full_description, price, duration, modules) VALUES
+                ('Мануальные техники в практике', '6 модулей по современным мануальным методикам', 'Комплексный курс по мануальным техникам', 15000, '12 часов', 6),
+                ('Неврология для практикующих врачей', 'Основы неврологической диагностики', 'Фундаментальный курс по неврологии', 12000, '10 часов', 5)
+            `);
+            console.log('✅ Демо-курсы добавлены');
+        }
+
+        // Демо-подкасты
+        const podcastsCount = await pool.query('SELECT COUNT(*) FROM podcasts');
+        if (parseInt(podcastsCount.rows[0].count) === 0) {
+            await pool.query(`
+                INSERT INTO podcasts (title, description, duration) VALUES
+                ('АНБ FM: Основы неврологии', 'Подкаст о современных подходах в неврологии', '45:20'),
+                ('АНБ FM: Реабилитация', 'Современные методы восстановительного лечения', '38:15')
+            `);
+            console.log('✅ Демо-подкасты добавлены');
+        }
+
+        console.log('✅ База данных полностью инициализирована');
+        // === КОНЕЦ ВСТАВКИ ===
         
     } catch (error) {
         console.error('❌ Ошибка подключения к PostgreSQL:', error.message);
         console.log('⚠️  Работаем без базы данных');
         dbConnected = false;
+    }
+}
+
+// Добавьте эту функцию после initDatabase()
+async function forceCreateTables() {
+    try {
+        console.log('🔨 Принудительно создаем таблицы...');
+        
+        const createNewsTable = `
+            CREATE TABLE IF NOT EXISTS news (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                content TEXT,
+                category TEXT,
+                image_url TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `;
+        
+        await pool.query(createNewsTable);
+        console.log('✅ Таблица news создана');
+        
+        // Добавляем демо-новости
+        await pool.query(`
+            INSERT INTO news (title, content, category) VALUES
+            ('Запуск платформы Академии АНБ', 'Новая образовательная платформа для врачей', 'development'),
+            ('Новый курс по мануальным техникам', 'Доступен курс из 6 модулей', 'courses'),
+            ('Вебинар по реабилитации', 'Онлайн-вебинар 15 декабря', 'events')
+        `);
+        console.log('✅ Демо-новости добавлены');
+        
+    } catch (error) {
+        console.error('❌ Ошибка создания таблиц:', error.message);
     }
 }
 
@@ -443,8 +582,30 @@ bot.command('admin', async (ctx) => {
             ]
         }
     });
-});
 
+// Добавьте эту команду рядом с другими командами бота
+bot.command('testadmin', async (ctx) => {
+    const user = await getUser(ctx.from.id);
+    
+    await ctx.reply(`🔧 Тест админ-прав:
+ID: ${ctx.from.id}
+В ADMIN_IDS: ${ADMIN_IDS.has(ctx.from.id)}
+is_admin в БД: ${user.is_admin}
+Общий доступ: ${user.is_admin || ADMIN_IDS.has(ctx.from.id)}
+
+Ссылка на админку: ${WEBAPP_URL}/admin.html`);
+    
+    if (user.is_admin || ADMIN_IDS.has(ctx.from.id)) {
+        await ctx.reply('✅ У вас есть доступ к админке!', {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: '📱 Открыть админ-панель', web_app: { url: `${WEBAPP_URL}/admin.html` } }]
+                ]
+            }
+        });
+    }
+});
+    
 // Опрос
 const userSurveys = new Map();
 
