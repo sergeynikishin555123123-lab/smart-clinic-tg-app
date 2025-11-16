@@ -18,6 +18,8 @@ console.log('🚀 Starting Smart Clinic Bot...');
 
 // ==================== УТИЛИТЫ ДЛЯ ОБРАБОТКИ КОНФЛИКТОВ ====================
 let isShuttingDown = false;
+let bot = null;
+let server = null;
 
 // Функция для graceful shutdown
 async function gracefulShutdown() {
@@ -29,10 +31,33 @@ async function gracefulShutdown() {
     try {
         if (bot) {
             console.log('Stopping Telegram bot...');
-            await bot.stop();
+            try {
+                await bot.stop();
+                console.log('✅ Bot stopped successfully');
+            } catch (botError) {
+                if (botError.message === 'Bot is not running!') {
+                    console.log('ℹ️ Bot was already stopped');
+                } else {
+                    console.error('❌ Error stopping bot:', botError.message);
+                }
+            }
         }
-        console.log('✅ Shutdown completed');
-        process.exit(0);
+
+        if (server) {
+            console.log('Closing HTTP server...');
+            server.close(() => {
+                console.log('✅ HTTP server closed');
+                process.exit(0);
+            });
+            
+            // Force close after 5 seconds
+            setTimeout(() => {
+                console.log('⚠️ Forcing shutdown...');
+                process.exit(1);
+            }, 5000);
+        } else {
+            process.exit(0);
+        }
     } catch (error) {
         console.error('❌ Error during shutdown:', error);
         process.exit(1);
@@ -44,6 +69,7 @@ process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
 process.on('uncaughtException', (error) => {
     console.error('🔥 Uncaught Exception:', error);
+    gracefulShutdown();
 });
 process.on('unhandledRejection', (reason, promise) => {
     console.error('🔥 Unhandled Rejection at:', promise, 'reason:', reason);
@@ -67,6 +93,17 @@ const contentDB = {
             modules: 6,
             image: "/images/course-1.jpg",
             created: new Date('2024-01-15')
+        },
+        {
+            id: 2,
+            title: "Неврология для практикующих врачей",
+            description: "Основы неврологической диагностики и лечения",
+            fullDescription: "Фундаментальный курс по неврологии для врачей различных специальностей.",
+            price: 12000,
+            duration: "10 часов",
+            modules: 5,
+            image: "/images/course-2.jpg",
+            created: new Date('2024-01-20')
         }
     ],
     podcasts: [
@@ -112,6 +149,15 @@ const contentDB = {
             file: "/materials/mri-1.pdf",
             image: "/images/mri-preview-1.jpg",
             created: new Date('2024-01-08')
+        },
+        {
+            id: 2,
+            title: "Клинический случай: мигрень",
+            description: "Разбор диагностики и лечения пациента с мигренью",
+            type: "case",
+            file: "/materials/case-1.pdf",
+            image: "/images/case-preview-1.jpg",
+            created: new Date('2024-01-12')
         }
     ],
     events: [
@@ -220,7 +266,7 @@ const surveySteps = [
 ];
 
 // ==================== ТЕЛЕГРАМ БОТ ====================
-const bot = new Telegraf(BOT_TOKEN);
+bot = new Telegraf(BOT_TOKEN);
 
 // Обработка ошибок бота
 bot.catch((err, ctx) => {
@@ -898,79 +944,53 @@ app.get('*', (req, res) => {
 // ==================== ЗАПУСК ====================
 async function startApp() {
     try {
-        // Проверяем, не запущен ли уже бот
-        const isAlreadyRunning = await checkIfBotRunning();
-        if (isAlreadyRunning) {
-            console.log('⚠️ Bot might be already running. Trying to stop previous instance...');
-            await gracefulShutdown();
-            await new Promise(resolve => setTimeout(resolve, 2000));
-        }
+        console.log('🚀 Starting application...');
 
         // Запускаем Express сервер
-        const server = app.listen(PORT, '0.0.0.0', () => {
+        server = app.listen(PORT, '0.0.0.0', () => {
             console.log(`🌐 WebApp сервер запущен на порту ${PORT}`);
             console.log(`📱 WebApp: ${WEBAPP_URL}`);
             console.log(`📱 Admin Panel: ${WEBAPP_URL}/admin.html`);
             console.log(`👑 Админ ID: ${ADMIN_IDS[0]}`);
-            console.log(`✅ Приложение готово к работе!`);
         });
 
         // Обработка ошибок сервера
         server.on('error', (error) => {
             if (error.code === 'EADDRINUSE') {
-                console.log(`❌ Port ${PORT} is already in use. You might have another instance running.`);
-                console.log('💡 Try: killall -9 node');
+                console.log(`❌ Port ${PORT} is already in use.`);
+                console.log('💡 Try: pkill -f "node.*server.js"');
                 process.exit(1);
             } else {
                 console.error('Server error:', error);
+                process.exit(1);
             }
         });
 
-        // Запускаем бота
-        await bot.launch();
-        console.log('✅ Telegram Bot запущен!');
-        console.log('🔧 Команды: /start, /menu, /admin');
+        // Запускаем бота с обработкой ошибки 409
+        try {
+            await bot.launch();
+            console.log('✅ Telegram Bot запущен!');
+            console.log('🔧 Команды: /start, /menu, /admin');
+            console.log('✅ Приложение готово к работе!');
+        } catch (launchError) {
+            if (launchError.code === 409) {
+                console.log('⚠️ Bot is already running (409 error). This is normal in some hosting environments.');
+                console.log('ℹ️ Bot commands might not work, but WebApp should be functional.');
+            } else {
+                throw launchError;
+            }
+        }
 
     } catch (error) {
         console.error('❌ Ошибка при запуске:', error);
         
         if (error.code === 409) {
-            console.log('💡 Conflict detected. Try stopping previous bot instance.');
-            console.log('💡 Command to stop: pkill -f "node.*server.js"');
+            console.log('💡 Bot conflict detected. The WebApp should still work.');
+        } else {
+            gracefulShutdown();
         }
-        
-        process.exit(1);
     }
 }
-
-// Функция для проверки запущен ли бот
-async function checkIfBotRunning() {
-    try {
-        // Простая проверка - пытаемся получить информацию о боте
-        const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`);
-        const data = await response.json();
-        return data.ok;
-    } catch (error) {
-        return false;
-    }
-}
-
-// Функция для принудительной остановки
-async function forceStop() {
-    console.log('🛑 Force stopping...');
-    try {
-        if (bot) {
-            await bot.stop();
-        }
-        process.exit(0);
-    } catch (error) {
-        console.error('Error during force stop:', error);
-        process.exit(1);
-    }
-}
-
-// Экспортируем функции для внешнего использования
-export { gracefulShutdown, forceStop };
 
 // Запускаем приложение
 startApp();
