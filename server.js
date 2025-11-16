@@ -1,4 +1,4 @@
-// server.js - ПОЛНОСТЬЮ РАБОЧАЯ ВЕРСИЯ
+// server.js - ПОЛНОСТЬЮ ПЕРЕРАБОТАННАЯ ВЕРСИЯ
 import { Telegraf, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -9,6 +9,8 @@ import { promisify } from 'util';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
+import bcrypt from 'bcryptjs';
+import cors from 'cors';
 
 const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
@@ -19,8 +21,9 @@ const BOT_TOKEN = process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoN
 const PORT = process.env.PORT || 3000;
 const WEBAPP_URL = process.env.WEBAPP_URL || `https://sergeynikishin555123123-lab-smart-clinic-tg-app-a472.twc1.net`;
 const ADMIN_IDS = new Set([898508164, 123456789].map(id => parseInt(id)));
+const JWT_SECRET = process.env.JWT_SECRET || 'anb_academy_secret_key_2024';
 
-console.log('🚀 Starting Smart Clinic Bot...');
+console.log('🚀 Starting Smart Clinic Bot v3.0...');
 
 // ==================== НАСТРОЙКА MULTER ДЛЯ ЗАГРУЗКИ ФАЙЛОВ ====================
 const storage = multer.diskStorage({
@@ -40,10 +43,10 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage: storage,
   limits: {
-    fileSize: 50 * 1024 * 1024 // 50MB limit
+    fileSize: 100 * 1024 * 1024 // 100MB limit
   },
   fileFilter: function (req, file, cb) {
-    const allowedTypes = /jpeg|jpg|png|gif|mp4|avi|mov|pdf|doc|docx|mp3|wav/;
+    const allowedTypes = /jpeg|jpg|png|gif|mp4|avi|mov|pdf|doc|docx|mp3|wav|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
 
@@ -74,7 +77,7 @@ async function initDatabase() {
             ssl: {
                 rejectUnauthorized: false
             },
-            max: 10,
+            max: 20,
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 10000,
         });
@@ -127,7 +130,8 @@ async function createTables() {
                 is_admin BOOLEAN DEFAULT FALSE,
                 joined_at TIMESTAMP DEFAULT NOW(),
                 last_activity TIMESTAMP DEFAULT NOW(),
-                survey_completed BOOLEAN DEFAULT FALSE
+                survey_completed BOOLEAN DEFAULT FALSE,
+                profile_image TEXT
             )`,
             `CREATE TABLE IF NOT EXISTS courses (
                 id SERIAL PRIMARY KEY,
@@ -140,6 +144,10 @@ async function createTables() {
                 image_url TEXT,
                 file_url TEXT,
                 video_url TEXT,
+                category TEXT DEFAULT 'general',
+                level TEXT DEFAULT 'beginner',
+                rating DECIMAL(3,2) DEFAULT 0.0,
+                students_count INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW()
             )`,
@@ -150,6 +158,7 @@ async function createTables() {
                 duration TEXT,
                 audio_url TEXT,
                 image_url TEXT,
+                category TEXT DEFAULT 'general',
                 created_at TIMESTAMP DEFAULT NOW()
             )`,
             `CREATE TABLE IF NOT EXISTS streams (
@@ -160,6 +169,8 @@ async function createTables() {
                 scheduled_time TIMESTAMP,
                 image_url TEXT,
                 is_live BOOLEAN DEFAULT FALSE,
+                viewers_count INTEGER DEFAULT 0,
+                category TEXT DEFAULT 'general',
                 created_at TIMESTAMP DEFAULT NOW()
             )`,
             `CREATE TABLE IF NOT EXISTS videos (
@@ -169,6 +180,8 @@ async function createTables() {
                 video_url TEXT,
                 duration TEXT,
                 thumbnail_url TEXT,
+                category TEXT DEFAULT 'general',
+                views_count INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW()
             )`,
             `CREATE TABLE IF NOT EXISTS materials (
@@ -179,6 +192,8 @@ async function createTables() {
                 file_url TEXT,
                 image_url TEXT,
                 material_type TEXT DEFAULT 'article',
+                category TEXT DEFAULT 'general',
+                downloads_count INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW()
             )`,
             `CREATE TABLE IF NOT EXISTS events (
@@ -190,6 +205,8 @@ async function createTables() {
                 event_type TEXT DEFAULT 'online',
                 image_url TEXT,
                 registration_url TEXT,
+                participants_count INTEGER DEFAULT 0,
+                category TEXT DEFAULT 'general',
                 created_at TIMESTAMP DEFAULT NOW()
             )`,
             `CREATE TABLE IF NOT EXISTS news (
@@ -198,6 +215,8 @@ async function createTables() {
                 content TEXT,
                 category TEXT,
                 image_url TEXT,
+                author TEXT DEFAULT 'АНБ Академия',
+                views_count INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW()
             )`,
             `CREATE TABLE IF NOT EXISTS user_progress (
@@ -221,6 +240,24 @@ async function createTables() {
                 upload_type TEXT,
                 uploaded_by BIGINT,
                 created_at TIMESTAMP DEFAULT NOW()
+            )`,
+            `CREATE TABLE IF NOT EXISTS categories (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                type TEXT NOT NULL,
+                color TEXT DEFAULT '#58b8e7',
+                icon TEXT DEFAULT '📁',
+                created_at TIMESTAMP DEFAULT NOW()
+            )`,
+            `CREATE TABLE IF NOT EXISTS navigation_items (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                icon TEXT,
+                image_url TEXT,
+                target_page TEXT,
+                position INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW()
             )`
         ];
 
@@ -241,30 +278,42 @@ async function createTables() {
 
 async function addDemoData() {
     try {
-        // Проверяем, есть ли уже данные
-        const usersCount = await pool.query('SELECT COUNT(*) FROM users');
-        if (parseInt(usersCount.rows[0].count) > 0) {
-            console.log('✅ Данные уже существуют');
-            return;
-        }
-
         console.log('📝 Добавление демо-данных...');
 
         // Добавляем администратора
         await pool.query(`
-            INSERT INTO users (id, first_name, username, is_admin, subscription_status, subscription_type) 
-            VALUES (898508164, 'Главный Администратор', 'admin', TRUE, 'active', 'admin')
+            INSERT INTO users (id, first_name, username, is_admin, subscription_status, subscription_type, profile_image) 
+            VALUES (898508164, 'Главный Администратор', 'admin', TRUE, 'active', 'admin', '/uploads/admin-avatar.jpg')
             ON CONFLICT (id) DO UPDATE SET is_admin = TRUE
         `);
+
+        // Добавляем категории
+        const categoriesCount = await pool.query('SELECT COUNT(*) FROM categories');
+        if (parseInt(categoriesCount.rows[0].count) === 0) {
+            await pool.query(`
+                INSERT INTO categories (name, type, color, icon) VALUES
+                ('Неврология', 'courses', '#58b8e7', '🧠'),
+                ('Ортопедия', 'courses', '#28a745', '🦴'),
+                ('Реабилитация', 'courses', '#ffc107', '🏃'),
+                ('Мануальная терапия', 'courses', '#dc3545', '✋'),
+                ('Диагностика', 'courses', '#6f42c1', '🔍'),
+                ('Клинические случаи', 'materials', '#20c997', '📋'),
+                ('МРТ разборы', 'materials', '#17a2b8', '🩻'),
+                ('Чек-листы', 'materials', '#fd7e14', '✅')
+            `);
+            console.log('✅ Демо-категории добавлены');
+        }
 
         // Демо-курсы
         const coursesCount = await pool.query('SELECT COUNT(*) FROM courses');
         if (parseInt(coursesCount.rows[0].count) === 0) {
             await pool.query(`
-                INSERT INTO courses (title, description, full_description, price, duration, modules) VALUES
-                ('Мануальные техники в практике', '6 модулей по современным мануальным методикам', 'Комплексный курс по мануальным техникам для практикующих врачей. Включает диагностику, техники работы и реабилитацию.', 15000, '12 часов', 6),
-                ('Неврология для практикующих врачей', 'Основы неврологической диагностики', 'Фундаментальный курс по неврологии с акцентом на практическое применение в клинической практике.', 12000, '10 часов', 5),
-                ('Реабилитация после травм', 'Современные методы восстановительного лечения', 'Полный курс по реабилитации пациентов после различных травм опорно-двигательного аппарата.', 18000, '15 часов', 8)
+                INSERT INTO courses (title, description, full_description, price, duration, modules, category, level, image_url) VALUES
+                ('Мануальные техники в практике', '6 модулей по современным мануальным методикам', 'Комплексный курс по мануальным техникам для практикующих врачей. Включает диагностику, техники работы и реабилитацию.', 15000, '12 часов', 6, 'Мануальная терапия', 'advanced', '/uploads/course-manual.jpg'),
+                ('Неврология для практикующих врачей', 'Основы неврологической диагностики', 'Фундаментальный курс по неврологии с акцентом на практическое применение в клинической практике.', 12000, '10 часов', 5, 'Неврология', 'intermediate', '/uploads/course-neurology.jpg'),
+                ('Реабилитация после травм', 'Современные методы восстановительного лечения', 'Полный курс по реабилитации пациентов после различных травм опорно-двигательного аппарата.', 18000, '15 часов', 8, 'Реабилитация', 'advanced', '/uploads/course-rehab.jpg'),
+                ('Основы ортопедии', 'Диагностика и лечение заболеваний ОДА', 'Базовый курс по ортопедии для начинающих специалистов.', 8000, '8 часов', 4, 'Ортопедия', 'beginner', '/uploads/course-ortho.jpg'),
+                ('Спортивная медицина', 'Реабилитация спортсменов', 'Специализированный курс по работе со спортсменами.', 20000, '20 часов', 10, 'Реабилитация', 'advanced', '/uploads/course-sport.jpg')
             `);
             console.log('✅ Демо-курсы добавлены');
         }
@@ -273,25 +322,56 @@ async function addDemoData() {
         const podcastsCount = await pool.query('SELECT COUNT(*) FROM podcasts');
         if (parseInt(podcastsCount.rows[0].count) === 0) {
             await pool.query(`
-                INSERT INTO podcasts (title, description, duration) VALUES
-                ('АНБ FM: Основы неврологии', 'Подкаст о современных подходах в неврологии', '45:20'),
-                ('АНБ FM: Реабилитация', 'Современные методы восстановительного лечения', '38:15'),
-                ('АНБ FM: Мануальная терапия', 'Обсуждение современных мануальных техник', '42:30')
+                INSERT INTO podcasts (title, description, duration, category, image_url) VALUES
+                ('АНБ FM: Основы неврологии', 'Подкаст о современных подходах в неврологии', '45:20', 'Неврология', '/uploads/podcast-neuro.jpg'),
+                ('АНБ FM: Реабилитация', 'Современные методы восстановительного лечения', '38:15', 'Реабилитация', '/uploads/podcast-rehab.jpg'),
+                ('АНБ FM: Мануальная терапия', 'Обсуждение современных мануальных техник', '42:30', 'Мануальная терапия', '/uploads/podcast-manual.jpg'),
+                ('АНБ FM: Ортопедия в практике', 'Практические аспекты ортопедии', '35:45', 'Ортопедия', '/uploads/podcast-ortho.jpg')
             `);
             console.log('✅ Демо-подкасты добавлены');
+        }
+
+        // Демо-материалы
+        const materialsCount = await pool.query('SELECT COUNT(*) FROM materials');
+        if (parseInt(materialsCount.rows[0].count) === 0) {
+            await pool.query(`
+                INSERT INTO materials (title, description, material_type, category, image_url) VALUES
+                ('МРТ поясничного отдела - разбор', 'Детальный разбор МРТ с клиническим случаем', 'mri', 'МРТ разборы', '/uploads/mri-lumbar.jpg'),
+                ('Чек-лист неврологического осмотра', 'Полный алгоритм неврологического обследования', 'checklist', 'Чек-листы', '/uploads/checklist-neuro.jpg'),
+                ('Клинический случай: боль в шее', 'Разбор сложного случая цервикалгии', 'case', 'Клинические случаи', '/uploads/case-neck.jpg'),
+                ('Протокол реабилитации после эндопротезирования', 'Поэтапный план восстановления', 'checklist', 'Чек-листы', '/uploads/protocol-hip.jpg')
+            `);
+            console.log('✅ Демо-материалы добавлены');
         }
 
         // Демо-новости
         const newsCount = await pool.query('SELECT COUNT(*) FROM news');
         if (parseInt(newsCount.rows[0].count) === 0) {
             await pool.query(`
-                INSERT INTO news (title, content, category) VALUES
-                ('Запуск платформы Академии АНБ', 'Новая образовательная платформа для врачей предлагает современные курсы и материалы', 'development'),
-                ('Новый курс по мануальным техникам', 'Доступен курс из 6 модулей по современным мануальным методикам', 'courses'),
-                ('Вебинар по реабилитации', 'Онлайн-вебинар 15 декабря по современным методам реабилитации', 'events'),
-                ('Обновление базы знаний', 'Добавлены новые материалы и исследования', 'development')
+                INSERT INTO news (title, content, category, image_url) VALUES
+                ('Запуск новой образовательной платформы Академии АНБ', 'Мы рады представить полностью обновленную платформу для профессионального развития врачей. Новый интерфейс, расширенный функционал и современный подход к обучению.', 'development', '/uploads/news-launch.jpg'),
+                ('Новый курс по мануальным техникам', 'Доступен для записи комплексный курс из 6 модулей по современным мануальным методикам. Ведущий - доктор медицинских наук.', 'courses', '/uploads/news-course.jpg'),
+                ('Вебинар по реабилитации после спортивных травм', 'Приглашаем на онлайн-вебинар 15 декабря по современным методам реабилитации. Бесплатное участие для всех подписчиков.', 'events', '/uploads/news-webinar.jpg'),
+                ('Обновление базы знаний', 'Добавлены новые материалы и исследования по неврологии и ортопедии. Расширена библиотека клинических случаев.', 'development', '/uploads/news-update.jpg'),
+                ('Новые методические рекомендации', 'Опубликованы обновленные клинические рекомендации по лечению заболеваний опорно-двигательного аппарата.', 'materials', '/uploads/news-guidelines.jpg')
             `);
             console.log('✅ Демо-новости добавлены');
+        }
+
+        // Навигационные элементы
+        const navCount = await pool.query('SELECT COUNT(*) FROM navigation_items');
+        if (parseInt(navCount.rows[0].count) === 0) {
+            await pool.query(`
+                INSERT INTO navigation_items (title, icon, image_url, target_page, position) VALUES
+                ('Главная', '🏠', '/uploads/nav-home.jpg', 'home', 1),
+                ('Курсы', '📚', '/uploads/nav-courses.jpg', 'courses', 2),
+                ('Подкасты', '🎧', '/uploads/nav-podcasts.jpg', 'podcasts', 3),
+                ('Эфиры', '📹', '/uploads/nav-streams.jpg', 'streams', 4),
+                ('Материалы', '📋', '/uploads/nav-materials.jpg', 'materials', 5),
+                ('Сообщество', '👥', '/uploads/nav-community.jpg', 'community', 6),
+                ('Профиль', '👤', '/uploads/nav-profile.jpg', 'profile', 7)
+            `);
+            console.log('✅ Навигационные элементы добавлены');
         }
 
         console.log('✅ Демо-данные успешно добавлены');
@@ -353,13 +433,14 @@ async function getOrCreateUser(userId, userData = {}) {
                 is_admin: ADMIN_IDS.has(parseInt(userId)),
                 joined_at: new Date(),
                 last_activity: new Date(),
-                survey_completed: false
+                survey_completed: false,
+                profile_image: null
             };
             
             await pool.query(
-                `INSERT INTO users (id, first_name, last_name, username, joined_at, last_activity, is_admin) 
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                [newUser.id, newUser.first_name, newUser.last_name, newUser.username, newUser.joined_at, newUser.last_activity, newUser.is_admin]
+                `INSERT INTO users (id, first_name, last_name, username, joined_at, last_activity, is_admin, profile_image) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                [newUser.id, newUser.first_name, newUser.last_name, newUser.username, newUser.joined_at, newUser.last_activity, newUser.is_admin, newUser.profile_image]
             );
             
             user = newUser;
@@ -391,7 +472,8 @@ function getTempUser(userId) {
         is_admin: ADMIN_IDS.has(parseInt(userId)),
         joined_at: new Date(),
         last_activity: new Date(),
-        survey_completed: false
+        survey_completed: false,
+        profile_image: null
     };
 }
 
@@ -465,7 +547,7 @@ bot.start(async (ctx) => {
             return;
         }
 
-        await ctx.reply(`👋 Добро пожаловать в Академию АНБ, ${ctx.from.first_name}!\n\n📝 Для начала ответьте на несколько вопросов:`);
+        await ctx.reply(`👋 Добро пожаловать в Академию АНБ, ${ctx.from.first_name}!\n\n📝 Для персонализации опыта ответьте на несколько вопросов:`);
         await sendSurveyStep(ctx, ctx.from.id, 0);
     } catch (error) {
         console.error('❌ Ошибка в start:', error);
@@ -576,7 +658,7 @@ async function finishSurvey(ctx, userId, answers) {
 
         await ctx.reply(
             `🎉 Спасибо за опрос, ${ctx.from.first_name}!\n\n` +
-            `✅ Ваш профиль:\n` +
+            `✅ Ваш профиль создан:\n` +
             `🎯 Специализация: ${answers.specialization || 'Не указано'}\n` +
             `🏙️ Город: ${answers.city || 'Не указан'}\n` +
             `📧 Email: ${answers.email || 'Не указан'}\n\n` +
@@ -746,14 +828,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(join(__dirname, 'webapp')));
 app.use('/uploads', express.static(join(__dirname, 'uploads')));
-
-// CORS middleware
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    next();
-});
+app.use(cors());
 
 // ==================== API ENDPOINTS ====================
 
@@ -824,7 +899,8 @@ app.get('/api/user/:id', async (req, res) => {
                     favorites: user.favorites_data,
                     isAdmin: user.is_admin,
                     joinedAt: user.joined_at,
-                    surveyCompleted: user.survey_completed
+                    surveyCompleted: user.survey_completed,
+                    profileImage: user.profile_image
                 }
             });
         } else {
@@ -870,7 +946,8 @@ app.post('/api/user', async (req, res) => {
                 favorites: user.favorites_data,
                 isAdmin: user.is_admin,
                 joinedAt: user.joined_at,
-                surveyCompleted: user.survey_completed
+                surveyCompleted: user.survey_completed,
+                profileImage: user.profile_image
             }
         });
     } catch (error) {
@@ -879,44 +956,84 @@ app.post('/api/user', async (req, res) => {
     }
 });
 
-// 📚 Получение контента
+// 📚 Получение контента с пагинацией и фильтрацией
 app.get('/api/content', async (req, res) => {
-    if (!dbConnected) {
-        return res.json({
-            success: true,
-            data: getTempContent()
-        });
-    }
-
     try {
-        const [courses, podcasts, streams, videos, materials, events, news] = await Promise.all([
-            pool.query('SELECT * FROM courses ORDER BY created_at DESC'),
-            pool.query('SELECT * FROM podcasts ORDER BY created_at DESC'),
-            pool.query('SELECT * FROM streams ORDER BY created_at DESC'),
-            pool.query('SELECT * FROM videos ORDER BY created_at DESC'),
-            pool.query('SELECT * FROM materials ORDER BY created_at DESC'),
-            pool.query('SELECT * FROM events ORDER BY created_at DESC'),
-            pool.query('SELECT * FROM news ORDER BY created_at DESC')
-        ]);
+        const { type, category, page = 1, limit = 20 } = req.query;
+        
+        if (!dbConnected) {
+            return res.json({
+                success: true,
+                data: getTempContent(),
+                pagination: { page: 1, limit, total: 1, pages: 1 }
+            });
+        }
+
+        let contentTypes = ['courses', 'podcasts', 'streams', 'videos', 'materials', 'events', 'news'];
+        if (type && contentTypes.includes(type)) {
+            contentTypes = [type];
+        }
+
+        const contentData = {};
+        const promises = [];
+
+        for (const contentType of contentTypes) {
+            let query = `SELECT * FROM ${contentType}`;
+            let countQuery = `SELECT COUNT(*) FROM ${contentType}`;
+            const queryParams = [];
+            let whereConditions = [];
+
+            if (category) {
+                whereConditions.push(`category = $${queryParams.length + 1}`);
+                queryParams.push(category);
+            }
+
+            if (whereConditions.length > 0) {
+                query += ' WHERE ' + whereConditions.join(' AND ');
+                countQuery += ' WHERE ' + whereConditions.join(' AND ');
+            }
+
+            query += ` ORDER BY created_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+            queryParams.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
+
+            promises.push(
+                pool.query(query, queryParams),
+                pool.query(countQuery, queryParams.slice(0, -2))
+            );
+        }
+
+        const results = await Promise.all(promises);
+
+        for (let i = 0; i < contentTypes.length; i++) {
+            const contentType = contentTypes[i];
+            const contentResult = results[i * 2];
+            const countResult = results[i * 2 + 1];
+            
+            contentData[contentType] = contentResult.rows;
+            contentData[`${contentType}Count`] = parseInt(countResult.rows[0].count);
+        }
+
+        // Получаем категории
+        const categoriesResult = await pool.query('SELECT * FROM categories ORDER BY name');
+        contentData.categories = categoriesResult.rows;
+
+        // Получаем навигацию
+        const navigationResult = await pool.query('SELECT * FROM navigation_items WHERE is_active = true ORDER BY position');
+        contentData.navigation = navigationResult.rows;
 
         res.json({
             success: true,
-            data: {
-                courses: courses.rows,
-                podcasts: podcasts.rows,
-                streams: streams.rows,
-                videos: videos.rows,
-                materials: materials.rows,
-                events: events.rows,
-                news: news.rows
+            data: contentData,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total: contentData[`${type}Count`] || Object.values(contentData).reduce((acc, curr) => acc + (Array.isArray(curr) ? curr.length : 0), 0),
+                pages: Math.ceil((contentData[`${type}Count`] || 1) / parseInt(limit))
             }
         });
     } catch (error) {
         console.error('❌ Ошибка получения контента:', error);
-        res.json({
-            success: true,
-            data: getTempContent()
-        });
+        res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
 
@@ -931,6 +1048,11 @@ function getTempContent() {
                 price: 15000,
                 duration: '12 часов',
                 modules: 6,
+                image_url: '/uploads/course-manual.jpg',
+                category: 'Мануальная терапия',
+                level: 'advanced',
+                rating: 4.8,
+                students_count: 124,
                 created_at: new Date()
             }
         ],
@@ -940,14 +1062,47 @@ function getTempContent() {
                 title: 'АНБ FM: Основы неврологии',
                 description: 'Подкаст о современных подходах в неврологии',
                 duration: '45:20',
+                image_url: '/uploads/podcast-neuro.jpg',
+                category: 'Неврология',
                 created_at: new Date()
             }
         ],
         streams: [],
         videos: [],
-        materials: [],
+        materials: [
+            {
+                id: 1,
+                title: 'МРТ поясничного отдела - разбор',
+                description: 'Детальный разбор МРТ с клиническим случаем',
+                material_type: 'mri',
+                image_url: '/uploads/mri-lumbar.jpg',
+                category: 'МРТ разборы',
+                downloads_count: 89,
+                created_at: new Date()
+            }
+        ],
         events: [],
-        news: []
+        news: [
+            {
+                id: 1,
+                title: 'Запуск новой образовательной платформы',
+                content: 'Академия АНБ представляет обновленную платформу для профессионального развития врачей',
+                category: 'development',
+                image_url: '/uploads/news-launch.jpg',
+                author: 'АНБ Академия',
+                views_count: 156,
+                created_at: new Date()
+            }
+        ],
+        categories: [
+            { id: 1, name: 'Неврология', type: 'courses', color: '#58b8e7', icon: '🧠' },
+            { id: 2, name: 'Ортопедия', type: 'courses', color: '#28a745', icon: '🦴' },
+            { id: 3, name: 'Реабилитация', type: 'courses', color: '#ffc107', icon: '🏃' }
+        ],
+        navigation: [
+            { id: 1, title: 'Главная', icon: '🏠', image_url: '/uploads/nav-home.jpg', target_page: 'home', position: 1 },
+            { id: 2, title: 'Курсы', icon: '📚', image_url: '/uploads/nav-courses.jpg', target_page: 'courses', position: 2 }
+        ]
     };
 }
 
@@ -994,7 +1149,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 app.post('/api/content', upload.fields([
     { name: 'image', maxCount: 1 },
     { name: 'file', maxCount: 1 },
-    { name: 'video', maxCount: 1 }
+    { name: 'video', maxCount: 1 },
+    { name: 'audio', maxCount: 1 }
 ]), async (req, res) => {
     if (!dbConnected) {
         return res.status(500).json({ success: false, error: 'Database not available' });
@@ -1013,12 +1169,15 @@ app.post('/api/content', upload.fields([
             eventDate,
             location,
             eventType,
-            registrationUrl
+            registrationUrl,
+            category,
+            level
         } = req.body;
         
         let imageUrl = null;
         let fileUrl = null;
         let videoUrl = null;
+        let audioUrl = null;
 
         // Обрабатываем загруженные файлы
         if (req.files) {
@@ -1031,6 +1190,9 @@ app.post('/api/content', upload.fields([
             if (req.files.video) {
                 videoUrl = `/uploads/${req.files.video[0].filename}`;
             }
+            if (req.files.audio) {
+                audioUrl = `/uploads/${req.files.audio[0].filename}`;
+            }
         }
 
         let tableName;
@@ -1040,44 +1202,51 @@ app.post('/api/content', upload.fields([
         switch(contentType) {
             case 'courses':
                 tableName = 'courses';
-                query = `INSERT INTO ${tableName} (title, description, full_description, duration, price, modules, image_url, file_url, video_url) 
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`;
-                values = [title, description, fullDescription, duration, parseInt(price) || 0, parseInt(modules) || 1, imageUrl, fileUrl, videoUrl];
+                query = `INSERT INTO ${tableName} (title, description, full_description, duration, price, modules, image_url, file_url, video_url, category, level) 
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`;
+                values = [title, description, fullDescription, duration, parseInt(price) || 0, parseInt(modules) || 1, imageUrl, fileUrl, videoUrl, category, level];
                 break;
                 
             case 'podcasts':
                 tableName = 'podcasts';
-                query = `INSERT INTO ${tableName} (title, description, duration, audio_url, image_url) 
-                         VALUES ($1, $2, $3, $4, $5) RETURNING *`;
-                values = [title, description, duration, fileUrl, imageUrl];
+                query = `INSERT INTO ${tableName} (title, description, duration, audio_url, image_url, category) 
+                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+                values = [title, description, duration, audioUrl, imageUrl, category];
                 break;
                 
             case 'streams':
                 tableName = 'streams';
-                query = `INSERT INTO ${tableName} (title, description, stream_url, scheduled_time, image_url) 
-                         VALUES ($1, $2, $3, $4, $5) RETURNING *`;
-                values = [title, description, videoUrl, eventDate, imageUrl];
+                query = `INSERT INTO ${tableName} (title, description, stream_url, scheduled_time, image_url, category) 
+                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+                values = [title, description, videoUrl, eventDate, imageUrl, category];
                 break;
                 
             case 'videos':
                 tableName = 'videos';
-                query = `INSERT INTO ${tableName} (title, description, video_url, duration, thumbnail_url) 
-                         VALUES ($1, $2, $3, $4, $5) RETURNING *`;
-                values = [title, description, videoUrl, duration, imageUrl];
+                query = `INSERT INTO ${tableName} (title, description, video_url, duration, thumbnail_url, category) 
+                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+                values = [title, description, videoUrl, duration, imageUrl, category];
                 break;
                 
             case 'materials':
                 tableName = 'materials';
-                query = `INSERT INTO ${tableName} (title, description, content, file_url, image_url, material_type) 
-                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
-                values = [title, description, fullDescription, fileUrl, imageUrl, materialType];
+                query = `INSERT INTO ${tableName} (title, description, content, file_url, image_url, material_type, category) 
+                         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
+                values = [title, description, fullDescription, fileUrl, imageUrl, materialType, category];
                 break;
                 
             case 'events':
                 tableName = 'events';
-                query = `INSERT INTO ${tableName} (title, description, event_date, location, event_type, image_url, registration_url) 
-                         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
-                values = [title, description, eventDate, location, eventType, imageUrl, registrationUrl];
+                query = `INSERT INTO ${tableName} (title, description, event_date, location, event_type, image_url, registration_url, category) 
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`;
+                values = [title, description, eventDate, location, eventType, imageUrl, registrationUrl, category];
+                break;
+                
+            case 'news':
+                tableName = 'news';
+                query = `INSERT INTO ${tableName} (title, content, category, image_url) 
+                         VALUES ($1, $2, $3, $4) RETURNING *`;
+                values = [title, fullDescription, category, imageUrl];
                 break;
                 
             default:
@@ -1161,14 +1330,16 @@ app.get('/api/stats', async (req, res) => {
             stats: {
                 totalUsers: 1,
                 activeUsers: 1,
-                completedSurveys: 0,
+                completedSurveys: 1,
+                totalRevenue: 2900,
                 content: {
-                    courses: 1,
-                    podcasts: 1,
+                    courses: 5,
+                    podcasts: 4,
                     streams: 0,
                     videos: 0,
-                    materials: 0,
-                    events: 0
+                    materials: 4,
+                    events: 0,
+                    news: 5
                 }
             }
         });
@@ -1177,26 +1348,35 @@ app.get('/api/stats', async (req, res) => {
     try {
         const usersCount = await pool.query('SELECT COUNT(*) FROM users');
         const activeUsers = await pool.query('SELECT COUNT(*) FROM users WHERE subscription_status IN ($1, $2)', ['active', 'trial']);
+        const completedSurveys = await pool.query('SELECT COUNT(*) FROM users WHERE survey_completed = true');
+        
         const coursesCount = await pool.query('SELECT COUNT(*) FROM courses');
         const podcastsCount = await pool.query('SELECT COUNT(*) FROM podcasts');
         const streamsCount = await pool.query('SELECT COUNT(*) FROM streams');
         const videosCount = await pool.query('SELECT COUNT(*) FROM videos');
         const materialsCount = await pool.query('SELECT COUNT(*) FROM materials');
         const eventsCount = await pool.query('SELECT COUNT(*) FROM events');
+        const newsCount = await pool.query('SELECT COUNT(*) FROM news');
+        
+        // Расчет дохода (примерный)
+        const activeSubs = parseInt(activeUsers.rows[0].count);
+        const totalRevenue = activeSubs * 2900; // Примерная выручка
         
         res.json({
             success: true,
             stats: {
                 totalUsers: parseInt(usersCount.rows[0].count),
-                activeUsers: parseInt(activeUsers.rows[0].count),
-                completedSurveys: 0,
+                activeUsers: activeSubs,
+                completedSurveys: parseInt(completedSurveys.rows[0].count),
+                totalRevenue: totalRevenue,
                 content: {
                     courses: parseInt(coursesCount.rows[0].count),
                     podcasts: parseInt(podcastsCount.rows[0].count),
                     streams: parseInt(streamsCount.rows[0].count),
                     videos: parseInt(videosCount.rows[0].count),
                     materials: parseInt(materialsCount.rows[0].count),
-                    events: parseInt(eventsCount.rows[0].count)
+                    events: parseInt(eventsCount.rows[0].count),
+                    news: parseInt(newsCount.rows[0].count)
                 }
             }
         });
@@ -1216,16 +1396,34 @@ app.get('/api/users', async (req, res) => {
     }
 
     try {
-        const result = await pool.query(`
+        const { page = 1, limit = 50, search = '' } = req.query;
+        const offset = (page - 1) * limit;
+        
+        let query = `
             SELECT id, first_name, last_name, username, specialization, city, email, phone,
                    subscription_status, subscription_type, subscription_end_date,
-                   progress_level, progress_data, favorites_data, is_admin, joined_at, survey_completed
+                   progress_level, progress_data, favorites_data, is_admin, joined_at, survey_completed, profile_image
             FROM users 
-            ORDER BY joined_at DESC
-            LIMIT 1000
-        `);
+        `;
+        let countQuery = 'SELECT COUNT(*) FROM users';
+        const queryParams = [];
         
-        const users = result.rows.map(row => ({
+        if (search) {
+            const whereClause = ` WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1 OR specialization ILIKE $1`;
+            query += whereClause;
+            countQuery += whereClause;
+            queryParams.push(`%${search}%`);
+        }
+        
+        query += ` ORDER BY joined_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+        queryParams.push(parseInt(limit), offset);
+        
+        const [usersResult, countResult] = await Promise.all([
+            pool.query(query, queryParams),
+            pool.query(countQuery, queryParams.slice(0, -2))
+        ]);
+        
+        const users = usersResult.rows.map(row => ({
             id: row.id,
             firstName: row.first_name,
             lastName: row.last_name,
@@ -1243,10 +1441,20 @@ app.get('/api/users', async (req, res) => {
             favorites: row.favorites_data || {courses: [], podcasts: [], streams: [], videos: [], materials: [], watchLater: []},
             isAdmin: row.is_admin,
             joinedAt: row.joined_at,
-            surveyCompleted: row.survey_completed
+            surveyCompleted: row.survey_completed,
+            profileImage: row.profile_image
         }));
         
-        res.json({ success: true, users });
+        res.json({ 
+            success: true, 
+            users,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total: parseInt(countResult.rows[0].count),
+                pages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit))
+            }
+        });
     } catch (error) {
         console.error('❌ Ошибка получения пользователей:', error);
         res.status(500).json({ success: false, error: 'Internal server error' });
@@ -1260,14 +1468,15 @@ app.get('/api/admins', async (req, res) => {
             id: id,
             first_name: 'Главный Администратор',
             username: 'admin',
-            joined_at: new Date('2024-01-01')
+            joined_at: new Date('2024-01-01'),
+            profile_image: '/uploads/admin-avatar.jpg'
         }));
         return res.json({ success: true, data: adminsList });
     }
 
     try {
         const result = await pool.query(`
-            SELECT id, first_name, last_name, username, joined_at 
+            SELECT id, first_name, last_name, username, joined_at, profile_image
             FROM users 
             WHERE is_admin = true 
             ORDER BY joined_at
@@ -1281,7 +1490,8 @@ app.get('/api/admins', async (req, res) => {
                     id: adminId,
                     first_name: 'Главный Администратор',
                     username: 'admin',
-                    joined_at: new Date('2024-01-01')
+                    joined_at: new Date('2024-01-01'),
+                    profile_image: '/uploads/admin-avatar.jpg'
                 });
             }
         }
@@ -1348,6 +1558,9 @@ app.get('/api/news', async (req, res) => {
                     title: 'Запуск новой образовательной платформы',
                     content: 'Академия АНБ представляет обновленную платформу для профессионального развития врачей',
                     category: 'development',
+                    image_url: '/uploads/news-launch.jpg',
+                    author: 'АНБ Академия',
+                    views_count: 156,
                     created_at: new Date()
                 }
             ]
@@ -1355,8 +1568,26 @@ app.get('/api/news', async (req, res) => {
     }
 
     try {
-        const result = await pool.query('SELECT * FROM news ORDER BY created_at DESC LIMIT 20');
-        res.json({ success: true, news: result.rows });
+        const { page = 1, limit = 10 } = req.query;
+        const offset = (page - 1) * limit;
+        
+        const result = await pool.query(
+            'SELECT * FROM news ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+            [parseInt(limit), offset]
+        );
+        
+        const countResult = await pool.query('SELECT COUNT(*) FROM news');
+        
+        res.json({ 
+            success: true, 
+            news: result.rows,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total: parseInt(countResult.rows[0].count),
+                pages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit))
+            }
+        });
     } catch (error) {
         console.error('❌ Ошибка получения новостей:', error);
         res.status(500).json({ success: false, error: 'Internal server error' });
@@ -1476,6 +1707,59 @@ app.post('/api/user/:id/events', async (req, res) => {
     }
 });
 
+// 🗂️ Получение категорий
+app.get('/api/categories', async (req, res) => {
+    if (!dbConnected) {
+        return res.json({
+            success: true,
+            categories: [
+                { id: 1, name: 'Неврология', type: 'courses', color: '#58b8e7', icon: '🧠' },
+                { id: 2, name: 'Ортопедия', type: 'courses', color: '#28a745', icon: '🦴' }
+            ]
+        });
+    }
+
+    try {
+        const { type } = req.query;
+        let query = 'SELECT * FROM categories';
+        const queryParams = [];
+        
+        if (type) {
+            query += ' WHERE type = $1';
+            queryParams.push(type);
+        }
+        
+        query += ' ORDER BY name';
+        
+        const result = await pool.query(query, queryParams);
+        res.json({ success: true, categories: result.rows });
+    } catch (error) {
+        console.error('❌ Ошибка получения категорий:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// 🧭 Получение навигации
+app.get('/api/navigation', async (req, res) => {
+    if (!dbConnected) {
+        return res.json({
+            success: true,
+            navigation: [
+                { id: 1, title: 'Главная', icon: '🏠', image_url: '/uploads/nav-home.jpg', target_page: 'home', position: 1 },
+                { id: 2, title: 'Курсы', icon: '📚', image_url: '/uploads/nav-courses.jpg', target_page: 'courses', position: 2 }
+            ]
+        });
+    }
+
+    try {
+        const result = await pool.query('SELECT * FROM navigation_items WHERE is_active = true ORDER BY position');
+        res.json({ success: true, navigation: result.rows });
+    } catch (error) {
+        console.error('❌ Ошибка получения навигации:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ 
@@ -1483,7 +1767,7 @@ app.get('/api/health', (req, res) => {
         status: 'OK', 
         dbConnected,
         timestamp: new Date().toISOString(),
-        version: '2.0.0'
+        version: '3.0.0'
     });
 });
 
@@ -1510,7 +1794,7 @@ app.get('*', (req, res) => {
 // ==================== ЗАПУСК СЕРВЕРА ====================
 async function startApp() {
     try {
-        console.log('🚀 Запуск приложения...');
+        console.log('🚀 Запуск приложения v3.0...');
         
         // Инициализируем базу данных
         await initDatabase();
