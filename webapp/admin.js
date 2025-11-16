@@ -1,842 +1,1393 @@
-// webapp/admin.js - ПОЛНАЯ РЕАЛИЗАЦИЯ АДМИН-ПАНЕЛИ
-let adminData = {
-    stats: {},
-    users: [],
-    content: {},
-    admins: [],
-    messages: {},
-    settings: {}
+// webapp/app.js - ПОЛНОСТЬЮ РАБОЧАЯ ВЕРСИЯ С АДМИНКОЙ
+const pages = {
+    home: {
+        title: 'Академия АНБ',
+        content: `
+            <div class="hero-section">
+                <div class="hero-text">
+                    <h2>Профессиональное развитие в неврологии и реабилитации</h2>
+                    <p>Сообщество специалистов, объединенных целью совершенствования практики</p>
+                </div>
+            </div>
+
+            <div class="quick-nav">
+                <h3>📱 Быстрая навигация</h3>
+                <div class="grid">
+                    <div class="card" onclick="openSection('courses')">
+                        <div class="card-icon">📚</div>
+                        <div class="card-title">Курсы</div>
+                        <div class="card-desc">Системное обучение с сертификатами</div>
+                    </div>
+                    <div class="card" onclick="openSection('podcasts')">
+                        <div class="card-icon">🎧</div>
+                        <div class="card-title">АНБ FM</div>
+                        <div class="card-desc">Аудио-подкасты и интервью</div>
+                    </div>
+                    <div class="card" onclick="openSection('streams')">
+                        <div class="card-icon">📹</div>
+                        <div class="card-title">Эфиры|Разборы</div>
+                        <div class="card-desc">Прямые эфиры и разборы кейсов</div>
+                    </div>
+                    <div class="card" onclick="openSection('videos')">
+                        <div class="card-icon">🎯</div>
+                        <div class="card-title">Видео-шпаргалки</div>
+                        <div class="card-desc">Короткие видео с техниками</div>
+                    </div>
+                    <div class="card" onclick="openSection('materials')">
+                        <div class="card-icon">📋</div>
+                        <div class="card-title">Практические материалы</div>
+                        <div class="card-desc">МРТ, кейсы, чек-листы</div>
+                    </div>
+                    <div class="card" onclick="openSection('events')">
+                        <div class="card-icon">🗺️</div>
+                        <div class="card-title">Карта мероприятий</div>
+                        <div class="card-desc">Онлайн и офлайн события</div>
+                    </div>
+                    <div class="card" onclick="openSection('offers')">
+                        <div class="card-icon">🔥</div>
+                        <div class="card-title">Ограниченное предложение</div>
+                        <div class="card-desc">Специальные условия</div>
+                    </div>
+                    <div class="card" onclick="openSupport()">
+                        <div class="card-icon">💬</div>
+                        <div class="card-title">Поддержка</div>
+                        <div class="card-desc">Помощь и консультации</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="news-section">
+                <div class="section-header">
+                    <h3>📰 Лента новостей</h3>
+                    <div class="filters" id="newsFilters">
+                        <button class="filter-btn active" data-filter="all">Все</button>
+                        <button class="filter-btn" data-filter="articles">Статьи</button>
+                        <button class="filter-btn" data-filter="development">Профессиональное развитие</button>
+                        <button class="filter-btn" data-filter="skills">Практические навыки</button>
+                        <button class="filter-btn" data-filter="physiotherapy">Физиотерапия</button>
+                        <button class="filter-btn" data-filter="rehabilitation">Реабилитация</button>
+                        <button class="filter-btn" data-filter="pharmacotherapy">Фармакотерапия</button>
+                        <button class="filter-btn" data-filter="manual">Мануальные техники</button>
+                    </div>
+                </div>
+                <div class="news-list" id="newsList">
+                    <div class="loading">Загрузка новостей...</div>
+                </div>
+            </div>
+        `
+    },
+
+    catalog: {
+        title: 'Каталог контента',
+        content: `
+            <div class="catalog-header">
+                <div class="catalog-filters">
+                    <input type="text" placeholder="Поиск курсов и материалов..." class="search-input" id="catalogSearch">
+                    <select class="filter-select" id="contentTypeFilter">
+                        <option value="all">Все типы</option>
+                        <option value="courses">Курсы</option>
+                        <option value="podcasts">АНБ FM</option>
+                        <option value="streams">Эфиры</option>
+                        <option value="videos">Шпаргалки</option>
+                        <option value="materials">Материалы</option>
+                        <option value="events">Мероприятия</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="catalog-content">
+                <div class="content-tabs">
+                    <button class="content-tab active" data-tab="all">Все</button>
+                    <button class="content-tab" data-tab="popular">Популярные</button>
+                    <button class="content-tab" data-tab="new">Новинки</button>
+                    <button class="content-tab" data-tab="free">Бесплатные</button>
+                </div>
+
+                <div class="content-grid" id="contentGrid">
+                    <div class="loading">Загрузка контента...</div>
+                </div>
+            </div>
+        `
+    },
+
+    community: {
+        title: 'Сообщество',
+        content: `
+            <div class="community-header">
+                <h2>👥 Сообщество Академии АНБ</h2>
+                <p>Присоединяйтесь к профессиональному сообществу специалистов</p>
+            </div>
+
+            <div class="community-grid">
+                <div class="community-card" onclick="openChat('general')">
+                    <div class="community-icon">💬</div>
+                    <div class="community-title">Флудилка</div>
+                    <div class="community-desc">Неформальное общение и знакомство</div>
+                    <div class="community-meta">1.2K участников</div>
+                </div>
+                <div class="community-card" onclick="openChat('specialists')">
+                    <div class="community-icon">👥</div>
+                    <div class="community-title">Чат специалистов</div>
+                    <div class="community-desc">Профессиональные обсуждения</div>
+                    <div class="community-meta">856 участников</div>
+                </div>
+                <div class="community-card" onclick="showCommunityRules()">
+                    <div class="community-icon">📜</div>
+                    <div class="community-title">Правила сообщества</div>
+                    <div class="community-desc">Основные принципы взаимодействия</div>
+                </div>
+                <div class="community-card" onclick="showFAQ()">
+                    <div class="community-icon">❓</div>
+                    <div class="community-title">F.A.Q.</div>
+                    <div class="community-desc">Ответы на частые вопросы</div>
+                </div>
+            </div>
+
+            <div class="faq-section">
+                <h3>❓ Частые вопросы</h3>
+                <div class="faq-list" id="faqList">
+                    <div class="loading">Загрузка вопросов...</div>
+                </div>
+            </div>
+        `
+    },
+
+    favorites: {
+        title: 'Мои материалы',
+        content: `
+            <div class="materials-tabs">
+                <button class="material-tab active" data-tab="watch-later">📥 Посмотреть позже</button>
+                <button class="material-tab" data-tab="favorites">⭐ Избранное</button>
+                <button class="material-tab" data-tab="practice">📋 Практические материалы</button>
+            </div>
+
+            <div class="materials-content">
+                <div class="material-section active" id="watch-later">
+                    <h3>Материалы для просмотра</h3>
+                    <div class="materials-list" id="watchLaterList">
+                        <div class="loading">Загрузка отложенных материалов...</div>
+                    </div>
+                </div>
+
+                <div class="material-section" id="favorites">
+                    <h3>Избранные материалы</h3>
+                    <div class="materials-list" id="favoritesList">
+                        <div class="loading">Загрузка избранного...</div>
+                    </div>
+                </div>
+
+                <div class="material-section" id="practice">
+                    <h3>Практические материалы</h3>
+                    <div class="practice-grid">
+                        <div class="practice-card" onclick="openMaterials('mri')">
+                            <div class="practice-icon">🩻</div>
+                            <div class="practice-title">МРТ разборы</div>
+                            <div class="practice-count" id="mriCount">0 материалов</div>
+                        </div>
+                        <div class="practice-card" onclick="openMaterials('cases')">
+                            <div class="practice-icon">📋</div>
+                            <div class="practice-title">Клинические случаи</div>
+                            <div class="practice-count" id="casesCount">0 кейсов</div>
+                        </div>
+                        <div class="practice-card" onclick="openMaterials('checklists')">
+                            <div class="practice-icon">✅</div>
+                            <div class="practice-title">Чек-листы</div>
+                            <div class="practice-count" id="checklistsCount">0 чек-листов</div>
+                        </div>
+                    </div>
+                    <div class="materials-list" id="practiceMaterialsList">
+                        <div class="loading">Загрузка практических материалов...</div>
+                    </div>
+                </div>
+            </div>
+        `
+    },
+
+    profile: {
+        title: 'Личный кабинет',
+        content: `
+            <div class="profile-header">
+                <div class="avatar-section">
+                    <div class="avatar-large">👤</div>
+                    <div class="profile-info">
+                        <div class="profile-name" id="userName">Пользователь</div>
+                        <div class="profile-status">Член Академии АНБ с <span id="joinDate">${new Date().toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'})}</span></div>
+                        <div class="profile-badge" id="userBadge">Активный участник</div>
+                    </div>
+                </div>
+                
+                <div class="subscription-info">
+                    <div class="subscription-status" id="subscriptionStatus">
+                        <div class="status-icon">❌</div>
+                        <div class="status-text">Подписка: не активна</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="changeSubscription()">Изменить подписку</button>
+                </div>
+            </div>
+
+            <div class="journey-section">
+                <h3>🎯 Мой путь развития</h3>
+                <div class="journey-progress" id="journeyProgress">
+                    <div class="loading">Загрузка прогресса...</div>
+                </div>
+            </div>
+
+            <div class="profile-stats">
+                <h3>📊 Моя активность</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📚</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="coursesCompleted">0</div>
+                            <div class="stat-label">Пройдено курсов</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="materialsWatched">0</div>
+                            <div class="stat-label">Просмотрено материалов</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="eventsAttended">0</div>
+                            <div class="stat-label">Мероприятий посещено</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💾</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="materialsSaved">0</div>
+                            <div class="stat-label">Материалов сохранено</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                <button class="btn btn-outline" onclick="editProfile()">✏️ Редактировать профиль</button>
+                <button class="btn btn-outline" onclick="showAchievements()">🏆 Мои достижения</button>
+                <button class="btn btn-outline" onclick="exportData()">📥 Экспорт данных</button>
+            </div>
+        `
+    }
 };
 
-let currentAdminTab = 'dashboard';
-let currentContentType = 'courses';
+let currentUser = null;
+let allContent = {};
+let currentPage = 'home';
 
-// ==================== ИНИЦИАЛИЗАЦИЯ АДМИН-ПАНЕЛИ ====================
+// ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
 
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 Инициализация админ-панели...');
-    
-    const isAdmin = await checkAdminStatus();
-    if (!isAdmin) {
-        showNotification('❌ Доступ запрещен. У вас нет прав администратора.', 'error');
-        setTimeout(() => goToMainApp(), 2000);
-        return;
-    }
-
-    initAdminPanel();
-    await loadAdminData();
-});
-
-async function checkAdminStatus() {
+async function loadUserData() {
     try {
-        console.log('🔧 Проверка прав для админ-панели...');
+        let userId;
+        let userData = null;
         
+        // Пробуем получить данные из Telegram WebApp
         if (window.Telegram && Telegram.WebApp) {
             const tgUser = Telegram.WebApp.initDataUnsafe.user;
+            console.log('🔑 Telegram WebApp User:', tgUser);
+            
             if (tgUser && tgUser.id) {
-                console.log('👤 Telegram пользователь:', tgUser);
-                
-                const response = await fetch(`/api/check-admin/${tgUser.id}`);
-                const data = await response.json();
-                
-                console.log('📊 Результат проверки:', data);
-                
-                if (data.success && data.isAdmin) {
-                    console.log('✅ Доступ разрешен');
-                    return true;
+                userId = tgUser.id;
+                userData = {
+                    id: tgUser.id,
+                    first_name: tgUser.first_name || 'User',
+                    last_name: tgUser.last_name || '',
+                    username: tgUser.username || ''
+                };
+
+                // Создаем или получаем пользователя
+                const response = await fetch('/api/user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id: userData.id,
+                        firstName: userData.first_name,
+                        lastName: userData.last_name,
+                        username: userData.username
+                    })
+                });
+
+                const userResponse = await response.json();
+                if (userResponse.success) {
+                    currentUser = userResponse.user;
+                    console.log('✅ Пользователь загружен:', currentUser);
+                } else {
+                    throw new Error('Failed to load user');
                 }
             }
         }
-        
-        console.log('❌ Доступ запрещен');
-        return false;
-        
-    } catch (error) {
-        console.error('❌ Ошибка проверки админ-прав:', error);
-        return false;
-    }
-}
 
-function initAdminPanel() {
-    console.log('⚙️ Инициализация интерфейса админ-панели...');
-    
-    // Навигация
-    document.querySelectorAll('.admin-nav-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            switchAdminTab(this.dataset.tab);
-        });
-    });
-
-    // Вкладки контента
-    document.querySelectorAll('.content-tab-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            switchContentTab(this.dataset.contentType);
-        });
-    });
-
-    // Поиск пользователей
-    const userSearch = document.getElementById('userSearch');
-    if (userSearch) {
-        userSearch.addEventListener('input', debounce(searchUsers, 300));
-    }
-
-    // Фильтры пользователей
-    const userFilter = document.getElementById('userFilter');
-    if (userFilter) {
-        userFilter.addEventListener('change', loadUsersList);
-    }
-
-    console.log('✅ Интерфейс админ-панели инициализирован');
-}
-
-async function loadAdminData() {
-    try {
-        console.log('📥 Загрузка данных для админ-панели...');
-        
-        // Загрузка статистики
-        const statsResponse = await fetch('/api/stats');
-        const statsData = await statsResponse.json();
-        adminData.stats = statsData.success ? statsData.stats : {};
-        console.log('📊 Статистика загружена:', adminData.stats);
-
-        // Загрузка контента
-        const contentResponse = await fetch('/api/content');
-        const contentData = await contentResponse.json();
-        adminData.content = contentData.success ? contentData.data : {};
-        console.log('📚 Контент загружен:', Object.keys(adminData.content));
-
-        // Загрузка списка админов
-        await loadAdmins();
-
-        updateDashboard();
-        
-        console.log('✅ Все данные админ-панели загружены');
-        
-    } catch (error) {
-        console.error('❌ Ошибка загрузки админ-данных:', error);
-        showNotification('❌ Ошибка загрузки данных', 'error');
-    }
-}
-
-// ==================== ДАШБОРД ====================
-
-function updateDashboard() {
-    if (!adminData.stats) return;
-
-    console.log('📈 Обновление дашборда...');
-
-    const totalUsersElement = document.getElementById('totalUsers');
-    const activeUsersElement = document.getElementById('activeUsers');
-    const totalCoursesElement = document.getElementById('totalCourses');
-    const totalRevenueElement = document.getElementById('totalRevenue');
-
-    if (totalUsersElement) totalUsersElement.textContent = adminData.stats.totalUsers || 0;
-    if (activeUsersElement) activeUsersElement.textContent = adminData.stats.activeUsers || 0;
-    if (totalCoursesElement) totalCoursesElement.textContent = adminData.stats.content?.courses || 0;
-    
-    const totalRevenue = (adminData.stats.activeUsers || 0) * 2900;
-    if (totalRevenueElement) totalRevenueElement.textContent = `${totalRevenue.toLocaleString()} ₽`;
-
-    updateRecentActivity();
-}
-
-async function updateRecentActivity() {
-    const activityList = document.getElementById('activityList');
-    if (!activityList) return;
-
-    try {
-        const activities = await fetchRecentActivity();
-        
-        if (activities.length === 0) {
-            activityList.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">📊</div>
-                    <div class="empty-text">Активность не найдена</div>
-                    <div class="empty-hint">Действия пользователей появятся здесь</div>
-                </div>
-            `;
-            return;
+        // Если нет Telegram данных, используем демо-режим
+        if (!userId) {
+            console.log('👤 Режим без Telegram, используем демо-данные');
+            currentUser = await loadDemoUser();
         }
 
-        activityList.innerHTML = activities.map(activity => `
-            <div class="activity-item">
-                <div class="activity-icon">${activity.icon || '🔔'}</div>
-                <div class="activity-info">
-                    <div class="activity-action">${activity.action}</div>
-                    <div class="activity-details">
-                        ${activity.user ? `<span class="user">${activity.user}</span>` : ''}
-                        ${activity.item ? `<span class="item">${activity.item}</span>` : ''}
-                        ${activity.amount ? `<span class="amount">${activity.amount}</span>` : ''}
-                    </div>
-                    <div class="activity-time">${activity.time}</div>
-                </div>
-            </div>
-        `).join('');
-    } catch (error) {
-        console.error('❌ Ошибка загрузки активности:', error);
-        activityList.innerHTML = '<div class="error">Ошибка загрузки активности</div>';
-    }
-}
-
-async function fetchRecentActivity() {
-    try {
-        const response = await fetch('/api/activity');
-        const data = await response.json();
-        return data.success ? data.activities : getDefaultActivities();
-    } catch (error) {
-        console.error('❌ Ошибка получения активности:', error);
-        return getDefaultActivities();
-    }
-}
-
-function getDefaultActivities() {
-    return [
-        {
-            type: 'user',
-            action: 'Новый пользователь',
-            user: 'Анна Сидорова',
-            time: '2 минуты назад',
-            icon: '👤'
-        },
-        {
-            type: 'payment',
-            action: 'Оплата подписки',
-            user: 'Петр Иванов',
-            amount: '2 900 ₽',
-            time: '1 час назад',
-            icon: '💳'
-        },
-        {
-            type: 'content',
-            action: 'Добавлен курс',
-            item: 'Мануальные техники',
-            time: '3 часа назад',
-            icon: '📚'
-        }
-    ];
-}
-
-// ==================== УПРАВЛЕНИЕ КОНТЕНТОМ ====================
-
-async function loadContentList(contentType) {
-    const contentList = document.getElementById('contentList');
-    if (!contentList) return;
-    
-    contentList.innerHTML = '<div class="loading">Загрузка...</div>';
-
-    try {
-        const content = adminData.content[contentType] || [];
+        updateUIWithUserData();
         
-        if (content.length === 0) {
-            contentList.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">📝</div>
-                    <div class="empty-text">Контент не найден</div>
-                    <button class="btn btn-primary" onclick="showAddContentForm('${contentType}')">Добавить первый</button>
-                </div>
-            `;
-            return;
-        }
-
-        contentList.innerHTML = content.map(item => `
-            <div class="admin-content-item" data-content-id="${item.id}" data-content-type="${contentType}">
-                <div class="content-preview">
-                    ${item.image_url ? `<img src="${item.image_url}" alt="${item.title}" class="content-image">` : ''}
-                    <div class="content-info">
-                        <div class="content-title">${item.title}</div>
-                        <div class="content-description">${item.description || 'Нет описания'}</div>
-                        <div class="content-meta">
-                            ${item.duration ? `<span>⏱️ ${item.duration}</span>` : ''}
-                            ${item.price ? `<span>💰 ${formatPrice(item.price)}</span>` : ''}
-                            ${item.type ? `<span>📁 ${getContentTypeName(item.type)}</span>` : ''}
-                            <span>📅 ${formatDate(item.created_at || item.created)}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="content-actions">
-                    <button class="btn btn-small" onclick="editContent('${contentType}', ${item.id})">✏️</button>
-                    <button class="btn btn-small btn-danger" onclick="deleteContent('${contentType}', ${item.id})">🗑️</button>
-                </div>
-            </div>
-        `).join('');
-        
-        console.log(`✅ Загружено ${content.length} элементов типа ${contentType}`);
     } catch (error) {
-        console.error(`❌ Ошибка загрузки контента ${contentType}:`, error);
-        contentList.innerHTML = '<div class="error">Ошибка загрузки</div>';
+        console.error('❌ Ошибка загрузки пользователя:', error);
+        currentUser = await loadDemoUser();
+        updateUIWithUserData();
     }
 }
 
-async function showAddContentForm(defaultType = 'courses') {
-    currentContentType = defaultType;
-    
-    const modalHTML = `
-        <div class="modal" id="addContentModal">
-            <div class="modal-content large">
-                <div class="modal-header">
-                    <h3>Добавить контент - ${getContentTypeName(defaultType)}</h3>
-                    <button class="close-btn" onclick="closeModal('addContentModal')">×</button>
-                </div>
-                <div class="modal-body">
-                    <form id="addContentForm" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <label>Тип контента *</label>
-                            <select id="contentTypeSelect" required>
-                                <option value="courses">Курс</option>
-                                <option value="podcasts">Подкаст</option>
-                                <option value="streams">Эфир</option>
-                                <option value="videos">Видео-шпаргалка</option>
-                                <option value="materials">Материал</option>
-                                <option value="events">Мероприятие</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Название *</label>
-                            <input type="text" id="contentTitleInput" required placeholder="Введите название">
-                        </div>
-                        <div class="form-group">
-                            <label>Описание</label>
-                            <textarea id="contentDescriptionInput" rows="3" placeholder="Краткое описание"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Полное описание</label>
-                            <textarea id="contentFullDescriptionInput" rows="5" placeholder="Подробное описание контента"></textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Изображение (превью)</label>
-                            <input type="file" id="contentImageInput" accept="image/*">
-                        </div>
-                        
-                        <div id="additionalFields">
-                            <!-- Динамические поля в зависимости от типа контента -->
-                        </div>
-                        
-                        <div class="form-actions">
-                            <button type="button" class="btn btn-secondary" onclick="closeModal('addContentModal')">Отмена</button>
-                            <button type="submit" class="btn btn-primary">Сохранить контент</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    document.getElementById('contentTypeSelect').value = defaultType;
-    
-    // Обновляем дополнительные поля при изменении типа контента
-    document.getElementById('contentTypeSelect').addEventListener('change', function() {
-        updateAdditionalFields(this.value);
-    });
-    
-    // Инициализируем дополнительные поля
-    updateAdditionalFields(defaultType);
-    
-    document.getElementById('addContentForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        addNewContent();
-    });
-    
-    console.log(`📝 Открыта форма добавления контента типа: ${defaultType}`);
-}
-
-function updateAdditionalFields(contentType) {
-    const additionalFields = document.getElementById('additionalFields');
-    if (!additionalFields) return;
-
-    let fieldsHTML = '';
-
-    switch(contentType) {
-        case 'courses':
-            fieldsHTML = `
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Длительность</label>
-                        <input type="text" id="contentDurationInput" placeholder="12 часов">
-                    </div>
-                    <div class="form-group">
-                        <label>Цена (руб.)</label>
-                        <input type="number" id="contentPriceInput" value="0" min="0">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Количество модулей</label>
-                    <input type="number" id="contentModulesInput" value="1" min="1">
-                </div>
-                <div class="form-group">
-                    <label>Видео файл</label>
-                    <input type="file" id="contentVideoInput" accept="video/*">
-                </div>
-                <div class="form-group">
-                    <label>Дополнительные материалы (PDF, DOC)</label>
-                    <input type="file" id="contentFileInput" accept=".pdf,.doc,.docx">
-                </div>
-            `;
-            break;
-
-        case 'podcasts':
-            fieldsHTML = `
-                <div class="form-group">
-                    <label>Длительность</label>
-                    <input type="text" id="contentDurationInput" placeholder="45:20">
-                </div>
-                <div class="form-group">
-                    <label>Аудио файл</label>
-                    <input type="file" id="contentFileInput" accept="audio/*">
-                </div>
-            `;
-            break;
-
-        case 'streams':
-            fieldsHTML = `
-                <div class="form-group">
-                    <label>Дата и время проведения</label>
-                    <input type="datetime-local" id="contentEventDate">
-                </div>
-                <div class="form-group">
-                    <label>Ссылка на трансляцию</label>
-                    <input type="url" id="contentStreamUrl" placeholder="https://youtube.com/...">
-                </div>
-            `;
-            break;
-
-        case 'videos':
-            fieldsHTML = `
-                <div class="form-group">
-                    <label>Длительность</label>
-                    <input type="text" id="contentDurationInput" placeholder="15:30">
-                </div>
-                <div class="form-group">
-                    <label>Видео файл</label>
-                    <input type="file" id="contentVideoInput" accept="video/*">
-                </div>
-            `;
-            break;
-
-        case 'materials':
-            fieldsHTML = `
-                <div class="form-group">
-                    <label>Тип материала</label>
-                    <select id="contentMaterialType">
-                        <option value="mri">МРТ разбор</option>
-                        <option value="case">Клинический случай</option>
-                        <option value="checklist">Чек-лист</option>
-                        <option value="article">Статья</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Файл материала</label>
-                    <input type="file" id="contentFileInput" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-                </div>
-            `;
-            break;
-
-        case 'events':
-            fieldsHTML = `
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Дата и время проведения</label>
-                        <input type="datetime-local" id="contentEventDate">
-                    </div>
-                    <div class="form-group">
-                        <label>Тип мероприятия</label>
-                        <select id="contentEventType">
-                            <option value="online">Онлайн</option>
-                            <option value="offline">Офлайн</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Место проведения</label>
-                    <input type="text" id="contentLocation" placeholder="Москва, ул. Примерная, 1">
-                </div>
-                <div class="form-group">
-                    <label>Ссылка для регистрации</label>
-                    <input type="url" id="contentRegistrationUrl" placeholder="https://forms.google.com/...">
-                </div>
-            `;
-            break;
-    }
-
-    additionalFields.innerHTML = fieldsHTML;
-}
-
-async function addNewContent() {
-    const form = document.getElementById('addContentForm');
-    const title = document.getElementById('contentTitleInput').value.trim();
-    const contentType = document.getElementById('contentTypeSelect').value;
-    
-    if (!title) {
-        showNotification('❌ Введите название контента', 'error');
-        return;
-    }
-    
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('description', document.getElementById('contentDescriptionInput').value.trim());
-    formData.append('fullDescription', document.getElementById('contentFullDescriptionInput').value.trim());
-    formData.append('contentType', contentType);
-
-    // Добавляем файлы
-    const imageFile = document.getElementById('contentImageInput').files[0];
-    if (imageFile) {
-        formData.append('image', imageFile);
-    }
-
-    // Добавляем дополнительные поля в зависимости от типа контента
-    switch(contentType) {
-        case 'courses':
-            formData.append('duration', document.getElementById('contentDurationInput').value.trim());
-            formData.append('price', document.getElementById('contentPriceInput').value);
-            formData.append('modules', document.getElementById('contentModulesInput').value);
-            
-            const videoFile = document.getElementById('contentVideoInput').files[0];
-            if (videoFile) formData.append('video', videoFile);
-            
-            const fileFile = document.getElementById('contentFileInput').files[0];
-            if (fileFile) formData.append('file', fileFile);
-            break;
-
-        case 'podcasts':
-            formData.append('duration', document.getElementById('contentDurationInput').value.trim());
-            
-            const audioFile = document.getElementById('contentFileInput').files[0];
-            if (audioFile) formData.append('file', audioFile);
-            break;
-
-        case 'streams':
-            formData.append('eventDate', document.getElementById('contentEventDate').value);
-            formData.append('streamUrl', document.getElementById('contentStreamUrl').value.trim());
-            break;
-
-        case 'videos':
-            formData.append('duration', document.getElementById('contentDurationInput').value.trim());
-            
-            const videoFile2 = document.getElementById('contentVideoInput').files[0];
-            if (videoFile2) formData.append('video', videoFile2);
-            break;
-
-        case 'materials':
-            formData.append('materialType', document.getElementById('contentMaterialType').value);
-            
-            const materialFile = document.getElementById('contentFileInput').files[0];
-            if (materialFile) formData.append('file', materialFile);
-            break;
-
-        case 'events':
-            formData.append('eventDate', document.getElementById('contentEventDate').value);
-            formData.append('location', document.getElementById('contentLocation').value.trim());
-            formData.append('eventType', document.getElementById('contentEventType').value);
-            formData.append('registrationUrl', document.getElementById('contentRegistrationUrl').value.trim());
-            break;
-    }
-    
-    console.log('📤 Отправка данных контента:', Object.fromEntries(formData));
-    
+async function loadDemoUser() {
     try {
-        const response = await fetch('/api/content', {
-            method: 'POST',
-            body: formData
-        });
+        const response = await fetch('/api/content');
+        const contentData = await response.json();
+        const content = contentData.success ? contentData.data : {};
         
-        const data = await response.json();
-        
-        if (data.success) {
-            showNotification('✅ Контент успешно добавлен', 'success');
-            closeModal('addContentModal');
-            await loadAdminData(); // Перезагружаем данные
-            loadContentList(contentType);
-        } else {
-            throw new Error(data.error || 'Unknown error');
-        }
-    } catch (error) {
-        console.error('❌ Ошибка при добавлении контента:', error);
-        showNotification('❌ Ошибка при добавлении контента: ' + error.message, 'error');
-    }
-}
-
-async function editContent(contentType, contentId) {
-    const content = adminData.content[contentType]?.find(item => item.id === contentId);
-    if (!content) {
-        showNotification('❌ Контент не найден', 'error');
-        return;
-    }
-    
-    console.log(`✏️ Редактирование контента: ${contentType} ID: ${contentId}`);
-    
-    const modalHTML = `
-        <div class="modal" id="editContentModal">
-            <div class="modal-content large">
-                <div class="modal-header">
-                    <h3>Редактировать контент</h3>
-                    <button class="close-btn" onclick="closeModal('editContentModal')">×</button>
-                </div>
-                <div class="modal-body">
-                    <form id="editContentForm">
-                        <div class="form-group">
-                            <label>Название *</label>
-                            <input type="text" id="editContentTitleInput" value="${escapeHtml(content.title)}" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Описание</label>
-                            <textarea id="editContentDescriptionInput" rows="3">${escapeHtml(content.description || '')}</textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Полное описание</label>
-                            <textarea id="editContentFullDescriptionInput" rows="5">${escapeHtml(content.full_description || content.fullDescription || '')}</textarea>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Длительность</label>
-                                <input type="text" id="editContentDurationInput" value="${escapeHtml(content.duration || '')}">
-                            </div>
-                            <div class="form-group">
-                                <label>Цена (руб.)</label>
-                                <input type="number" id="editContentPriceInput" value="${content.price || 0}" min="0">
-                            </div>
-                        </div>
-                        <div class="form-actions">
-                            <button type="button" class="btn btn-secondary" onclick="closeModal('editContentModal')">Отмена</button>
-                            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    document.getElementById('editContentForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        await updateContent(contentType, contentId);
-    });
-}
-
-async function updateContent(contentType, contentId) {
-    const updateData = {
-        title: document.getElementById('editContentTitleInput').value.trim(),
-        description: document.getElementById('editContentDescriptionInput').value.trim(),
-        fullDescription: document.getElementById('editContentFullDescriptionInput').value.trim(),
-        duration: document.getElementById('editContentDurationInput').value.trim(),
-        price: parseInt(document.getElementById('editContentPriceInput').value) || 0
-    };
-    
-    console.log(`📤 Обновление контента ${contentType} ID: ${contentId}`, updateData);
-    
-    try {
-        const response = await fetch(`/api/content/${contentType}/${contentId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
+        return {
+            id: 1,
+            firstName: 'Демо Пользователь',
+            lastName: '',
+            specialization: 'Невролог',
+            city: 'Москва',
+            email: 'demo@anb.ru',
+            subscription: { 
+                status: 'trial', 
+                type: 'trial_7days',
+                endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) 
             },
-            body: JSON.stringify(updateData)
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showNotification('✅ Контент успешно обновлен', 'success');
-            closeModal('editContentModal');
-            await loadAdminData();
-            loadContentList(contentType);
-        } else {
-            throw new Error(data.error || 'Unknown error');
-        }
+            progress: { 
+                level: 'Понимаю', 
+                steps: {
+                    materialsWatched: 5,
+                    eventsParticipated: 3,
+                    materialsSaved: 7,
+                    coursesBought: 1
+                }
+            },
+            favorites: { 
+                courses: content.courses ? [content.courses[0]?.id].filter(Boolean) : [], 
+                podcasts: content.podcasts ? [content.podcasts[0]?.id].filter(Boolean) : [], 
+                streams: content.streams ? [content.streams[0]?.id].filter(Boolean) : [], 
+                videos: content.videos ? [content.videos[0]?.id].filter(Boolean) : [], 
+                materials: content.materials ? [content.materials[0]?.id].filter(Boolean) : [], 
+                watchLater: content.streams ? [content.streams[0]?.id].filter(Boolean) : [] 
+            },
+            isAdmin: false,
+            joinedAt: new Date('2024-01-01'),
+            surveyCompleted: true
+        };
     } catch (error) {
-        console.error('❌ Ошибка при обновлении контента:', error);
-        showNotification('❌ Ошибка при обновлении контента: ' + error.message, 'error');
+        console.error('❌ Ошибка загрузки демо-данных:', error);
+        return getFallbackUser();
     }
 }
 
-async function deleteContent(contentType, contentId) {
-    const content = adminData.content[contentType]?.find(item => item.id === contentId);
-    if (!content) {
-        showNotification('❌ Контент не найден', 'error');
-        return;
-    }
+function getFallbackUser() {
+    return {
+        id: 1,
+        firstName: 'Демо Пользователь',
+        lastName: '',
+        specialization: 'Невролог',
+        city: 'Москва',
+        email: 'demo@anb.ru',
+        subscription: { 
+            status: 'trial', 
+            type: 'trial_7days',
+            endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) 
+        },
+        progress: { 
+            level: 'Понимаю', 
+            steps: {
+                materialsWatched: 5,
+                eventsParticipated: 3,
+                materialsSaved: 7,
+                coursesBought: 1
+            }
+        },
+        favorites: { 
+            courses: [1], 
+            podcasts: [1], 
+            streams: [1], 
+            videos: [1], 
+            materials: [1], 
+            watchLater: [1] 
+        },
+        isAdmin: false,
+        joinedAt: new Date('2024-01-01'),
+        surveyCompleted: true
+    };
+}
 
-    if (!confirm(`🗑️ Удалить контент "${content.title}"?`)) return;
-
-    console.log(`🗑️ Удаление контента: ${contentType} ID: ${contentId}`);
-    
+async function loadContent() {
     try {
-        const response = await fetch(`/api/content/${contentType}/${contentId}`, {
-            method: 'DELETE'
-        });
-        
+        const response = await fetch('/api/content');
         const data = await response.json();
         
         if (data.success) {
-            showNotification('✅ Контент удален', 'success');
-            await loadAdminData();
-            loadContentList(contentType);
+            allContent = data.data;
+            console.log('✅ Контент загружен:', allContent);
         } else {
-            throw new Error(data.error || 'Unknown error');
+            throw new Error('Failed to load content');
         }
     } catch (error) {
-        console.error('❌ Ошибка при удалении контента:', error);
-        showNotification('❌ Ошибка при удалении контента: ' + error.message, 'error');
+        console.error('❌ Ошибка загрузки контента:', error);
+        allContent = {};
+        showNotification('⚠️ Не удалось загрузить контент', 'error');
     }
 }
 
-// ==================== УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ ====================
-
-async function loadUsersList() {
-    const usersList = document.getElementById('usersList');
-    if (!usersList) return;
+function renderPage(page) {
+    currentPage = page;
+    const pageData = pages[page];
     
-    usersList.innerHTML = '<div class="loading">Загрузка пользователей...</div>';
+    document.getElementById('mainContent').innerHTML = `
+        <div class="page">
+            <h2>${pageData.title}</h2>
+            ${pageData.content}
+        </div>
+    `;
 
-    try {
-        const response = await fetch('/api/users');
-        const data = await response.json();
-        
-        if (data.success) {
-            adminData.users = data.users;
-            renderUsersList();
-            console.log(`✅ Загружено ${data.users.length} пользователей`);
-        } else {
-            throw new Error('Failed to load users');
-        }
-    } catch (error) {
-        console.error('❌ Ошибка загрузки пользователей:', error);
-        usersList.innerHTML = '<div class="error">Ошибка загрузки пользователей</div>';
-    }
-}
-
-function renderUsersList() {
-    const usersList = document.getElementById('usersList');
-    const searchTerm = document.getElementById('userSearch')?.value.toLowerCase() || '';
-    const filterType = document.getElementById('userFilter')?.value || 'all';
-
-    const filteredUsers = adminData.users.filter(user => {
-        const matchesSearch = user.firstName.toLowerCase().includes(searchTerm) ||
-                             (user.email && user.email.toLowerCase().includes(searchTerm)) ||
-                             (user.specialization && user.specialization.toLowerCase().includes(searchTerm));
-        
-        const matchesFilter = filterType === 'all' || 
-                             (filterType === 'active' && user.subscription?.status === 'active') ||
-                             (filterType === 'trial' && user.subscription?.status === 'trial') ||
-                             (filterType === 'inactive' && (!user.subscription || user.subscription.status === 'inactive'));
-        
-        return matchesSearch && matchesFilter;
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.page === page);
     });
 
-    if (filteredUsers.length === 0) {
-        usersList.innerHTML = `
+    initializePage(page);
+}
+
+function initializePage(page) {
+    switch (page) {
+        case 'home':
+            initHomePage();
+            break;
+        case 'catalog':
+            loadCatalogContent();
+            initCatalogFilters();
+            break;
+        case 'community':
+            initCommunityPage();
+            break;
+        case 'favorites':
+            loadFavorites();
+            initFavoritesPage();
+            break;
+        case 'profile':
+            updateProfileData();
+            break;
+    }
+}
+
+// ==================== ГЛАВНАЯ СТРАНИЦА ====================
+
+async function initHomePage() {
+    await loadNews();
+    initNewsFilters();
+}
+
+async function loadNews() {
+    const newsList = document.getElementById('newsList');
+    if (!newsList) return;
+
+    try {
+        const response = await fetch('/api/news');
+        const data = await response.json();
+        
+        if (data.success && data.news.length > 0) {
+            displayNews(data.news);
+        } else {
+            await loadContent();
+            generateNewsFromContent();
+        }
+    } catch (error) {
+        console.error('❌ Ошибка загрузки новостей:', error);
+        generateNewsFromContent();
+    }
+}
+
+function generateNewsFromContent() {
+    const news = [];
+    
+    if (allContent.courses && allContent.courses.length > 0) {
+        allContent.courses.slice(0, 2).forEach(course => {
+            news.push({
+                category: 'Профессиональное развитие',
+                title: `Новый курс: "${course.title}"`,
+                date: new Date(course.created_at).toLocaleDateString('ru-RU'),
+                excerpt: course.description,
+                type: 'courses'
+            });
+        });
+    }
+    
+    if (allContent.streams && allContent.streams.length > 0) {
+        allContent.streams.slice(0, 2).forEach(stream => {
+            news.push({
+                category: 'Вебинар',
+                title: `Предстоящий эфир: "${stream.title}"`,
+                date: new Date(stream.created_at).toLocaleDateString('ru-RU'),
+                excerpt: stream.description,
+                type: 'streams'
+            });
+        });
+    }
+    
+    // Добавляем общие новости если мало контента
+    if (news.length < 3) {
+        news.push({
+            category: 'Развитие',
+            title: 'Запуск новой образовательной платформы',
+            date: new Date().toLocaleDateString('ru-RU'),
+            excerpt: 'Академия АНБ представляет обновленную платформу для профессионального развития врачей',
+            type: 'development'
+        });
+    }
+    
+    displayNews(news.slice(0, 5));
+}
+
+function displayNews(news) {
+    const newsList = document.getElementById('newsList');
+    if (!newsList) return;
+
+    if (news.length === 0) {
+        newsList.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">👥</div>
-                <div class="empty-text">Пользователи не найдены</div>
-                <div class="empty-hint">Попробуйте изменить параметры поиска</div>
+                <div class="empty-icon">📰</div>
+                <div class="empty-text">Новости пока не добавлены</div>
+                <div class="empty-hint">Следите за обновлениями</div>
             </div>
         `;
         return;
     }
 
-    usersList.innerHTML = filteredUsers.map(user => `
-        <div class="admin-content-item">
-            <div class="user-info">
-                <div class="user-avatar">${user.isAdmin ? '👑' : '👤'}</div>
-                <div class="user-details">
-                    <div class="user-name">${user.firstName} ${user.lastName || ''}</div>
-                    <div class="user-meta">
-                        ${user.specialization ? `<span>🎯 ${user.specialization}</span>` : ''}
-                        ${user.city ? `<span>🏙️ ${user.city}</span>` : ''}
-                        ${user.email ? `<span>📧 ${user.email}</span>` : ''}
-                    </div>
-                    <div class="user-status">
-                        <span class="status-badge ${user.subscription?.status || 'inactive'}">
-                            ${getSubscriptionStatusText(user.subscription?.status)}
-                        </span>
-                        <span class="join-date">Зарегистрирован: ${formatDate(user.joinedAt)}</span>
-                    </div>
-                    <div class="user-stats">
-                        <span>📚 Материалов: ${user.progress?.steps?.materialsWatched || 0}</span>
-                        <span>👥 Мероприятий: ${user.progress?.steps?.eventsParticipated || 0}</span>
-                        <span>💾 Сохранено: ${user.progress?.steps?.materialsSaved || 0}</span>
-                        <span>🎓 Курсов: ${user.progress?.steps?.coursesBought || 0}</span>
-                    </div>
+    newsList.innerHTML = news.map(item => `
+        <div class="news-item" data-type="${item.type || 'news'}">
+            <div class="news-category">${item.category}</div>
+            <div class="news-title">${item.title}</div>
+            <div class="news-date">${item.date}</div>
+            <div class="news-excerpt">${item.excerpt}</div>
+        </div>
+    `).join('');
+}
+
+function initNewsFilters() {
+    document.querySelectorAll('#newsFilters .filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('#newsFilters .filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            filterNews(this.dataset.filter);
+        });
+    });
+}
+
+function filterNews(filter) {
+    const newsItems = document.querySelectorAll('.news-item');
+    let visibleCount = 0;
+    
+    newsItems.forEach(item => {
+        if (filter === 'all' || item.dataset.type === filter) {
+            item.style.display = 'block';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    if (visibleCount === 0) {
+        document.getElementById('newsList').innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">🔍</div>
+                <div class="empty-text">Новости не найдены</div>
+                <div class="empty-hint">Попробуйте другой фильтр</div>
+            </div>
+        `;
+    }
+}
+
+// ==================== КАТАЛОГ КОНТЕНТА ====================
+
+async function loadCatalogContent() {
+    await loadContent();
+    renderCatalogContent();
+}
+
+function renderCatalogContent() {
+    const contentGrid = document.getElementById('contentGrid');
+    if (!contentGrid) return;
+    
+    if (!allContent || Object.keys(allContent).length === 0) {
+        contentGrid.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📚</div>
+                <div class="empty-text">Контент пока не добавлен</div>
+                <div class="empty-hint">Следите за обновлениями</div>
+            </div>
+        `;
+        return;
+    }
+
+    let allItems = [];
+    Object.keys(allContent).forEach(type => {
+        if (allContent[type] && Array.isArray(allContent[type])) {
+            allContent[type].forEach(item => {
+                item.contentType = type;
+                allItems.push(item);
+            });
+        }
+    });
+
+    if (allItems.length === 0) {
+        contentGrid.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📚</div>
+                <div class="empty-text">Контент пока не добавлен</div>
+            </div>
+        `;
+        return;
+    }
+
+    // Сортируем по дате создания (новые первыми)
+    allItems.sort((a, b) => new Date(b.created_at || b.created) - new Date(a.created_at || a.created));
+
+    contentGrid.innerHTML = allItems.map(item => `
+        <div class="content-card" data-type="${item.contentType}">
+            <div class="content-card-header">
+                <div class="content-icon">${getContentIcon(item.contentType)}</div>
+                <button class="favorite-btn ${isFavorite(item.contentType, item.id) ? 'active' : ''}" 
+                        onclick="toggleFavorite('${item.contentType}', ${item.id})">
+                    ${isFavorite(item.contentType, item.id) ? '★' : '☆'}
+                </button>
+            </div>
+            <div class="content-card-body">
+                <div class="content-title">${item.title}</div>
+                <div class="content-description">${item.description || 'Описание отсутствует'}</div>
+                <div class="content-meta">
+                    ${item.duration ? `<span class="meta-item">⏱️ ${item.duration}</span>` : ''}
+                    ${item.price ? `<span class="meta-item">💰 ${formatPrice(item.price)}</span>` : ''}
+                    ${!item.price && item.contentType !== 'courses' ? `<span class="meta-item free">🆓 Бесплатно</span>` : ''}
+                    ${item.modules ? `<span class="meta-item">📚 ${item.modules} модулей</span>` : ''}
+                    ${item.type ? `<span class="meta-item">📁 ${getMaterialType(item.type)}</span>` : ''}
                 </div>
             </div>
-            <div class="user-actions">
-                <button class="btn btn-small" onclick="viewUser(${user.id})">👁️ Профиль</button>
-                <button class="btn btn-small" onclick="messageUser(${user.id})">✉️ Сообщение</button>
-                ${!user.isAdmin ? `<button class="btn btn-small btn-primary" onclick="makeAdmin(${user.id})">👑 Админ</button>` : ''}
+            <div class="content-card-actions">
+                <button class="btn btn-outline" onclick="addToWatchLater('${item.contentType}', ${item.id})">📥 Позже</button>
+                <button class="btn btn-primary" onclick="openContent('${item.contentType}', ${item.id})">
+                    ${getActionButtonText(item.contentType)}
+                </button>
             </div>
         </div>
     `).join('');
 }
 
-async function viewUser(userId) {
-    try {
-        const response = await fetch(`/api/user/${userId}`);
-        const data = await response.json();
+function initCatalogFilters() {
+    const searchInput = document.getElementById('catalogSearch');
+    const typeFilter = document.getElementById('contentTypeFilter');
+    const contentTabs = document.querySelectorAll('.content-tab');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(filterCatalogContent, 300));
+    }
+    
+    if (typeFilter) {
+        typeFilter.addEventListener('change', filterCatalogContent);
+    }
+    
+    contentTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            contentTabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            filterCatalogContent();
+        });
+    });
+}
+
+function filterCatalogContent() {
+    const searchTerm = document.getElementById('catalogSearch')?.value.toLowerCase() || '';
+    const contentType = document.getElementById('contentTypeFilter')?.value || 'all';
+    const activeTab = document.querySelector('.content-tab.active')?.dataset.tab || 'all';
+    
+    const cards = document.querySelectorAll('.content-card');
+    let visibleCount = 0;
+    
+    cards.forEach(card => {
+        const title = card.querySelector('.content-title').textContent.toLowerCase();
+        const description = card.querySelector('.content-description').textContent.toLowerCase();
+        const cardType = card.dataset.type;
+        const isFree = card.querySelector('.meta-item.free');
+        const isNew = true;
         
-        if (data.success) {
-            showUserModal(data.user);
+        const matchesSearch = title.includes(searchTerm) || description.includes(searchTerm);
+        const matchesType = contentType === 'all' || cardType === contentType;
+        const matchesTab = activeTab === 'all' || 
+                          (activeTab === 'free' && isFree) ||
+                          (activeTab === 'new' && isNew) ||
+                          (activeTab === 'popular' && cardType === 'streams');
+        
+        if (matchesSearch && matchesType && matchesTab) {
+            card.style.display = 'block';
+            visibleCount++;
         } else {
-            throw new Error('User not found');
+            card.style.display = 'none';
         }
-    } catch (error) {
-        console.error('❌ Ошибка загрузки пользователя:', error);
-        showNotification('❌ Пользователь не найден', 'error');
+    });
+    
+    const contentGrid = document.getElementById('contentGrid');
+    const noResults = contentGrid.querySelector('.no-results');
+    
+    if (visibleCount === 0) {
+        if (!noResults) {
+            const noResultsMsg = document.createElement('div');
+            noResultsMsg.className = 'empty-state no-results';
+            noResultsMsg.innerHTML = `
+                <div class="empty-icon">🔍</div>
+                <div class="empty-text">Ничего не найдено</div>
+                <div class="empty-hint">Попробуйте изменить параметры поиска</div>
+            `;
+            contentGrid.appendChild(noResultsMsg);
+        }
+    } else if (noResults) {
+        noResults.remove();
     }
 }
 
-function showUserModal(user) {
+// ==================== ИЗБРАННОЕ И МАТЕРИАЛЫ ====================
+
+async function loadFavorites() {
+    if (!currentUser) return;
+    
+    await loadContent();
+    await loadWatchLater();
+    await loadFavoritesList();
+    await loadPracticeMaterials();
+    updatePracticeCounts();
+}
+
+async function loadWatchLater() {
+    const watchLaterList = document.getElementById('watchLaterList');
+    if (!watchLaterList) return;
+    
+    const watchLaterItems = currentUser.favorites.watchLater.map(id => {
+        for (const type in allContent) {
+            const item = allContent[type].find(item => item.id === id);
+            if (item) return { ...item, contentType: type };
+        }
+        return null;
+    }).filter(item => item);
+    
+    if (watchLaterItems.length === 0) {
+        watchLaterList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📥</div>
+                <div class="empty-text">Здесь будут материалы, которые вы отложили на потом</div>
+                <div class="empty-hint">Нажимайте "Посмотреть позже" на карточках контента</div>
+            </div>
+        `;
+    } else {
+        watchLaterList.innerHTML = watchLaterItems.map(item => `
+            <div class="material-item">
+                <div class="material-icon">${getContentIcon(item.contentType)}</div>
+                <div class="material-info">
+                    <div class="material-title">${item.title}</div>
+                    <div class="material-description">${item.description}</div>
+                    <div class="material-meta">
+                        <span class="material-type">${getContentTypeName(item.contentType)}</span>
+                        <span class="material-date">Добавлено ${formatDate(item.created_at || item.created)}</span>
+                    </div>
+                </div>
+                <div class="material-actions">
+                    <button class="btn btn-small" onclick="openContent('${item.contentType}', ${item.id})">Открыть</button>
+                    <button class="btn btn-small btn-outline" onclick="removeFromWatchLater(${item.id})">❌ Удалить</button>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+async function loadFavoritesList() {
+    const favoritesList = document.getElementById('favoritesList');
+    if (!favoritesList) return;
+    
+    const allFavorites = [];
+    for (const type in currentUser.favorites) {
+        if (type !== 'watchLater') {
+            currentUser.favorites[type].forEach(id => {
+                for (const contentType in allContent) {
+                    const item = allContent[contentType].find(item => item.id === id);
+                    if (item) {
+                        allFavorites.push({ ...item, contentType });
+                    }
+                }
+            });
+        }
+    }
+    
+    if (allFavorites.length === 0) {
+        favoritesList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">⭐</div>
+                <div class="empty-text">Добавляйте материалы в избранное, нажимая на звездочку</div>
+                <div class="empty-hint">Ваши избранные материалы появятся здесь</div>
+            </div>
+        `;
+    } else {
+        favoritesList.innerHTML = allFavorites.map(item => `
+            <div class="material-item">
+                <div class="material-icon">${getContentIcon(item.contentType)}</div>
+                <div class="material-info">
+                    <div class="material-title">${item.title}</div>
+                    <div class="material-description">${item.description}</div>
+                    <div class="material-meta">
+                        <span class="material-type">${getContentTypeName(item.contentType)}</span>
+                    </div>
+                </div>
+                <div class="material-actions">
+                    <button class="btn btn-small btn-outline" onclick="toggleFavorite('${item.contentType}', ${item.id})">
+                        ❌ Удалить
+                    </button>
+                    <button class="btn btn-small" onclick="openContent('${item.contentType}', ${item.id})">Открыть</button>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+async function loadPracticeMaterials() {
+    const practiceList = document.getElementById('practiceMaterialsList');
+    if (!practiceList) return;
+    
+    const materials = allContent.materials || [];
+    const practiceMaterials = materials.filter(m => m.type && ['mri', 'case', 'checklist'].includes(m.type));
+    
+    if (practiceMaterials.length === 0) {
+        practiceList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📋</div>
+                <div class="empty-text">Практические материалы появятся здесь</div>
+            </div>
+        `;
+        return;
+    }
+    
+    practiceList.innerHTML = practiceMaterials.map(material => `
+        <div class="material-item">
+            <div class="material-icon">${getMaterialIcon(material.type)}</div>
+            <div class="material-info">
+                <div class="material-title">${material.title}</div>
+                <div class="material-description">${material.description}</div>
+                <div class="material-meta">
+                    <span class="material-type">${getMaterialType(material.type)}</span>
+                    ${material.duration ? `<span class="material-duration">⏱️ ${material.duration}</span>` : ''}
+                </div>
+            </div>
+            <div class="material-actions">
+                <button class="btn btn-small btn-outline ${isFavorite('materials', material.id) ? 'active' : ''}" 
+                        onclick="toggleFavorite('materials', ${material.id})">
+                    ${isFavorite('materials', material.id) ? '★' : '☆'}
+                </button>
+                <button class="btn btn-small" onclick="openContent('materials', ${material.id})">Открыть</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updatePracticeCounts() {
+    const materials = allContent.materials || [];
+    
+    const mriCount = materials.filter(m => m.type === 'mri').length;
+    const casesCount = materials.filter(m => m.type === 'case').length;
+    const checklistsCount = materials.filter(m => m.type === 'checklist').length;
+    
+    const mriElement = document.getElementById('mriCount');
+    const casesElement = document.getElementById('casesCount');
+    const checklistsElement = document.getElementById('checklistsCount');
+    
+    if (mriElement) mriElement.textContent = `${mriCount} материалов`;
+    if (casesElement) casesElement.textContent = `${casesCount} кейсов`;
+    if (checklistsElement) checklistsElement.textContent = `${checklistsCount} чек-листов`;
+}
+
+function initFavoritesPage() {
+    const materialTabs = document.querySelectorAll('.material-tab');
+    
+    materialTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabName = this.dataset.tab;
+            
+            materialTabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            document.querySelectorAll('.material-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+        });
+    });
+}
+
+// ==================== ПРОФИЛЬ И ПРОГРЕСС ====================
+
+function updateProfileData() {
+    if (!currentUser) return;
+    
+    updateUIWithUserData();
+    updateProfileStats();
+    loadJourneyProgress();
+}
+
+function updateUIWithUserData() {
+    if (!currentUser) return;
+    
+    const userNameElement = document.getElementById('userName');
+    const subscriptionStatusElement = document.getElementById('subscriptionStatus');
+    const joinDateElement = document.getElementById('joinDate');
+    const userBadgeElement = document.getElementById('userBadge');
+    
+    if (userNameElement) {
+        userNameElement.textContent = currentUser.firstName + (currentUser.lastName ? ' ' + currentUser.lastName : '');
+    }
+    
+    if (joinDateElement && currentUser.joinedAt) {
+        joinDateElement.textContent = new Date(currentUser.joinedAt).toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'});
+    }
+    
+    if (userBadgeElement) {
+        userBadgeElement.textContent = getUserBadge(currentUser.progress.level);
+    }
+    
+    if (subscriptionStatusElement) {
+        let statusHTML = '';
+        
+        if (currentUser.subscription.status === 'trial') {
+            const endDate = currentUser.subscription.endDate ? 
+                new Date(currentUser.subscription.endDate).toLocaleDateString('ru-RU') : 'неизвестно';
+            statusHTML = `
+                <div class="status-icon">🆓</div>
+                <div class="status-text">
+                    <div>Подписка: пробный период</div>
+                    <div class="status-date">до ${endDate}</div>
+                </div>
+            `;
+            subscriptionStatusElement.className = 'subscription-status trial';
+        } else if (currentUser.subscription.status === 'active') {
+            const endDate = currentUser.subscription.endDate ? 
+                new Date(currentUser.subscription.endDate).toLocaleDateString('ru-RU') : 'неизвестно';
+            statusHTML = `
+                <div class="status-icon">✅</div>
+                <div class="status-text">
+                    <div>Подписка: активна</div>
+                    <div class="status-date">до ${endDate}</div>
+                </div>
+            `;
+            subscriptionStatusElement.className = 'subscription-status active';
+        } else {
+            statusHTML = `
+                <div class="status-icon">❌</div>
+                <div class="status-text">Подписка: не активна</div>
+            `;
+            subscriptionStatusElement.className = 'subscription-status inactive';
+        }
+        
+        subscriptionStatusElement.innerHTML = statusHTML;
+    }
+}
+
+function updateProfileStats() {
+    if (!currentUser) return;
+    
+    const coursesElement = document.getElementById('coursesCompleted');
+    const materialsElement = document.getElementById('materialsWatched');
+    const eventsElement = document.getElementById('eventsAttended');
+    const savedElement = document.getElementById('materialsSaved');
+    
+    if (coursesElement) coursesElement.textContent = currentUser.progress.steps.coursesBought || 0;
+    if (materialsElement) materialsElement.textContent = currentUser.progress.steps.materialsWatched || 0;
+    if (eventsElement) eventsElement.textContent = currentUser.progress.steps.eventsParticipated || 0;
+    if (savedElement) savedElement.textContent = currentUser.progress.steps.materialsSaved || 0;
+}
+
+function loadJourneyProgress() {
+    const journeyProgress = document.getElementById('journeyProgress');
+    if (!journeyProgress) return;
+
+    const levels = [
+        {
+            level: 'Понимаю',
+            title: 'Понимаю',
+            description: 'Начинаю замечать закономерности и связи. Не просто слышу жалобы — вижу структуру боли.',
+            progress: calculateLevelProgress('Понимаю'),
+            total: 9,
+            current: calculateCurrentProgress('Понимаю'),
+            hint: 'Чтобы перейти к следующему этапу — продолжайте участвовать в эфирах и сохраняйте всё, что откликается, в «Мои материалы».',
+            active: currentUser.progress.level === 'Понимаю'
+        },
+        {
+            level: 'Связываю', 
+            title: 'Связываю',
+            description: 'Закономерности и связи складываются в единую картину. Боль приобретает смысл.',
+            progress: calculateLevelProgress('Связываю'),
+            total: 25,
+            current: calculateCurrentProgress('Связываю'),
+            hint: 'Чтобы перейти к следующему этапу — участвуйте в разборах и ищите взаимосвязи между изученными материалами.',
+            active: currentUser.progress.level === 'Связываю'
+        },
+        {
+            level: 'Применяю',
+            title: 'Применяю',
+            description: 'При взгляде на единую картину - боль воспринимается как следствие. Работа направлена на устранение причины.',
+            progress: calculateLevelProgress('Применяю'),
+            total: 23,
+            current: calculateCurrentProgress('Применяю'),
+            hint: 'Чтобы перейти к следующему этапу — выберите тему, в которой хотите углубиться, и пройдите обучение в Академии.',
+            active: currentUser.progress.level === 'Применяю'
+        },
+        {
+            level: 'Систематизирую',
+            title: 'Систематизирую',
+            description: 'Знания становятся инструментом, а не набором методик.',
+            progress: calculateLevelProgress('Систематизирую'),
+            total: 13,
+            current: calculateCurrentProgress('Систематизирую'),
+            hint: 'Продолжайте обучение и участвуйте в разборах как приглашенный гость.',
+            active: currentUser.progress.level === 'Систематизирую'
+        },
+        {
+            level: 'Делюсь',
+            title: 'Делюсь',
+            description: 'Опыт становится вкладом. Появляется желание обсуждать, помогать и развивать других.',
+            progress: calculateLevelProgress('Делюсь'),
+            total: 7,
+            current: calculateCurrentProgress('Делюсь'),
+            hint: 'Публикуйте собственные клинические кейсы и участвуйте в закрытых мероприятиях.',
+            active: currentUser.progress.level === 'Делюсь'
+        }
+    ];
+
+    journeyProgress.innerHTML = levels.map(level => `
+        <div class="journey-step ${level.active ? 'active' : ''}">
+            <div class="step-marker">${levels.indexOf(level) + 1}</div>
+            <div class="step-content">
+                <div class="step-title">${level.title}</div>
+                <div class="step-description">${level.description}</div>
+                <div class="step-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${level.progress}%"></div>
+                    </div>
+                    <div class="progress-text">${level.current} из ${level.total}</div>
+                </div>
+                ${level.hint ? `<div class="step-hint">${level.hint}</div>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function calculateLevelProgress(level) {
+    const currentLevel = currentUser.progress.level;
+    const levelIndex = ['Понимаю', 'Связываю', 'Применяю', 'Систематизирую', 'Делюсь'].indexOf(level);
+    const currentIndex = ['Понимаю', 'Связываю', 'Применяешь', 'Систематизирую', 'Делюсь'].indexOf(currentLevel);
+    
+    if (levelIndex < currentIndex) {
+        return 100;
+    } else if (levelIndex > currentIndex) {
+        return 0;
+    } else {
+        const progress = currentUser.progress.steps;
+        let completed = 0;
+        let total = 0;
+        
+        switch(level) {
+            case 'Понимаю':
+                completed = (progress.materialsWatched >= 1 ? 1 : 0) + 
+                           (progress.eventsParticipated >= 3 ? 1 : 0) + 
+                           (progress.materialsSaved >= 5 ? 1 : 0);
+                total = 3;
+                break;
+            case 'Связываю':
+                completed = (progress.materialsWatched >= 10 ? 1 : 0) + 
+                           (progress.eventsParticipated >= 5 ? 1 : 0) + 
+                           (progress.materialsSaved >= 10 ? 1 : 0);
+                total = 3;
+                break;
+            case 'Применяю':
+                completed = (progress.coursesBought >= 1 ? 1 : 0) + 
+                           (progress.materialsWatched >= 15 ? 1 : 0) + 
+                           (progress.eventsParticipated >= 7 ? 1 : 0);
+                total = 3;
+                break;
+            default:
+                completed = 1;
+                total = 3;
+        }
+        
+        return Math.round((completed / total) * 100);
+    }
+}
+
+function calculateCurrentProgress(level) {
+    const progress = currentUser.progress.steps;
+    
+    switch(level) {
+        case 'Понимаю':
+            return Math.min(progress.materialsWatched, 1) + 
+                   Math.min(progress.eventsParticipated, 3) + 
+                   Math.min(progress.materialsSaved, 5);
+        case 'Связываю':
+            return Math.min(progress.materialsWatched, 10) + 
+                   Math.min(progress.eventsParticipated, 5) + 
+                   Math.min(progress.materialsSaved, 10);
+        case 'Применяю':
+            return Math.min(progress.coursesBought, 1) + 
+                   Math.min(progress.materialsWatched, 15) + 
+                   Math.min(progress.eventsParticipated, 7);
+        default:
+            return 0;
+    }
+}
+
+// ==================== ИНТЕРАКТИВНЫЕ ФУНКЦИИ ====================
+
+async function toggleFavorite(contentType, contentId) {
+    if (!currentUser) {
+        showNotification('⚠️ Необходимо войти в систему');
+        return;
+    }
+
+    const isCurrentlyFavorite = isFavorite(contentType, contentId);
+    
+    try {
+        const response = await fetch(`/api/user/${currentUser.id}/favorites`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contentType,
+                contentId,
+                action: isCurrentlyFavorite ? 'remove' : 'add'
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            currentUser.favorites = data.favorites;
+            showNotification(isCurrentlyFavorite ? '❌ Удалено из избранного' : '⭐ Добавлено в избранное');
+            
+            if (currentPage === 'catalog') {
+                renderCatalogContent();
+            } else if (currentPage === 'favorites') {
+                loadFavorites();
+            }
+        }
+    } catch (error) {
+        console.error('❌ Ошибка обновления избранного:', error);
+        showNotification('❌ Ошибка при обновлении избранного', 'error');
+    }
+}
+
+async function addToWatchLater(contentType, contentId) {
+    if (!currentUser) {
+        showNotification('⚠️ Необходимо войти в систему');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/user/${currentUser.id}/watch-later`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contentType,
+                contentId,
+                action: 'add'
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            currentUser.favorites.watchLater = data.watchLater;
+            showNotification('📥 Добавлено в "Посмотреть позже"');
+            
+            if (currentPage === 'favorites') {
+                loadFavorites();
+            }
+        }
+    } catch (error) {
+        console.error('❌ Ошибка добавления в список:', error);
+        showNotification('❌ Ошибка при добавлении в список', 'error');
+    }
+}
+
+async function removeFromWatchLater(contentId) {
+    if (!currentUser) return;
+    
+    try {
+        const response = await fetch(`/api/user/${currentUser.id}/watch-later`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contentId,
+                action: 'remove'
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            currentUser.favorites.watchLater = data.watchLater;
+            showNotification('❌ Удалено из "Посмотреть позже"');
+            loadFavorites();
+        }
+    } catch (error) {
+        console.error('❌ Ошибка удаления из списка:', error);
+        showNotification('❌ Ошибка при удалении из списка', 'error');
+    }
+}
+
+async function openContent(contentType, contentId) {
+    if (!currentUser) {
+        showNotification('⚠️ Необходимо войти в систему');
+        return;
+    }
+
+    const content = allContent[contentType]?.find(item => item.id === contentId);
+    if (!content) {
+        showNotification('❌ Контент не найден');
+        return;
+    }
+
+    // Проверяем доступ к контенту
+    if (!hasAccessToContent(content)) {
+        showNotification('🔒 Для доступа к этому контенту нужна активная подписка');
+        changeSubscription();
+        return;
+    }
+
     const modalHTML = `
-        <div class="modal" id="userModal">
+        <div class="modal" id="contentModal">
             <div class="modal-content large">
                 <div class="modal-header">
-                    <h3>👤 Профиль пользователя</h3>
-                    <button class="close-btn" onclick="closeModal('userModal')">×</button>
+                    <h3>${content.title}</h3>
+                    <button class="close-btn" onclick="closeModal('contentModal')">×</button>
                 </div>
                 <div class="modal-body">
-                    <div class="user-profile">
-                        <div class="profile-header">
-                            <div class="avatar-large">${user.isAdmin ? '👑' : '👤'}</div>
-                            <div class="profile-info">
-                                <div class="profile-name">${user.firstName} ${user.lastName || ''}</div>
-                                <div class="profile-meta">
-                                    ${user.specialization ? `<span>🎯 ${user.specialization}</span>` : ''}
-                                    ${user.city ? `<span>🏙️ ${user.city}</span>` : ''}
-                                    ${user.email ? `<span>📧 ${user.email}</span>` : ''}
-                                </div>
-                                <div class="subscription-status ${user.subscription?.status || 'inactive'}">
-                                    ${getSubscriptionStatusText(user.subscription?.status)}
-                                    ${user.subscription?.endDate ? ` до ${formatDate(user.subscription.endDate)}` : ''}
+                    <div class="content-preview">
+                        <div class="preview-header">
+                            <div class="content-icon-large">${getContentIcon(contentType)}</div>
+                            <div class="preview-info">
+                                <div class="preview-title">${content.title}</div>
+                                <div class="preview-description">${content.description || ''}</div>
+                                <div class="preview-meta">
+                                    ${content.duration ? `<span>⏱️ ${content.duration}</span>` : ''}
+                                    ${content.price ? `<span>💰 ${formatPrice(content.price)}</span>` : ''}
+                                    ${content.modules ? `<span>📚 ${content.modules} модулей</span>` : ''}
+                                    ${content.type ? `<span>📁 ${getMaterialType(content.type)}</span>` : ''}
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="user-stats-detailed">
-                            <h4>📊 Статистика активности</h4>
-                            <div class="stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-value">${user.progress?.steps?.materialsWatched || 0}</div>
-                                    <div class="stat-label">Просмотрено материалов</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value">${user.progress?.steps?.eventsParticipated || 0}</div>
-                                    <div class="stat-label">Участий в мероприятиях</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value">${user.progress?.steps?.materialsSaved || 0}</div>
-                                    <div class="stat-label">Сохранено материалов</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value">${user.progress?.steps?.coursesBought || 0}</div>
-                                    <div class="stat-label">Приобретено курсов</div>
-                                </div>
-                            </div>
+                        <div class="content-actions-full">
+                            <button class="btn btn-primary" onclick="startContent('${contentType}', ${contentId})">
+                                ${getActionButtonText(contentType)}
+                            </button>
+                            <button class="btn btn-outline ${isFavorite(contentType, contentId) ? 'active' : ''}" 
+                                    onclick="toggleFavorite('${contentType}', ${contentId})">
+                                ${isFavorite(contentType, contentId) ? '★ В избранном' : '☆ В избранное'}
+                            </button>
+                            <button class="btn btn-outline" onclick="addToWatchLater('${contentType}', ${contentId})">
+                                📥 Посмотреть позже
+                            </button>
                         </div>
                         
-                        <div class="user-actions-full">
-                            <button class="btn btn-primary" onclick="editUserSubscription(${user.id})">✏️ Изменить подписку</button>
-                            <button class="btn btn-secondary" onclick="sendUserMessage(${user.id})">✉️ Отправить сообщение</button>
-                            <button class="btn btn-outline" onclick="exportUserData(${user.id})">📥 Экспорт данных</button>
+                        ${content.full_description ? `
+                            <div class="content-full-description">
+                                <h4>Описание</h4>
+                                <p>${content.full_description}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function hasAccessToContent(content) {
+    if (!currentUser) return false;
+    
+    // Бесплатный контент доступен всем
+    if (!content.price || content.price === 0) return true;
+    
+    // Проверяем активную подписку
+    return currentUser.subscription.status === 'active' || 
+           currentUser.subscription.status === 'trial' ||
+           currentUser.isAdmin;
+}
+
+function startContent(contentType, contentId) {
+    const content = allContent[contentType]?.find(item => item.id === contentId);
+    if (!content) return;
+
+    // Обновляем прогресс просмотра
+    updateUserProgress('materialsWatched');
+
+    const actions = {
+        'courses': () => {
+            showNotification('🎓 Начинаем курс...');
+            openCoursePlayer(content);
+        },
+        'podcasts': () => {
+            showNotification('🎧 Запускаем подкаст...');
+            openAudioPlayer(content);
+        },
+        'streams': () => {
+            showNotification('📹 Начинаем трансляцию...');
+            openVideoPlayer(content);
+        },
+        'videos': () => {
+            showNotification('🎯 Воспроизводим видео...');
+            openVideoPlayer(content);
+        },
+        'materials': () => {
+            showNotification('📄 Открываем материал...');
+            openMaterialViewer(content);
+        },
+        'events': () => {
+            showNotification('🗺️ Переходим к мероприятию...');
+            openEventRegistration(content);
+        }
+    };
+    
+    if (actions[contentType]) {
+        actions[contentType]();
+    }
+    
+    closeModal('contentModal');
+}
+
+// ==================== СИСТЕМА ВОСПРОИЗВЕДЕНИЯ ====================
+
+function openCoursePlayer(course) {
+    const modalHTML = `
+        <div class="modal" id="coursePlayerModal">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h3>${course.title}</h3>
+                    <button class="close-btn" onclick="closeModal('coursePlayerModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="video-player">
+                        <div class="player-placeholder">
+                            <div class="placeholder-icon">🎓</div>
+                            <div class="placeholder-text">Видеоплеер курса</div>
+                            <div class="placeholder-note">Здесь будет видео-контент курса</div>
+                        </div>
+                    </div>
+                    <div class="player-controls">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 30%"></div>
+                        </div>
+                        <div class="control-buttons">
+                            <button class="btn btn-outline" onclick="pauseContent()">⏸️ Пауза</button>
+                            <button class="btn btn-outline" onclick="skipForward()">⏩ +15с</button>
+                            <button class="btn btn-primary" onclick="completeContent('course')">✅ Завершить модуль</button>
                         </div>
                     </div>
                 </div>
@@ -845,110 +1396,566 @@ function showUserModal(user) {
     `;
     
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    console.log(`👁️ Просмотр профиля пользователя: ${user.firstName}`);
 }
 
-async function editUserSubscription(userId) {
-    const user = adminData.users.find(u => u.id === userId);
-    if (!user) return;
-
-    const newStatus = prompt('Изменить статус подписки (active/trial/inactive):', user.subscription?.status || 'inactive');
-    if (newStatus && ['active', 'trial', 'inactive'].includes(newStatus)) {
-        try {
-            const endDate = newStatus === 'active' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) :
-                          newStatus === 'trial' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : null;
-
-            const response = await fetch(`/api/user/${userId}/subscription`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    plan: newStatus === 'active' ? '1_month' : 'trial_7days'
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                showNotification(`✅ Подписка пользователя изменена на "${newStatus}"`, 'success');
-                closeModal('userModal');
-                await loadUsersList();
-            } else {
-                throw new Error(data.error);
-            }
-        } catch (error) {
-            console.error('❌ Ошибка при изменении подписки:', error);
-            showNotification('❌ Ошибка при изменении подписки', 'error');
-        }
-    }
-}
-
-async function sendUserMessage(userId) {
-    const user = adminData.users.find(u => u.id === userId);
-    if (!user) return;
+function openVideoPlayer(video) {
+    const modalHTML = `
+        <div class="modal" id="videoPlayerModal">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h3>${video.title}</h3>
+                    <button class="close-btn" onclick="closeModal('videoPlayerModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="video-player">
+                        <div class="player-placeholder">
+                            <div class="placeholder-icon">📹</div>
+                            <div class="placeholder-text">Видеоплеер</div>
+                            <div class="placeholder-note">Продолжительность: ${video.duration}</div>
+                        </div>
+                    </div>
+                    <div class="player-controls">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="control-buttons">
+                            <button class="btn btn-outline" onclick="pauseContent()">⏸️ Пауза</button>
+                            <button class="btn btn-outline" onclick="skipForward()">⏩ +15с</button>
+                            <button class="btn btn-primary" onclick="completeContent('video')">✅ Завершить просмотр</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     
-    const message = prompt(`Введите сообщение для ${user.firstName}:`);
-    if (message) {
-        try {
-            const response = await fetch(`/api/user/${userId}/message`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                showNotification('✉️ Сообщение отправлено', 'success');
-            } else {
-                throw new Error(data.error);
-            }
-        } catch (error) {
-            console.error('❌ Ошибка при отправке сообщения:', error);
-            showNotification('❌ Ошибка при отправке сообщения', 'error');
-        }
-    }
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
-async function makeAdmin(userId) {
-    const user = adminData.users.find(u => u.id === userId);
-    if (!user) return;
+function openAudioPlayer(podcast) {
+    const modalHTML = `
+        <div class="modal" id="audioPlayerModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>${podcast.title}</h3>
+                    <button class="close-btn" onclick="closeModal('audioPlayerModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="audio-player">
+                        <div class="player-placeholder">
+                            <div class="placeholder-icon">🎧</div>
+                            <div class="placeholder-text">Аудиоплеер подкаста</div>
+                            <div class="placeholder-note">Продолжительность: ${podcast.duration}</div>
+                        </div>
+                    </div>
+                    <div class="player-controls">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="control-buttons">
+                            <button class="btn btn-outline" onclick="pauseContent()">⏸️ Пауза</button>
+                            <button class="btn btn-outline" onclick="skipForward()">⏩ +30с</button>
+                            <button class="btn btn-primary" onclick="completeContent('audio')">✅ Завершить прослушивание</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     
-    if (confirm(`Назначить пользователя ${user.firstName} администратором?`)) {
-        try {
-            const response = await fetch('/api/admins', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ userId })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                showNotification('✅ Пользователь назначен администратором', 'success');
-                await loadAdmins();
-                await loadUsersList();
-            } else {
-                throw new Error(data.error);
-            }
-        } catch (error) {
-            console.error('❌ Ошибка при назначении администратора:', error);
-            showNotification('❌ Ошибка при назначении администратора', 'error');
-        }
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function openMaterialViewer(material) {
+    const modalHTML = `
+        <div class="modal" id="materialModal">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h3>${material.title}</h3>
+                    <button class="close-btn" onclick="closeModal('materialModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="material-viewer">
+                        <div class="viewer-placeholder">
+                            <div class="placeholder-icon">📄</div>
+                            <div class="placeholder-text">Просмотр материала</div>
+                            <div class="placeholder-note">Тип: ${getMaterialType(material.type)}</div>
+                            ${material.duration ? `<div class="placeholder-note">Время изучения: ${material.duration}</div>` : ''}
+                        </div>
+                        <div class="material-content">
+                            <h4>Содержание материала:</h4>
+                            <p>${material.full_description || material.description || 'Подробное содержание материала будет отображено здесь.'}</p>
+                        </div>
+                    </div>
+                    <div class="material-actions">
+                        <button class="btn btn-primary" onclick="completeContent('material')">✅ Изучил материал</button>
+                        <button class="btn btn-outline" onclick="downloadMaterial()">📥 Скачать</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function openEventRegistration(event) {
+    const modalHTML = `
+        <div class="modal" id="eventModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>${event.title}</h3>
+                    <button class="close-btn" onclick="closeModal('eventModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="event-details">
+                        <div class="event-info">
+                            <div class="info-item">
+                                <span class="info-label">📅 Дата:</span>
+                                <span class="info-value">${event.date || 'Скоро будет объявлено'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">⏰ Время:</span>
+                                <span class="info-value">${event.time || 'Уточняется'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">📍 Формат:</span>
+                                <span class="info-value">${event.type === 'online' ? '🌐 Онлайн' : '🏢 Офлайн'}</span>
+                            </div>
+                            ${event.location ? `
+                                <div class="info-item">
+                                    <span class="info-label">🏢 Место:</span>
+                                    <span class="info-value">${event.location}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="event-description">
+                            <p>${event.full_description || event.description || 'Подробности мероприятия будут объявлены дополнительно.'}</p>
+                        </div>
+                        
+                        <div class="event-registration">
+                            <h4>Регистрация на мероприятие</h4>
+                            <form id="eventRegistrationForm">
+                                <div class="form-group">
+                                    <label>Ваше имя *</label>
+                                    <input type="text" value="${currentUser.firstName}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Email для связи *</label>
+                                    <input type="email" value="${currentUser.email}" required>
+                                </div>
+                                ${event.type === 'online' ? `
+                                    <div class="form-group">
+                                        <label>
+                                            <input type="checkbox" checked> 
+                                            Получить ссылку на подключение
+                                        </label>
+                                    </div>
+                                ` : ''}
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    document.getElementById('eventRegistrationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        registerForEvent(event.id);
+    });
+}
+
+// Функции управления контентом
+function pauseContent() {
+    showNotification('⏸️ Воспроизведение приостановлено');
+}
+
+function skipForward() {
+    showNotification('⏩ Перемотка вперед');
+}
+
+async function completeContent(type) {
+    await updateUserProgress('materialsWatched');
+    
+    let message = '✅ Контент завершен!';
+    switch(type) {
+        case 'course': message = '✅ Модуль завершен!'; break;
+        case 'video': message = '✅ Видео завершено!'; break;
+        case 'audio': message = '✅ Аудио завершено!'; break;
+        case 'material': message = '✅ Материал изучен!'; break;
+    }
+    
+    showNotification(message);
+    
+    // Закрываем соответствующий модал
+    switch(type) {
+        case 'course': closeModal('coursePlayerModal'); break;
+        case 'video': closeModal('videoPlayerModal'); break;
+        case 'audio': closeModal('audioPlayerModal'); break;
+        case 'material': closeModal('materialModal'); break;
     }
 }
 
-function exportUserData(userId) {
-    const user = adminData.users.find(u => u.id === userId);
-    if (!user) return;
+function downloadMaterial() {
+    showNotification('📥 Начато скачивание материала...');
+}
+
+async function registerForEvent(eventId) {
+    try {
+        const response = await fetch(`/api/user/${currentUser.id}/events`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ eventId, action: 'register' })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showNotification('✅ Вы успешно зарегистрированы на мероприятие!');
+            await updateUserProgress('eventsAttended');
+            closeModal('eventModal');
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (error) {
+        console.error('❌ Ошибка регистрации на мероприятие:', error);
+        showNotification('❌ Ошибка при регистрации на мероприятие', 'error');
+    }
+}
+
+// ==================== СИСТЕМА ПОДПИСКИ ====================
+
+async function changeSubscription() {
+    if (!currentUser) return;
+    
+    const modalHTML = `
+        <div class="modal" id="subscriptionModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>💳 Управление подпиской</h3>
+                    <button class="close-btn" onclick="closeModal('subscriptionModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="current-subscription">
+                        <h4>Текущий статус</h4>
+                        <div class="subscription-status-large ${currentUser.subscription.status}">
+                            <div class="status-icon">${currentUser.subscription.status === 'active' ? '✅' : currentUser.subscription.status === 'trial' ? '🆓' : '❌'}</div>
+                            <div class="status-info">
+                                <div class="status-title">${getSubscriptionStatusText(currentUser.subscription.status)}</div>
+                                ${currentUser.subscription.endDate ? `
+                                    <div class="status-date">до ${new Date(currentUser.subscription.endDate).toLocaleDateString('ru-RU')}</div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="subscription-plans">
+                        <h4>Доступные тарифы</h4>
+                        <div class="plan-card">
+                            <div class="plan-header">
+                                <div class="plan-name">1 месяц</div>
+                                <div class="plan-price">2 900 ₽</div>
+                            </div>
+                            <ul class="plan-features">
+                                <li>✅ Полный доступ к курсам</li>
+                                <li>✅ Участие в эфирах</li>
+                                <li>✅ Практические материалы</li>
+                                <li>✅ Чат специалистов</li>
+                            </ul>
+                            <button class="btn btn-primary" onclick="selectPlan('1_month')">Выбрать</button>
+                        </div>
+                        
+                        <div class="plan-card popular">
+                            <div class="plan-badge">Выгодно</div>
+                            <div class="plan-header">
+                                <div class="plan-name">3 месяца</div>
+                                <div class="plan-price">7 500 ₽</div>
+                                <div class="plan-save">Экономия 600 ₽</div>
+                            </div>
+                            <ul class="plan-features">
+                                <li>✅ Полный доступ к курсам</li>
+                                <li>✅ Участие в эфирах</li>
+                                <li>✅ Практические материалы</li>
+                                <li>✅ Чат специалистов</li>
+                                <li>✅ Персональный сертификат</li>
+                            </ul>
+                            <button class="btn btn-primary" onclick="selectPlan('3_months')">Выбрать</button>
+                        </div>
+
+                        <div class="plan-card">
+                            <div class="plan-header">
+                                <div class="plan-name">12 месяцев</div>
+                                <div class="plan-price">24 000 ₽</div>
+                                <div class="plan-save">Экономия 10 800 ₽</div>
+                            </div>
+                            <ul class="plan-features">
+                                <li>✅ Полный доступ к курсам</li>
+                                <li>✅ Участие в эфирах</li>
+                                <li>✅ Практические материалы</li>
+                                <li>✅ Чат специалистов</li>
+                                <li>✅ Доступ к закрытым мероприятиям</li>
+                                <li>✅ Индивидуальные консультации</li>
+                            </ul>
+                            <button class="btn btn-primary" onclick="selectPlan('12_months')">Выбрать</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+async function selectPlan(plan) {
+    if (!currentUser) return;
+    
+    try {
+        const response = await fetch(`/api/user/${currentUser.id}/subscription`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            currentUser.subscription = data.subscription;
+            showNotification('🎉 Подписка успешно оформлена!');
+            closeModal('subscriptionModal');
+            updateUIWithUserData();
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (error) {
+        console.error('❌ Ошибка оформления подписки:', error);
+        showNotification('❌ Ошибка при оформлении подписки', 'error');
+    }
+}
+
+// ==================== СООБЩЕСТВО И ПОДДЕРЖКА ====================
+
+function initCommunityPage() {
+    loadFAQ();
+    initFAQ();
+}
+
+async function loadFAQ() {
+    const faqList = document.getElementById('faqList');
+    if (!faqList) return;
+
+    try {
+        const response = await fetch('/api/faq');
+        const data = await response.json();
+        
+        if (data.success) {
+            displayFAQ(data.faq);
+        } else {
+            displayDefaultFAQ();
+        }
+    } catch (error) {
+        console.error('❌ Ошибка загрузки FAQ:', error);
+        displayDefaultFAQ();
+    }
+}
+
+function displayFAQ(faqItems) {
+    const faqList = document.getElementById('faqList');
+    if (!faqList) return;
+
+    faqList.innerHTML = faqItems.map(item => `
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFAQ(this)">${item.question}</div>
+            <div class="faq-answer">${item.answer}</div>
+        </div>
+    `).join('');
+}
+
+function displayDefaultFAQ() {
+    const defaultFAQ = [
+        {
+            question: "Как оформить, продлить или отменить подписку?",
+            answer: "Подписку можно оформить или продлить в разделе «Личный кабинет». Там же доступна отмена — через кнопку «Изменить подписку»."
+        },
+        {
+            question: "Что входит в подписку Академии?",
+            answer: "Доступ к эфирам, разборам (в том числе в записи), практическим материалам, видео-шпаргалки на разные темы, а также к чату специалистов и интерактивной карте офлайн-мероприятий."
+        },
+        {
+            question: "Можно ли смотреть материалы без подписки?",
+            answer: "Да, часть контента доступна в пробном периоде для ознакомления. Полный доступ и участие в развитии открываются при активной подписке."
+        },
+        {
+            question: "Чем отличаются курсы, эфиры, разборы, видео-шпаргалки и практические материалы?",
+            answer: "Курсы — системное обучение с сертификатами. Эфиры — живые встречи. Разборы — реальные кейсы врачей. Видео-шпаргалки — короткие видео с техниками. Практические материалы — полезные инструменты для работы."
+        }
+    ];
+    
+    displayFAQ(defaultFAQ);
+}
+
+function initFAQ() {
+    const faqQuestions = document.querySelectorAll('.faq-question');
+    faqQuestions.forEach(question => {
+        question.addEventListener('click', function() {
+            toggleFAQ(this);
+        });
+    });
+}
+
+function toggleFAQ(element) {
+    const answer = element.nextElementSibling;
+    const isVisible = answer.style.display === 'block';
+    
+    // Скрываем все ответы
+    document.querySelectorAll('.faq-answer').forEach(ans => {
+        ans.style.display = 'none';
+    });
+    
+    // Показываем/скрываем текущий ответ
+    answer.style.display = isVisible ? 'none' : 'block';
+}
+
+function showCommunityRules() {
+    const modalHTML = `
+        <div class="modal" id="rulesModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>📜 Правила сообщества</h3>
+                    <button class="close-btn" onclick="closeModal('rulesModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="rules-content">
+                        <h4>Основные принципы взаимодействия</h4>
+                        <ol>
+                            <li><strong>Уважение к коллегам:</strong> Поддерживайте доброжелательную атмосферу</li>
+                            <li><strong>Профессионализм:</strong> Делитесь только проверенной информацией</li>
+                            <li><strong>Конфиденциальность:</strong> Не разглашайте данные пациентов</li>
+                            <li><strong>Взаимопомощь:</strong> Помогайте коллегам в профессиональных вопросах</li>
+                            <li><strong>Соблюдение этики:</strong> Придерживайтесь врачебной этики</li>
+                        </ol>
+                        
+                        <h4>Что запрещено:</h4>
+                        <ul>
+                            <li>Реклама сторонних услуг</li>
+                            <li>Некорректное поведение</li>
+                            <li>Распространение недостоверной информации</li>
+                            <li>Нарушение конфиденциальности</li>
+                        </ul>
+                        
+                        <div class="rules-footer">
+                            <p>Координатор проекта отвечает с ПН-ПТ с 11:00 до 19:00</p>
+                            <p>Сообщить о нарушении: @academy_anb</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function showFAQ() {
+    renderPage('community');
+}
+
+function openChat(chatType) {
+    if (!currentUser || currentUser.subscription.status === 'inactive') {
+        showNotification('💬 Для доступа к чатам необходима активная подписка');
+        return;
+    }
+    
+    const chatNames = {
+        'general': 'Флудилка',
+        'specialists': 'Чат специалистов'
+    };
+    
+    showNotification(`💬 Открываем чат: ${chatNames[chatType]}`);
+}
+
+function openMaterials(materialType) {
+    const types = {
+        'mri': 'МРТ разборы',
+        'cases': 'Клинические случаи',
+        'checklists': 'Чек-листы'
+    };
+    
+    showNotification(`📋 Открываем: ${types[materialType]}`);
+    if (currentPage === 'favorites') {
+        document.querySelector('[data-tab="practice"]').click();
+    }
+}
+
+// ==================== ПРОФИЛЬ И ДОСТИЖЕНИЯ ====================
+
+function editProfile() {
+    showNotification('✏️ Редактирование профиля в разработке');
+}
+
+function showAchievements() {
+    const modalHTML = `
+        <div class="modal" id="achievementsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🏆 Мои достижения</h3>
+                    <button class="close-btn" onclick="closeModal('achievementsModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="achievements-list">
+                        <div class="achievement-item completed">
+                            <div class="achievement-icon">🎯</div>
+                            <div class="achievement-info">
+                                <div class="achievement-title">Первый шаг</div>
+                                <div class="achievement-description">Завершил первый материал</div>
+                            </div>
+                        </div>
+                        <div class="achievement-item completed">
+                            <div class="achievement-icon">👥</div>
+                            <div class="achievement-info">
+                                <div class="achievement-title">Активный участник</div>
+                                <div class="achievement-description">Участвовал в 3+ мероприятиях</div>
+                            </div>
+                        </div>
+                        <div class="achievement-item">
+                            <div class="achievement-icon">📚</div>
+                            <div class="achievement-info">
+                                <div class="achievement-title">Знаток</div>
+                                <div class="achievement-description">Изучил 10+ материалов</div>
+                            </div>
+                        </div>
+                        <div class="achievement-item">
+                            <div class="achievement-icon">💎</div>
+                            <div class="achievement-info">
+                                <div class="achievement-title">Эксперт</div>
+                                <div class="achievement-description">Завершил полный курс</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function exportData() {
+    if (!currentUser) return;
     
     const userData = {
-        profile: user,
+        profile: currentUser,
+        stats: {
+            coursesCompleted: currentUser.progress.steps.coursesBought || 0,
+            materialsWatched: currentUser.progress.steps.materialsWatched || 0,
+            eventsAttended: currentUser.progress.steps.eventsParticipated || 0,
+            materialsSaved: currentUser.progress.steps.materialsSaved || 0
+        },
         exportDate: new Date().toISOString()
     };
     
@@ -958,361 +1965,185 @@ function exportUserData(userId) {
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `user_${userId}_data.json`;
+    link.download = `anb_academy_data_${currentUser.id}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    showNotification('📥 Данные пользователя экспортированы', 'success');
+    showNotification('📥 Данные экспортированы', 'success');
 }
 
-// ==================== УПРАВЛЕНИЕ АДМИНИСТРАТОРАМИ ====================
+// ==================== НАВИГАЦИЯ И ПОИСК ====================
 
-async function loadAdmins() {
-    const adminsList = document.getElementById('adminsList');
-    if (!adminsList) return;
-
-    adminsList.innerHTML = '<div class="loading">Загрузка администраторов...</div>';
-
-    try {
-        const response = await fetch('/api/admins');
-        const data = await response.json();
-        
-        if (data.success) {
-            adminData.admins = data.data;
-            updateAdminsList();
-            console.log(`✅ Загружено ${data.data.length} администраторов`);
-        } else {
-            throw new Error('Failed to load admins');
+function openSection(section) {
+    const sections = {
+        'courses': () => { 
+            renderPage('catalog');
+            setTimeout(() => {
+                document.getElementById('contentTypeFilter').value = 'courses';
+                filterCatalogContent();
+            }, 100);
+        },
+        'podcasts': () => { 
+            renderPage('catalog');
+            setTimeout(() => {
+                document.getElementById('contentTypeFilter').value = 'podcasts';
+                filterCatalogContent();
+            }, 100);
+        },
+        'streams': () => { 
+            renderPage('catalog');
+            setTimeout(() => {
+                document.getElementById('contentTypeFilter').value = 'streams';
+                filterCatalogContent();
+            }, 100);
+        },
+        'videos': () => { 
+            renderPage('catalog');
+            setTimeout(() => {
+                document.getElementById('contentTypeFilter').value = 'videos';
+                filterCatalogContent();
+            }, 100);
+        },
+        'materials': () => { 
+            renderPage('catalog');
+            setTimeout(() => {
+                document.getElementById('contentTypeFilter').value = 'materials';
+                filterCatalogContent();
+            }, 100);
+        },
+        'events': () => { 
+            renderPage('catalog');
+            setTimeout(() => {
+                document.getElementById('contentTypeFilter').value = 'events';
+                filterCatalogContent();
+            }, 100);
+        },
+        'offers': () => { 
+            showNotification('🔥 Ограниченные предложения - специальные условия и акции');
         }
-    } catch (error) {
-        console.error('❌ Ошибка загрузки списка админов:', error);
-        adminsList.innerHTML = '<div class="error">Ошибка загрузки администраторов</div>';
+    };
+    
+    if (sections[section]) {
+        sections[section]();
     }
 }
 
-function updateAdminsList() {
-    const adminsList = document.getElementById('adminsList');
-    if (!adminsList) return;
-
-    if (adminData.admins.length === 0) {
-        adminsList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">👑</div>
-                <div class="empty-text">Нет администраторов</div>
-                <button class="btn btn-primary" onclick="addNewAdmin()">Добавить первого</button>
-            </div>
-        `;
-        return;
+function openSupport() {
+    if (window.Telegram && Telegram.WebApp) {
+        Telegram.WebApp.openTelegramLink('https://t.me/academy_anb');
+    } else {
+        showNotification('💬 Поддержка: @academy_anb');
     }
-
-    adminsList.innerHTML = adminData.admins.map(admin => `
-        <div class="admin-item">
-            <div class="admin-info">
-                <div class="admin-avatar">👑</div>
-                <div class="admin-details">
-                    <div class="admin-name">${admin.first_name || `Пользователь ${admin.id}`}</div>
-                    <div class="admin-meta">
-                        ${admin.username ? `<span>@${admin.username}</span>` : ''}
-                        <span>ID: ${admin.id}</span>
-                    </div>
-                    <div class="admin-join-date">С ${formatDate(admin.joined_at)}</div>
-                </div>
-            </div>
-            <div class="admin-actions">
-                ${admin.id !== 898508164 ? `
-                    <button class="btn btn-small btn-danger" onclick="removeAdmin(${admin.id})">🗑️ Удалить</button>
-                ` : '<div class="main-admin-badge">👑 Главный администратор</div>'}
-            </div>
-        </div>
-    `).join('');
 }
 
-async function addNewAdmin() {
-    const userId = prompt('Введите ID пользователя для назначения администратором:');
+function toggleSearch() {
+    const searchContainer = document.getElementById('searchContainer');
+    searchContainer.style.display = searchContainer.style.display === 'none' ? 'block' : 'none';
     
-    if (!userId || isNaN(userId)) {
-        showNotification('❌ Введите корректный ID пользователя', 'error');
-        return;
+    if (searchContainer.style.display === 'block') {
+        document.getElementById('searchInput').focus();
     }
+}
 
-    const userIdNum = parseInt(userId);
-    
-    try {
-        const response = await fetch('/api/admins', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ userId: userIdNum })
-        });
+function performSearch(query) {
+    if (query.trim()) {
+        showNotification(`🔍 Поиск: "${query}"`);
+        renderPage('catalog');
         
-        const data = await response.json();
-        
-        if (data.success) {
-            showNotification('✅ Администратор добавлен', 'success');
-            await loadAdmins();
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('❌ Ошибка при добавлении админа:', error);
-        showNotification('❌ Ошибка при добавлении администратора: ' + error.message, 'error');
+        setTimeout(() => {
+            const catalogSearch = document.getElementById('catalogSearch');
+            if (catalogSearch) {
+                catalogSearch.value = query;
+                filterCatalogContent();
+            }
+        }, 100);
     }
 }
 
-async function removeAdmin(userId) {
-    const admin = adminData.admins.find(a => a.id === userId);
-    if (!admin) return;
-
-    if (!confirm(`🗑️ Удалить администратора ${admin.first_name || `пользователя ${userId}`}?`)) return;
-
-    try {
-        const response = await fetch(`/api/admins/${userId}`, {
-            method: 'DELETE'
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showNotification('✅ Администратор удален', 'success');
-            await loadAdmins();
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('❌ Ошибка при удалении админа:', error);
-        showNotification('❌ Ошибка при удалении администратора: ' + error.message, 'error');
-    }
+function goToAdminPanel() {
+    window.location.href = '/admin.html';
 }
 
-// ==================== ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИОНАЛЫ ====================
+// ==================== УТИЛИТЫ ====================
 
-function loadSubscriptions() {
-    const subscriptionsTab = document.getElementById('subscriptions');
-    if (!subscriptionsTab) return;
-    
-    subscriptionsTab.innerHTML = `
-        <h2>💳 Управление подписками</h2>
-        <div class="subscriptions-stats">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value">${adminData.stats.activeUsers || 0}</div>
-                    <div class="stat-label">Активных подписок</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${(adminData.stats.totalUsers || 0) - (adminData.stats.activeUsers || 0)}</div>
-                    <div class="stat-label">Неактивных</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${((adminData.stats.activeUsers || 0) / (adminData.stats.totalUsers || 1) * 100).toFixed(1)}%</div>
-                    <div class="stat-label">Конверсия</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="subscriptions-actions">
-            <h3>Действия</h3>
-            <div class="action-buttons">
-                <button class="btn btn-primary" onclick="createPromoCode()">🎫 Создать промокод</button>
-                <button class="btn btn-secondary" onclick="exportSubscriptions()">📥 Экспорт подписок</button>
-                <button class="btn btn-outline" onclick="sendMassNotification()">📢 Массовое уведомление</button>
-            </div>
-        </div>
-    `;
+function getContentIcon(contentType) {
+    const icons = {
+        'courses': '📚',
+        'podcasts': '🎧',
+        'streams': '📹',
+        'videos': '🎯',
+        'materials': '📋',
+        'events': '🗺️'
+    };
+    return icons[contentType] || '📄';
 }
 
-function loadPromotions() {
-    const promotionsTab = document.getElementById('promotions');
-    if (!promotionsTab) return;
-    
-    promotionsTab.innerHTML = `
-        <div class="promotions-header">
-            <h2>🎁 Управление акциями</h2>
-            <button class="btn btn-primary" onclick="createPromotion()">+ Создать акцию</button>
-        </div>
-        
-        <div class="promotions-grid">
-            <div class="promotion-card">
-                <div class="promotion-header">
-                    <div class="promotion-title">Пробный период</div>
-                    <div class="promotion-status active">✅ Активна</div>
-                </div>
-                <div class="promotion-description">7 дней бесплатного доступа ко всем материалам</div>
-                <div class="promotion-stats">
-                    <span>👥 45 активаций</span>
-                    <span>🔄 12% конверсия</span>
-                </div>
-                <div class="promotion-actions">
-                    <button class="btn btn-small" onclick="editPromotion(1)">✏️</button>
-                    <button class="btn btn-small btn-danger" onclick="deletePromotion(1)">🗑️</button>
-                </div>
-            </div>
-        </div>
-    `;
+function getMaterialIcon(materialType) {
+    const icons = {
+        'mri': '🩻',
+        'case': '📋',
+        'checklist': '✅'
+    };
+    return icons[materialType] || '📄';
 }
 
-function loadSettings() {
-    const settingsTab = document.getElementById('settings');
-    if (!settingsTab) return;
-    
-    settingsTab.innerHTML = `
-        <h2>⚙️ Настройки системы</h2>
-        
-        <div class="settings-sections">
-            <div class="settings-section">
-                <h3>🔧 Основные настройки</h3>
-                <div class="setting-item">
-                    <label>Название академии</label>
-                    <input type="text" value="Академия АНБ" class="setting-input">
-                </div>
-                <div class="setting-item">
-                    <label>Email поддержки</label>
-                    <input type="email" value="academy@anb.ru" class="setting-input">
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h3>💰 Настройки платежей</h3>
-                <div class="setting-item">
-                    <label>Пробный период (дни)</label>
-                    <input type="number" value="7" class="setting-input">
-                </div>
-            </div>
-        </div>
-        
-        <div class="settings-actions">
-            <button class="btn btn-primary" onclick="saveSettings()">💾 Сохранить настройки</button>
-        </div>
-    `;
+function getActionButtonText(contentType) {
+    const actions = {
+        'courses': 'Записаться',
+        'podcasts': 'Слушать',
+        'streams': 'Смотреть',
+        'videos': 'Смотреть',
+        'materials': 'Открыть',
+        'events': 'Участвовать'
+    };
+    return actions[contentType] || 'Открыть';
 }
 
-// Функции для акций и промокодов
-function createPromoCode() {
-    const promoCode = `PROMO${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-    showNotification(`🎫 Создан промокод: ${promoCode}`, 'success');
-}
-
-function createPromotion() {
-    showNotification('🎁 Функция создания акции в разработке', 'info');
-}
-
-function editPromotion(promoId) {
-    showNotification(`✏️ Редактирование акции ID: ${promoId}`, 'info');
-}
-
-function deletePromotion(promoId) {
-    if (confirm('Удалить акцию?')) {
-        showNotification(`🗑️ Акция ID: ${promoId} удалена`, 'success');
-    }
-}
-
-function exportSubscriptions() {
-    showNotification('📥 Экспорт данных о подписках завершен', 'success');
-}
-
-function sendMassNotification() {
-    const message = prompt('Введите сообщение для массовой рассылки:');
-    if (message) {
-        showNotification(`📢 Массовая рассылка отправлена: "${message}"`, 'success');
-    }
-}
-
-function saveSettings() {
-    showNotification('💾 Настройки сохранены', 'success');
-}
-
-// ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
-
-function switchAdminTab(tab) {
-    currentAdminTab = tab;
-    
-    console.log(`📑 Переключение на вкладку: ${tab}`);
-    
-    // Скрыть все вкладки
-    document.querySelectorAll('.admin-tab').forEach(t => {
-        t.classList.remove('active');
-    });
-    
-    // Убрать активность с кнопок
-    document.querySelectorAll('.admin-nav-btn').forEach(b => {
-        b.classList.remove('active');
-    });
-    
-    // Показать выбранную вкладку
-    const tabElement = document.getElementById(tab);
-    if (tabElement) {
-        tabElement.classList.add('active');
-    }
-    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-
-    // Загрузить данные для вкладки
-    loadTabData(tab);
-}
-
-function switchContentTab(contentType) {
-    currentContentType = contentType;
-    
-    document.querySelectorAll('.content-tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`[data-content-type="${contentType}"]`).classList.add('active');
-    
-    document.getElementById('contentTitle').textContent = getContentTypeName(contentType);
-    loadContentList(contentType);
-    
-    console.log(`📚 Переключение на контент: ${contentType}`);
-}
-
-function loadTabData(tab) {
-    console.log(`📥 Загрузка данных для вкладки: ${tab}`);
-    
-    switch (tab) {
-        case 'users':
-            loadUsersList();
-            break;
-        case 'admins':
-            loadAdmins();
-            break;
-        case 'content':
-            loadContentList(currentContentType);
-            break;
-        case 'subscriptions':
-            loadSubscriptions();
-            break;
-        case 'promotions':
-            loadPromotions();
-            break;
-        case 'settings':
-            loadSettings();
-            break;
-    }
-}
-
-function searchUsers() {
-    renderUsersList();
+function getMaterialType(type) {
+    const types = {
+        'mri': 'МРТ разбор',
+        'case': 'Клинический случай',
+        'checklist': 'Чек-лист'
+    };
+    return types[type] || 'Материал';
 }
 
 function getContentTypeName(type) {
     const names = {
-        'courses': 'Курсы',
-        'podcasts': 'АНБ FM',
-        'streams': 'Эфиры',
-        'videos': 'Видео-шпаргалки',
-        'materials': 'Материалы',
-        'events': 'Мероприятия'
+        'courses': 'Курс',
+        'podcasts': 'Подкаст',
+        'streams': 'Эфир',
+        'videos': 'Видео-шпаргалка',
+        'materials': 'Материал',
+        'events': 'Мероприятие'
     };
     return names[type] || type;
 }
 
 function getSubscriptionStatusText(status) {
     const statuses = {
-        'active': '✅ Активная подписка',
-        'trial': '🆓 Пробный период', 
-        'inactive': '❌ Нет подписки'
+        'active': 'Активная подписка',
+        'trial': 'Пробный период',
+        'inactive': 'Подписка не активна'
     };
-    return statuses[status] || '❌ Нет подписки';
+    return statuses[status] || 'Не активна';
+}
+
+function getUserBadge(level) {
+    const badges = {
+        'Понимаю': 'Начинающий специалист',
+        'Связываю': 'Активный участник',
+        'Применяю': 'Практикующий специалист',
+        'Систематизирую': 'Опытный врач',
+        'Делюсь': 'Эксперт сообщества'
+    };
+    return badges[level] || 'Участник академии';
+}
+
+function isFavorite(contentType, contentId) {
+    return currentUser && currentUser.favorites && currentUser.favorites[contentType].includes(contentId);
 }
 
 function formatPrice(price) {
@@ -1320,18 +2151,7 @@ function formatPrice(price) {
 }
 
 function formatDate(date) {
-    if (!date) return 'неизвестно';
     return new Date(date).toLocaleDateString('ru-RU');
-}
-
-function escapeHtml(unsafe) {
-    if (!unsafe) return '';
-    return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
 }
 
 function debounce(func, wait) {
@@ -1344,6 +2164,29 @@ function debounce(func, wait) {
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
     };
+}
+
+async function updateUserProgress(metric) {
+    if (!currentUser) return;
+    
+    try {
+        const response = await fetch(`/api/user/${currentUser.id}/progress`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ metric })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            currentUser.progress = data.progress;
+            updateProfileStats();
+            if (currentPage === 'profile') {
+                loadJourneyProgress();
+            }
+        }
+    } catch (error) {
+        console.error('❌ Ошибка обновления прогресса:', error);
+    }
 }
 
 function showNotification(message, type = 'info') {
@@ -1360,7 +2203,7 @@ function showNotification(message, type = 'info') {
         border-radius: 8px;
         z-index: 1000;
         animation: slideIn 0.3s ease;
-        max-width: 400px;
+        max-width: 300px;
         word-wrap: break-word;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     `;
@@ -1374,7 +2217,7 @@ function showNotification(message, type = 'info') {
                 notification.parentNode.removeChild(notification);
             }
         }, 300);
-    }, 4000);
+    }, 3000);
 }
 
 function closeModal(modalId) {
@@ -1384,25 +2227,54 @@ function closeModal(modalId) {
     }
 }
 
-function refreshAdminData() {
-    loadAdminData();
-    showNotification('🔄 Данные обновлены', 'info');
-}
+// ==================== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ====================
 
-function goToMainApp() {
-    window.location.href = '/';
-}
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Инициализация приложения...');
+    
+    // Инициализация навигации
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            renderPage(this.dataset.page);
+        });
+    });
 
-// Инициализация Telegram WebApp в админ-панели
-if (window.Telegram && Telegram.WebApp) {
-    Telegram.WebApp.expand();
-    Telegram.WebApp.ready();
-    console.log('📱 Telegram WebApp инициализирован в админ-панели');
-}
+    // Инициализация поиска
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch(this.value);
+            }
+        });
+    }
 
-// CSS анимации для админки
-const adminStyle = document.createElement('style');
-adminStyle.textContent = `
+    // Загрузка пользователя и контента
+    Promise.all([loadUserData(), loadContent()]).then(() => {
+        console.log('✅ Приложение готово');
+        renderPage('home');
+    });
+
+    // Интеграция с Telegram
+    if (window.Telegram && Telegram.WebApp) {
+        console.log('📱 Интеграция с Telegram WebApp');
+        Telegram.WebApp.expand();
+        Telegram.WebApp.ready();
+        Telegram.WebApp.setHeaderColor('#58b8e7');
+        Telegram.WebApp.setBackgroundColor('#ffffff');
+        
+        // Обработка нажатия кнопки "Назад" в Telegram
+        Telegram.WebApp.BackButton.onClick(() => {
+            if (currentPage !== 'home') {
+                renderPage('home');
+            }
+        });
+    }
+});
+
+// CSS анимации
+const style = document.createElement('style');
+style.textContent = `
     @keyframes slideIn {
         from { transform: translateX(100%); opacity: 0; }
         to { transform: translateX(0); opacity: 1; }
@@ -1413,365 +2285,92 @@ adminStyle.textContent = `
         to { transform: translateX(100%); opacity: 0; }
     }
     
-    .admin-content-item {
+    .player-placeholder {
+        text-align: center;
+        padding: 40px 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        border: 2px dashed #e3f2fd;
+    }
+    
+    .placeholder-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.7;
+    }
+    
+    .placeholder-text {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #2c3e50;
+    }
+    
+    .placeholder-note {
+        color: #6c757d;
+        font-size: 14px;
+    }
+    
+    .achievement-item {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        border: 2px solid #e3f2fd;
+        border-radius: 8px;
+        margin-bottom: 12px;
         transition: all 0.3s ease;
     }
     
-    .admin-content-item:hover {
+    .achievement-item.completed {
+        border-color: #28a745;
+        background: #f0fff4;
+    }
+    
+    .achievement-item:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     
-    .status-badge.active {
-        background: #28a745;
-        color: white;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    
-    .status-badge.trial {
-        background: #ffc107;
-        color: black;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    
-    .status-badge.inactive {
-        background: #dc3545;
-        color: white;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    
-    .main-admin-badge {
-        background: #58b8e7;
-        color: white;
-        padding: 6px 12px;
-        border-radius: 16px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    
-    .upload-preview {
-        margin: 10px 0;
-        padding: 10px;
-        border: 2px dashed #58b8e7;
-        border-radius: 8px;
-        text-align: center;
-    }
-    
-    .upload-preview img, .upload-preview video {
-        max-width: 100%;
-        max-height: 200px;
-        border-radius: 8px;
-    }
-    
-    .file-preview {
-        padding: 8px;
-        background: #f8f9fa;
-        border-radius: 6px;
-        margin: 5px 0;
-    }
-    
-    .progress-bar {
-        width: 100%;
-        height: 6px;
-        background: #e9ecef;
-        border-radius: 3px;
-        overflow: hidden;
-        margin: 10px 0;
-    }
-    
-    .progress-fill {
-        height: 100%;
-        background: #58b8e7;
-        transition: width 0.3s ease;
-    }
-    
-    .content-preview-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 15px;
-        margin: 20px 0;
-    }
-    
-    .content-preview-item {
-        border: 2px solid #e3f2fd;
-        border-radius: 8px;
-        padding: 15px;
-        text-align: center;
-        transition: all 0.3s ease;
-    }
-    
-    .content-preview-item:hover {
-        border-color: #58b8e7;
-        transform: translateY(-2px);
-    }
-    
-    .preview-image {
-        width: 100%;
-        height: 120px;
-        object-fit: cover;
-        border-radius: 6px;
-        margin-bottom: 10px;
-    }
-    
-    .preview-title {
-        font-weight: 600;
-        margin-bottom: 5px;
-        color: #2c3e50;
-    }
-    
-    .preview-description {
-        font-size: 12px;
-        color: #6c757d;
-        margin-bottom: 8px;
-    }
-    
-    .stats-chart {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        margin: 20px 0;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    
-    .chart-container {
-        height: 300px;
-        position: relative;
-    }
-    
-    .quick-actions {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 15px;
-        margin: 20px 0;
-    }
-    
-    .quick-action-btn {
-        background: white;
-        border: 2px solid #e3f2fd;
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-    
-    .quick-action-btn:hover {
-        border-color: #58b8e7;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(88, 184, 231, 0.2);
-    }
-    
-    .action-icon {
+    .achievement-icon {
         font-size: 24px;
-        margin-bottom: 10px;
+        margin-right: 16px;
     }
     
-    .action-title {
-        font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 5px;
+    .rules-content ol, .rules-content ul {
+        margin-left: 20px;
+        margin-bottom: 16px;
     }
     
-    .action-description {
-        font-size: 12px;
-        color: #6c757d;
-    }
-    
-    .user-activity-chart {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        margin: 20px 0;
-    }
-    
-    .activity-bar {
-        display: flex;
-        align-items: center;
-        margin: 10px 0;
-    }
-    
-    .activity-label {
-        width: 120px;
-        font-weight: 600;
-        color: #2c3e50;
-    }
-    
-    .activity-value {
-        flex: 1;
-        height: 20px;
-        background: #e3f2fd;
-        border-radius: 10px;
-        overflow: hidden;
-        position: relative;
-    }
-    
-    .activity-fill {
-        height: 100%;
-        background: #58b8e7;
-        border-radius: 10px;
-        transition: width 0.5s ease;
-    }
-    
-    .activity-count {
-        margin-left: 10px;
-        font-weight: 600;
-        color: #2c3e50;
-        min-width: 40px;
-    }
-    
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        padding: 20px;
-    }
-    
-    .modal-content-large {
-        background: white;
-        border-radius: 16px;
-        width: 90%;
-        max-width: 800px;
-        max-height: 90vh;
-        overflow-y: auto;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
-    
-    .tab-content {
-        display: none;
-    }
-    
-    .tab-content.active {
-        display: block;
-    }
-    
-    .form-section {
-        margin-bottom: 25px;
-        padding: 20px;
-        background: #f8f9fa;
-        border-radius: 8px;
-    }
-    
-    .form-section h4 {
-        margin-bottom: 15px;
-        color: #2c3e50;
-        border-bottom: 2px solid #58b8e7;
-        padding-bottom: 8px;
-    }
-    
-    .file-upload-area {
-        border: 2px dashed #58b8e7;
-        border-radius: 8px;
-        padding: 30px;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        margin: 15px 0;
-    }
-    
-    .file-upload-area:hover {
-        background: #e3f2fd;
-    }
-    
-    .file-upload-area.dragover {
-        background: #58b8e7;
-        color: white;
-    }
-    
-    .upload-icon {
-        font-size: 48px;
-        margin-bottom: 15px;
-        opacity: 0.7;
-    }
-    
-    .upload-text {
-        font-weight: 600;
+    .rules-content li {
         margin-bottom: 8px;
+        line-height: 1.5;
     }
     
-    .upload-hint {
+    .rules-footer {
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid #e3f2fd;
+        color: #6c757d;
         font-size: 14px;
-        color: #6c757d;
     }
     
-    .selected-files {
-        margin: 15px 0;
-    }
-    
-    .selected-file {
+    .info-item {
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        padding: 10px;
-        background: white;
-        border: 1px solid #e9ecef;
-        border-radius: 6px;
-        margin-bottom: 8px;
+        padding: 8px 0;
+        border-bottom: 1px solid #f8f9fa;
     }
     
-    .file-info {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .file-icon {
-        font-size: 20px;
-    }
-    
-    .file-name {
+    .info-label {
         font-weight: 600;
+        color: #2c3e50;
     }
     
-    .file-size {
-        font-size: 12px;
+    .info-value {
         color: #6c757d;
-    }
-    
-    .remove-file {
-        background: #dc3545;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 4px 8px;
-        cursor: pointer;
-        font-size: 12px;
-    }
-    
-    @media (max-width: 768px) {
-        .content-preview-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .quick-actions {
-            grid-template-columns: 1fr;
-        }
-        
-        .modal-content-large {
-            width: 95%;
-            margin: 10px;
-        }
-        
-        .form-row {
-            flex-direction: column;
-        }
     }
 `;
-document.head.appendChild(adminStyle);
+document.head.appendChild(style);
 
-console.log('✅ admin.js полностью загружен и готов к работе');
+console.log('📦 app.js загружен');
