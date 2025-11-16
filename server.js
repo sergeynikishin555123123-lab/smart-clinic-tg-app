@@ -143,12 +143,20 @@ async function createTables() {
                 image_url TEXT,
                 created_at TIMESTAMP DEFAULT NOW()
             )`
+         `CREATE TABLE IF NOT EXISTS news (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                content TEXT,
+                category TEXT,
+                image_url TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )`
         ];
 
         for (const tableQuery of tables) {
             try {
                 await pool.query(tableQuery);
-                console.log(`✅ Таблица создана`);
+                console.log(`✅ Таблица создана/проверена`);
             } catch (error) {
                 console.error(`❌ Ошибка создания таблицы: ${error.message}`);
             }
@@ -356,8 +364,23 @@ async function updateUser(userId, updates) {
     }
 
     try {
-        const setClause = Object.keys(updates).map((key, index) => `${key} = $${index + 2}`).join(', ');
-        const values = [userId, ...Object.values(updates)];
+        // Убираем поле last_activity из updates, так как оно добавляется отдельно
+        const { last_activity, ...cleanUpdates } = updates;
+        
+        if (Object.keys(cleanUpdates).length === 0) {
+            // Если обновлений нет, просто обновляем last_activity
+            await pool.query(
+                'UPDATE users SET last_activity = NOW() WHERE id = $1',
+                [userId]
+            );
+            return true;
+        }
+
+        const setClause = Object.keys(cleanUpdates)
+            .map((key, index) => `${key} = $${index + 2}`)
+            .join(', ');
+        
+        const values = [userId, ...Object.values(cleanUpdates)];
         
         await pool.query(
             `UPDATE users SET ${setClause}, last_activity = NOW() WHERE id = $1`,
@@ -366,6 +389,7 @@ async function updateUser(userId, updates) {
         return true;
     } catch (error) {
         console.error('❌ Ошибка обновления пользователя:', error.message);
+        console.error('🔍 SQL запрос:', `UPDATE users SET ... WHERE id = ${userId}`);
         return false;
     }
 }
@@ -559,7 +583,8 @@ async function handleMenuButton(ctx, text) {
     const user = await getUser(ctx.from.id);
     if (!user) return;
 
-    await updateUser(ctx.from.id, {}); // Обновляем активность
+    // Вместо пустого объекта передаем явное обновление last_activity
+    await updateUser(ctx.from.id, { last_activity: new Date() });
 
     switch (text) {
         case '📱 Навигация':
