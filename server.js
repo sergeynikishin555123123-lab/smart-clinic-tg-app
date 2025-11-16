@@ -1,4 +1,4 @@
-// server.js - ИСПРАВЛЕННАЯ ВЕРСИЯ С ПРАВИЛЬНЫМ URL БД
+// server.js - ИСПРАВЛЕННАЯ ВЕРСИЯ С ПРАВИЛЬНЫМ ПОДКЛЮЧЕНИЕМ
 import { Telegraf, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -15,7 +15,6 @@ const __dirname = dirname(__filename);
 const BOT_TOKEN = process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4';
 const PORT = process.env.PORT || 3000;
 const WEBAPP_URL = process.env.WEBAPP_URL || `https://sergeynikishin555123123-lab-smart-clinic-tg-app-a472.twc1.net`;
-
 const ADMIN_IDS = new Set([898508164]);
 
 console.log('🚀 Starting Smart Clinic Bot...');
@@ -26,7 +25,7 @@ async function killPreviousProcesses() {
         console.log('🔫 Останавливаем предыдущие процессы...');
         
         try {
-            const { stdout } = await execAsync(`fuser -k ${PORT}/tcp || true`);
+            await execAsync(`fuser -k ${PORT}/tcp || true`);
             console.log(`✅ Освобожден порт ${PORT}`);
         } catch (e) {
             console.log(`ℹ️  Порт ${PORT} уже свободен`);
@@ -50,64 +49,46 @@ async function killPreviousProcesses() {
 let pool;
 let dbConnected = false;
 
-// Функция для создания корректного connection string
-function getDatabaseUrl() {
-    const rawUrl = process.env.DATABASE_URL;
-    if (!rawUrl) return null;
-    
-    // Декодируем URL и заменяем проблемные символы
-    let decodedUrl;
-    try {
-        decodedUrl = decodeURIComponent(rawUrl);
-    } catch (e) {
-        decodedUrl = rawUrl;
-    }
-    
-    // Заменяем проблемные символы в пароле
-    decodedUrl = decodedUrl.replace(/:/g, '%3A')
-                          .replace(/;/g, '%3B')
-                          .replace(/</g, '%3C')
-                          .replace(/>/g, '%3E')
-                          .replace(/\?/g, '%3F');
-    
-    console.log('🔗 Используем URL БД:', decodedUrl.replace(/:[^@]*@/, ':****@'));
-    return decodedUrl;
-}
-
 async function initDatabase() {
     try {
         const { Pool } = await import('pg');
         
-        const databaseUrl = getDatabaseUrl();
-        if (!databaseUrl) {
-            throw new Error('DATABASE_URL не установлен');
-        }
+        console.log('🔌 Подключаемся к PostgreSQL...');
         
-        // Упрощенная конфигурация для тестирования
+        // ПРАВИЛЬНЫЕ НАСТРОЙКИ ИЗ ВАШЕГО ПРИМЕРА
         pool = new Pool({
-            connectionString: databaseUrl,
+            user: 'gen_user',
+            host: '45.89.190.49', // Публичный IP
+            database: 'default_db',
+            password: '5-R;mKGYJ<88?1',
+            port: 5432,
             ssl: {
                 rejectUnauthorized: false
             },
-            // Минимальные настройки для теста
-            max: 2,
+            // Оптимизированные настройки
+            max: 5,
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 10000,
         });
 
-        console.log('🔌 Тестируем подключение к PostgreSQL...');
+        console.log('🔗 Настройки подключения:');
+        console.log('   Host:', '45.89.190.49');
+        console.log('   Database:', 'default_db');
+        console.log('   User:', 'gen_user');
+        console.log('   Port:', 5432);
         
-        // Простой тест подключения
+        // Тестируем подключение
         const client = await pool.connect();
-        console.log('✅ Успешное подключение к PostgreSQL');
+        console.log('✅ Успешное подключение к PostgreSQL!');
         
-        // Проверяем версию PostgreSQL
+        // Проверяем версию
         const versionResult = await client.query('SELECT version()');
         console.log('📊 Версия PostgreSQL:', versionResult.rows[0].version.split(',')[0]);
         
         client.release();
         dbConnected = true;
 
+        // Создаем таблицы
         await createTables();
         await addDemoData();
         
@@ -122,7 +103,6 @@ async function createTables() {
     try {
         console.log('📦 Создание таблиц...');
         
-        // Только основные таблицы для начала
         const tables = [
             `CREATE TABLE IF NOT EXISTS users (
                 id BIGINT PRIMARY KEY,
@@ -153,13 +133,22 @@ async function createTables() {
                 image_url TEXT,
                 file_url TEXT,
                 created_at TIMESTAMP DEFAULT NOW()
+            )`,
+            `CREATE TABLE IF NOT EXISTS podcasts (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                duration TEXT,
+                audio_url TEXT,
+                image_url TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
             )`
         ];
 
         for (const tableQuery of tables) {
             try {
                 await pool.query(tableQuery);
-                console.log(`✅ Таблица создана: ${tableQuery.split('(')[0].split('IF NOT EXISTS ')[1]}`);
+                console.log(`✅ Таблица создана`);
             } catch (error) {
                 console.error(`❌ Ошибка создания таблицы: ${error.message}`);
             }
@@ -182,11 +171,18 @@ async function addDemoData() {
 
         console.log('📝 Добавление демо-данных...');
 
-        // Только основные демо-данные
+        // Демо-курсы
         await pool.query(`
             INSERT INTO courses (title, description, full_description, price, duration, modules) VALUES
             ('Мануальные техники в практике', '6 модулей по современным мануальным методикам', 'Комплексный курс по мануальным техникам', 15000, '12 часов', 6),
             ('Неврология для практикующих врачей', 'Основы неврологической диагностики', 'Фундаментальный курс по неврологии', 12000, '10 часов', 5)
+        `);
+
+        // Демо-подкасты
+        await pool.query(`
+            INSERT INTO podcasts (title, description, duration) VALUES
+            ('АНБ FM: Основы неврологии', 'Подкаст о современных подходах в неврологии', '45:20'),
+            ('АНБ FM: Реабилитация', 'Современные методы восстановительного лечения', '38:15')
         `);
 
         console.log('✅ Демо-данные добавлены');
@@ -209,17 +205,16 @@ const tempContent = {
             price: 15000,
             duration: '12 часов',
             modules: 6
-        },
-        {
-            id: 2,
-            title: 'Неврология для практикующих врачей',
-            description: 'Основы неврологической диагностики и лечения',
-            price: 12000,
-            duration: '10 часов',
-            modules: 5
         }
     ],
-    podcasts: [],
+    podcasts: [
+        {
+            id: 1,
+            title: 'АНБ FM: Основы неврологии',
+            description: 'Подкаст о современных подходах в неврологии',
+            duration: '45:20'
+        }
+    ],
     streams: [],
     videos: [],
     materials: [],
@@ -725,13 +720,9 @@ app.get('/api/content', async (req, res) => {
     }
 
     try {
-        const [courses, podcasts, streams, videos, materials, events] = await Promise.all([
+        const [courses, podcasts] = await Promise.all([
             pool.query('SELECT * FROM courses ORDER BY created_at DESC'),
-            pool.query('SELECT * FROM podcasts ORDER BY created_at DESC'),
-            pool.query('SELECT * FROM streams ORDER BY created_at DESC'),
-            pool.query('SELECT * FROM videos ORDER BY created_at DESC'),
-            pool.query('SELECT * FROM materials ORDER BY created_at DESC'),
-            pool.query('SELECT * FROM events ORDER BY created_at DESC')
+            pool.query('SELECT * FROM podcasts ORDER BY created_at DESC')
         ]);
 
         res.json({
@@ -739,10 +730,10 @@ app.get('/api/content', async (req, res) => {
             data: {
                 courses: courses.rows,
                 podcasts: podcasts.rows,
-                streams: streams.rows,
-                videos: videos.rows,
-                materials: materials.rows,
-                events: events.rows
+                streams: [],
+                videos: [],
+                materials: [],
+                events: []
             }
         });
     } catch (error) {
@@ -840,10 +831,6 @@ app.get('/api/stats', async (req, res) => {
         const activeUsers = await pool.query('SELECT COUNT(*) FROM users WHERE subscription_status IN ($1, $2)', ['active', 'trial']);
         const coursesCount = await pool.query('SELECT COUNT(*) FROM courses');
         const podcastsCount = await pool.query('SELECT COUNT(*) FROM podcasts');
-        const streamsCount = await pool.query('SELECT COUNT(*) FROM streams');
-        const videosCount = await pool.query('SELECT COUNT(*) FROM videos');
-        const materialsCount = await pool.query('SELECT COUNT(*) FROM materials');
-        const eventsCount = await pool.query('SELECT COUNT(*) FROM events');
         
         res.json({
             success: true,
@@ -854,10 +841,10 @@ app.get('/api/stats', async (req, res) => {
                 content: {
                     courses: parseInt(coursesCount.rows[0].count),
                     podcasts: parseInt(podcastsCount.rows[0].count),
-                    streams: parseInt(streamsCount.rows[0].count),
-                    videos: parseInt(videosCount.rows[0].count),
-                    materials: parseInt(materialsCount.rows[0].count),
-                    events: parseInt(eventsCount.rows[0].count)
+                    streams: 0,
+                    videos: 0,
+                    materials: 0,
+                    events: 0
                 }
             }
         });
@@ -934,6 +921,10 @@ app.get('/api/users', async (req, res) => {
 
 // 📝 Управление контентом (для админки)
 app.post('/api/content', async (req, res) => {
+    if (!dbConnected) {
+        return res.status(500).json({ success: false, error: 'База данных недоступна' });
+    }
+
     try {
         const { title, description, fullDescription, duration, price, modules, type, contentType, image, file } = req.body;
         
@@ -941,10 +932,6 @@ app.post('/api/content', async (req, res) => {
         switch(contentType) {
             case 'courses': tableName = 'courses'; break;
             case 'podcasts': tableName = 'podcasts'; break;
-            case 'streams': tableName = 'streams'; break;
-            case 'videos': tableName = 'videos'; break;
-            case 'materials': tableName = 'materials'; break;
-            case 'events': tableName = 'events'; break;
             default: return res.status(400).json({ success: false, error: 'Invalid content type' });
         }
         
@@ -963,6 +950,16 @@ app.post('/api/content', async (req, res) => {
 
 // 👑 Управление администраторами
 app.get('/api/admins', async (req, res) => {
+    if (!dbConnected) {
+        const adminsList = Array.from(ADMIN_IDS).map(id => ({
+            id: id,
+            first_name: 'Главный Администратор',
+            username: 'admin',
+            joined_at: new Date('2024-01-01')
+        }));
+        return res.json({ success: true, data: adminsList });
+    }
+
     try {
         const result = await pool.query(`
             SELECT id, first_name, username, joined_at 
@@ -992,6 +989,10 @@ app.get('/api/admins', async (req, res) => {
 });
 
 app.post('/api/admins', async (req, res) => {
+    if (!dbConnected) {
+        return res.status(500).json({ success: false, error: 'База данных недоступна' });
+    }
+
     try {
         const { userId } = req.body;
         
@@ -1010,6 +1011,10 @@ app.post('/api/admins', async (req, res) => {
 });
 
 app.delete('/api/admins/:userId', async (req, res) => {
+    if (!dbConnected) {
+        return res.status(500).json({ success: false, error: 'База данных недоступна' });
+    }
+
     try {
         const userId = parseInt(req.params.userId);
         
@@ -1029,6 +1034,21 @@ app.delete('/api/admins/:userId', async (req, res) => {
 
 // 📰 Новости
 app.get('/api/news', async (req, res) => {
+    if (!dbConnected) {
+        return res.json({
+            success: true,
+            news: [
+                {
+                    id: 1,
+                    title: 'Запуск новой образовательной платформы',
+                    content: 'Академия АНБ представляет обновленную платформу для профессионального развития врачей',
+                    category: 'development',
+                    created_at: new Date()
+                }
+            ]
+        });
+    }
+
     try {
         const result = await pool.query('SELECT * FROM news ORDER BY created_at DESC LIMIT 10');
         res.json({ success: true, news: result.rows });
