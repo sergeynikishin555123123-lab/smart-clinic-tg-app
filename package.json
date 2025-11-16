@@ -6,25 +6,44 @@
     "start": "node server.js",
     "dev": "node server.js",
     "build": "echo 'Build completed' && exit 0",
-    "setup": "mkdir -p uploads && echo 'Uploads directory created'",
-    "db:init": "node -e \"import('./server.js').then(m => m.initDatabase())\""
+    "setup": "mkdir -p uploads webapp && echo 'Directories created'",
+    "db:init": "node -e \"import('./server.js').then(m => m.initDatabase())\"",
+    "deploy": "npm run setup && npm start"
   },
   "dependencies": {
     "telegraf": "^4.16.3",
     "express": "^4.18.2",
     "multer": "^1.4.5-lts.1",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   },
   "keywords": [
     "telegram",
     "webapp",
     "education",
     "medicine",
-    "neurology"
+    "neurology",
+    "academy",
+    "admin"
   ],
   "author": "Академия АНБ",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/smart-clinic-tg-app"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/smart-clinic-tg-app/issues"
+  },
+  "homepage": "https://github.com/your-username/smart-clinic-tg-app#readme"
 }
