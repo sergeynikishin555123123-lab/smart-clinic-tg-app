@@ -1,350 +1,176 @@
 // webapp/app.js - ПОЛНОСТЬЮ ПЕРЕРАБОТАННАЯ ВЕРСИЯ
-const pages = {
-    home: {
-        title: 'Академия АНБ',
-        content: `
-            <div class="hero-section">
-                <div class="hero-text">
-                    <h2>Профессиональное развитие в неврологии и реабилитации</h2>
-                    <p>Сообщество специалистов, объединенных целью совершенствования практики</p>
-                </div>
-            </div>
-
-            <div class="quick-nav">
-                <h3>📱 Быстрая навигация</h3>
-                <div class="grid">
-                    <div class="card" onclick="openSection('courses')">
-                        <div class="card-icon">📚</div>
-                        <div class="card-title">Курсы</div>
-                        <div class="card-desc">Системное обучение с сертификатами</div>
-                    </div>
-                    <div class="card" onclick="openSection('podcasts')">
-                        <div class="card-icon">🎧</div>
-                        <div class="card-title">АНБ FM</div>
-                        <div class="card-desc">Аудио-подкасты и интервью</div>
-                    </div>
-                    <div class="card" onclick="openSection('streams')">
-                        <div class="card-icon">📹</div>
-                        <div class="card-title">Эфиры|Разборы</div>
-                        <div class="card-desc">Прямые эфиры и разборы кейсов</div>
-                    </div>
-                    <div class="card" onclick="openSection('videos')">
-                        <div class="card-icon">🎯</div>
-                        <div class="card-title">Видео-шпаргалки</div>
-                        <div class="card-desc">Короткие видео с техниками</div>
-                    </div>
-                    <div class="card" onclick="openSection('materials')">
-                        <div class="card-icon">📋</div>
-                        <div class="card-title">Практические материалы</div>
-                        <div class="card-desc">МРТ, кейсы, чек-листы</div>
-                    </div>
-                    <div class="card" onclick="openSection('events')">
-                        <div class="card-icon">🗺️</div>
-                        <div class="card-title">Карта мероприятий</div>
-                        <div class="card-desc">Онлайн и офлайн события</div>
-                    </div>
-                    <div class="card" onclick="openSection('offers')">
-                        <div class="card-icon">🔥</div>
-                        <div class="card-title">Ограниченное предложение</div>
-                        <div class="card-desc">Специальные условия</div>
-                    </div>
-                    <div class="card" onclick="openSupport()">
-                        <div class="card-icon">💬</div>
-                        <div class="card-title">Поддержка</div>
-                        <div class="card-desc">Помощь и консультации</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="news-section">
-                <div class="section-header">
-                    <h3>📰 Лента новостей</h3>
-                    <div class="filters" id="newsFilters">
-                        <button class="filter-btn active" data-filter="all">Все</button>
-                        <button class="filter-btn" data-filter="articles">Статьи</button>
-                        <button class="filter-btn" data-filter="development">Профессиональное развитие</button>
-                        <button class="filter-btn" data-filter="skills">Практические навыки</button>
-                        <button class="filter-btn" data-filter="physiotherapy">Физиотерапия</button>
-                        <button class="filter-btn" data-filter="rehabilitation">Реабилитация</button>
-                        <button class="filter-btn" data-filter="pharmacotherapy">Фармакотерапия</button>
-                        <button class="filter-btn" data-filter="manual">Мануальные техники</button>
-                    </div>
-                </div>
-                <div class="news-list" id="newsList">
-                    <div class="loading">Загрузка новостей...</div>
-                </div>
-            </div>
-        `
-    },
-
-    catalog: {
-        title: 'Каталог контента',
-        content: `
-            <div class="catalog-header">
-                <div class="catalog-filters">
-                    <input type="text" placeholder="Поиск курсов и материалов..." class="search-input" id="catalogSearch">
-                    <select class="filter-select" id="contentTypeFilter">
-                        <option value="all">Все типы</option>
-                        <option value="courses">Курсы</option>
-                        <option value="podcasts">АНБ FM</option>
-                        <option value="streams">Эфиры</option>
-                        <option value="videos">Шпаргалки</option>
-                        <option value="materials">Материалы</option>
-                        <option value="events">Мероприятия</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="catalog-content">
-                <div class="content-tabs">
-                    <button class="content-tab active" data-tab="all">Все</button>
-                    <button class="content-tab" data-tab="popular">Популярные</button>
-                    <button class="content-tab" data-tab="new">Новинки</button>
-                    <button class="content-tab" data-tab="free">Бесплатные</button>
-                </div>
-
-                <div class="content-grid" id="contentGrid">
-                    <div class="loading">Загрузка контента...</div>
-                </div>
-            </div>
-        `
-    },
-
-    community: {
-        title: 'Сообщество',
-        content: `
-            <div class="community-header">
-                <h2>👥 Сообщество Академии АНБ</h2>
-                <p>Присоединяйтесь к профессиональному сообществу специалистов</p>
-            </div>
-
-            <div class="community-grid">
-                <div class="community-card" onclick="openChat('general')">
-                    <div class="community-icon">💬</div>
-                    <div class="community-title">Флудилка</div>
-                    <div class="community-desc">Неформальное общение и знакомство</div>
-                    <div class="community-meta">1.2K участников</div>
-                </div>
-                <div class="community-card" onclick="openChat('specialists')">
-                    <div class="community-icon">👥</div>
-                    <div class="community-title">Чат специалистов</div>
-                    <div class="community-desc">Профессиональные обсуждения</div>
-                    <div class="community-meta">856 участников</div>
-                </div>
-                <div class="community-card" onclick="showCommunityRules()">
-                    <div class="community-icon">📜</div>
-                    <div class="community-title">Правила сообщества</div>
-                    <div class="community-desc">Основные принципы взаимодействия</div>
-                </div>
-                <div class="community-card" onclick="showFAQ()">
-                    <div class="community-icon">❓</div>
-                    <div class="community-title">F.A.Q.</div>
-                    <div class="community-desc">Ответы на частые вопросы</div>
-                </div>
-            </div>
-
-            <div class="faq-section">
-                <h3>❓ Частые вопросы</h3>
-                <div class="faq-list" id="faqList">
-                    <div class="loading">Загрузка вопросов...</div>
-                </div>
-            </div>
-        `
-    },
-
-    favorites: {
-        title: 'Мои материалы',
-        content: `
-            <div class="materials-tabs">
-                <button class="material-tab active" data-tab="watch-later">📥 Посмотреть позже</button>
-                <button class="material-tab" data-tab="favorites">⭐ Избранное</button>
-                <button class="material-tab" data-tab="practice">📋 Практические материалы</button>
-            </div>
-
-            <div class="materials-content">
-                <div class="material-section active" id="watch-later">
-                    <h3>Материалы для просмотра</h3>
-                    <div class="materials-list" id="watchLaterList">
-                        <div class="loading">Загрузка отложенных материалов...</div>
-                    </div>
-                </div>
-
-                <div class="material-section" id="favorites">
-                    <h3>Избранные материалы</h3>
-                    <div class="materials-list" id="favoritesList">
-                        <div class="loading">Загрузка избранного...</div>
-                    </div>
-                </div>
-
-                <div class="material-section" id="practice">
-                    <h3>Практические материалы</h3>
-                    <div class="practice-grid">
-                        <div class="practice-card" onclick="openMaterials('mri')">
-                            <div class="practice-icon">🩻</div>
-                            <div class="practice-title">МРТ разборы</div>
-                            <div class="practice-count" id="mriCount">0 материалов</div>
-                        </div>
-                        <div class="practice-card" onclick="openMaterials('cases')">
-                            <div class="practice-icon">📋</div>
-                            <div class="practice-title">Клинические случаи</div>
-                            <div class="practice-count" id="casesCount">0 кейсов</div>
-                        </div>
-                        <div class="practice-card" onclick="openMaterials('checklists')">
-                            <div class="practice-icon">✅</div>
-                            <div class="practice-title">Чек-листы</div>
-                            <div class="practice-count" id="checklistsCount">0 чек-листов</div>
-                        </div>
-                    </div>
-                    <div class="materials-list" id="practiceMaterialsList">
-                        <div class="loading">Загрузка практических материалов...</div>
-                    </div>
-                </div>
-            </div>
-        `
-    },
-
-    profile: {
-        title: 'Личный кабинет',
-        content: `
-            <div class="profile-header">
-                <div class="avatar-section">
-                    <div class="avatar-large">👤</div>
-                    <div class="profile-info">
-                        <div class="profile-name" id="userName">Пользователь</div>
-                        <div class="profile-status">Член Академии АНБ с <span id="joinDate">${new Date().toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'})}</span></div>
-                        <div class="profile-badge" id="userBadge">Активный участник</div>
-                    </div>
-                </div>
-                
-                <div class="subscription-info">
-                    <div class="subscription-status" id="subscriptionStatus">
-                        <div class="status-icon">❌</div>
-                        <div class="status-text">Подписка: не активна</div>
-                    </div>
-                    <button class="btn btn-primary" onclick="changeSubscription()">Изменить подписку</button>
-                </div>
-            </div>
-
-            <div class="journey-section">
-                <h3>🎯 Мой путь развития</h3>
-                <div class="journey-progress" id="journeyProgress">
-                    <div class="loading">Загрузка прогресса...</div>
-                </div>
-            </div>
-
-            <div class="profile-stats">
-                <h3>📊 Моя активность</h3>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon">📚</div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="coursesCompleted">0</div>
-                            <div class="stat-label">Пройдено курсов</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🎯</div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="materialsWatched">0</div>
-                            <div class="stat-label">Просмотрено материалов</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">👥</div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="eventsAttended">0</div>
-                            <div class="stat-label">Мероприятий посещено</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">💾</div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="materialsSaved">0</div>
-                            <div class="stat-label">Материалов сохранено</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="profile-actions">
-                <button class="btn btn-outline" onclick="editProfile()">✏️ Редактировать профиль</button>
-                <button class="btn btn-outline" onclick="showAchievements()">🏆 Мои достижения</button>
-                <button class="btn btn-outline" onclick="exportData()">📥 Экспорт данных</button>
-            </div>
-        `
-    }
-};
-
-let currentUser = null;
-let allContent = {};
-let currentPage = 'home';
-
-// ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
-
-async function loadUserData() {
-    try {
-        let userId;
-        let userData = null;
+class AcademyApp {
+    constructor() {
+        this.currentUser = null;
+        this.allContent = {};
+        this.currentPage = 'home';
+        this.currentCategory = 'all';
+        this.searchQuery = '';
+        this.isLoading = false;
         
-        // Пробуем получить данные из Telegram WebApp
-        if (window.Telegram && Telegram.WebApp) {
-            const tgUser = Telegram.WebApp.initDataUnsafe.user;
-            console.log('🔑 Telegram WebApp User:', tgUser);
-            
-            if (tgUser && tgUser.id) {
-                userId = tgUser.id;
-                userData = {
-                    id: tgUser.id,
-                    first_name: tgUser.first_name || 'User',
-                    last_name: tgUser.last_name || '',
-                    username: tgUser.username || ''
-                };
+        this.pages = {
+            home: this.createHomePage(),
+            courses: this.createContentPage('courses', '📚 Курсы'),
+            podcasts: this.createContentPage('podcasts', '🎧 АНБ FM'),
+            streams: this.createContentPage('streams', '📹 Эфиры'),
+            videos: this.createContentPage('videos', '🎯 Видео-шпаргалки'),
+            materials: this.createContentPage('materials', '📋 Материалы'),
+            events: this.createContentPage('events', '🗺️ Мероприятия'),
+            community: this.createCommunityPage(),
+            profile: this.createProfilePage()
+        };
 
-                // Создаем или получаем пользователя
+        this.init();
+    }
+
+    async init() {
+        console.log('🚀 Инициализация приложения Академии АНБ...');
+        
+        // Инициализация навигации
+        this.initNavigation();
+        
+        // Загрузка пользователя и данных
+        await this.loadUserData();
+        await this.loadContent();
+        
+        // Показываем главную страницу
+        this.renderPage('home');
+        
+        console.log('✅ Приложение готово к работе');
+    }
+
+    initNavigation() {
+        // Обработчики навигации
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = btn.dataset.page;
+                this.renderPage(page);
+            });
+        });
+
+        // Поиск
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', this.debounce((e) => {
+                this.searchQuery = e.target.value;
+                this.performSearch();
+            }, 300));
+        }
+
+        // Инициализация Telegram WebApp
+        if (window.Telegram && Telegram.WebApp) {
+            this.initTelegramWebApp();
+        }
+    }
+
+    initTelegramWebApp() {
+        Telegram.WebApp.expand();
+        Telegram.WebApp.ready();
+        Telegram.WebApp.setHeaderColor('#58b8e7');
+        Telegram.WebApp.setBackgroundColor('#ffffff');
+        
+        // Обработка кнопки "Назад"
+        Telegram.WebApp.BackButton.onClick(() => {
+            if (this.currentPage !== 'home') {
+                this.renderPage('home');
+            }
+        });
+    }
+
+    async loadUserData() {
+        try {
+            let userId;
+            let userData = null;
+            
+            if (window.Telegram && Telegram.WebApp) {
+                const tgUser = Telegram.WebApp.initDataUnsafe.user;
+                if (tgUser?.id) {
+                    userId = tgUser.id;
+                    userData = {
+                        id: tgUser.id,
+                        firstName: tgUser.first_name || 'User',
+                        lastName: tgUser.last_name || '',
+                        username: tgUser.username || ''
+                    };
+                }
+            }
+
+            if (userId) {
                 const response = await fetch('/api/user', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        id: userData.id,
-                        firstName: userData.first_name,
-                        lastName: userData.last_name,
-                        username: userData.username
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
                 });
 
                 const userResponse = await response.json();
                 if (userResponse.success) {
-                    currentUser = userResponse.user;
-                    console.log('✅ Пользователь загружен:', currentUser);
+                    this.currentUser = userResponse.user;
+                    console.log('✅ Пользователь загружен:', this.currentUser);
                 } else {
                     throw new Error('Failed to load user');
                 }
+            } else {
+                // Демо-режим
+                this.currentUser = await this.loadDemoUser();
             }
-        }
 
-        // Если нет Telegram данных, используем демо-режим
-        if (!userId) {
-            console.log('👤 Режим без Telegram, используем демо-данные');
-            currentUser = await loadDemoUser();
+            this.updateUIWithUserData();
+            
+        } catch (error) {
+            console.error('❌ Ошибка загрузки пользователя:', error);
+            this.currentUser = await this.loadDemoUser();
+            this.updateUIWithUserData();
         }
-
-        updateUIWithUserData();
-        
-    } catch (error) {
-        console.error('❌ Ошибка загрузки пользователя:', error);
-        currentUser = await loadDemoUser();
-        updateUIWithUserData();
     }
-}
 
-async function loadDemoUser() {
-    try {
-        const response = await fetch('/api/content');
-        const contentData = await response.json();
-        const content = contentData.success ? contentData.data : {};
-        
+    async loadDemoUser() {
+        try {
+            const response = await fetch('/api/content');
+            const contentData = await response.json();
+            const content = contentData.success ? contentData.data : {};
+            
+            return {
+                id: 1,
+                firstName: 'Демо Пользователь',
+                lastName: '',
+                specialization: 'Невролог',
+                city: 'Москва',
+                email: 'demo@anb.ru',
+                subscription: { 
+                    status: 'trial', 
+                    type: 'trial_7days',
+                    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) 
+                },
+                progress: { 
+                    level: 'Понимаю', 
+                    steps: {
+                        materialsWatched: 5,
+                        eventsParticipated: 3,
+                        materialsSaved: 7,
+                        coursesBought: 1
+                    }
+                },
+                favorites: { 
+                    courses: content.courses ? [content.courses[0]?.id].filter(Boolean) : [], 
+                    podcasts: content.podcasts ? [content.podcasts[0]?.id].filter(Boolean) : [], 
+                    streams: content.streams ? [content.streams[0]?.id].filter(Boolean) : [], 
+                    videos: content.videos ? [content.videos[0]?.id].filter(Boolean) : [], 
+                    materials: content.materials ? [content.materials[0]?.id].filter(Boolean) : [], 
+                    watchLater: content.streams ? [content.streams[0]?.id].filter(Boolean) : [] 
+                },
+                isAdmin: false,
+                joinedAt: new Date('2024-01-01'),
+                surveyCompleted: true,
+                profileImage: null
+            };
+        } catch (error) {
+            console.error('❌ Ошибка загрузки демо-данных:', error);
+            return this.getFallbackUser();
+        }
+    }
+
+    getFallbackUser() {
         return {
             id: 1,
             firstName: 'Демо Пользователь',
@@ -367,2010 +193,1114 @@ async function loadDemoUser() {
                 }
             },
             favorites: { 
-                courses: content.courses ? [content.courses[0]?.id].filter(Boolean) : [], 
-                podcasts: content.podcasts ? [content.podcasts[0]?.id].filter(Boolean) : [], 
-                streams: content.streams ? [content.streams[0]?.id].filter(Boolean) : [], 
-                videos: content.videos ? [content.videos[0]?.id].filter(Boolean) : [], 
-                materials: content.materials ? [content.materials[0]?.id].filter(Boolean) : [], 
-                watchLater: content.streams ? [content.streams[0]?.id].filter(Boolean) : [] 
+                courses: [1], 
+                podcasts: [1], 
+                streams: [1], 
+                videos: [1], 
+                materials: [1], 
+                watchLater: [1] 
             },
             isAdmin: false,
             joinedAt: new Date('2024-01-01'),
-            surveyCompleted: true
+            surveyCompleted: true,
+            profileImage: null
         };
-    } catch (error) {
-        console.error('❌ Ошибка загрузки демо-данных:', error);
-        return getFallbackUser();
     }
-}
 
-function getFallbackUser() {
-    return {
-        id: 1,
-        firstName: 'Демо Пользователь',
-        lastName: '',
-        specialization: 'Невролог',
-        city: 'Москва',
-        email: 'demo@anb.ru',
-        subscription: { 
-            status: 'trial', 
-            type: 'trial_7days',
-            endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) 
-        },
-        progress: { 
-            level: 'Понимаю', 
-            steps: {
-                materialsWatched: 5,
-                eventsParticipated: 3,
-                materialsSaved: 7,
-                coursesBought: 1
+    async loadContent() {
+        try {
+            const response = await fetch('/api/content');
+            const data = await response.json();
+            
+            if (data.success) {
+                this.allContent = data.data;
+                console.log('✅ Контент загружен:', this.allContent);
+            } else {
+                throw new Error('Failed to load content');
             }
-        },
-        favorites: { 
-            courses: [1], 
-            podcasts: [1], 
-            streams: [1], 
-            videos: [1], 
-            materials: [1], 
-            watchLater: [1] 
-        },
-        isAdmin: false,
-        joinedAt: new Date('2024-01-01'),
-        surveyCompleted: true
-    };
-}
+        } catch (error) {
+            console.error('❌ Ошибка загрузки контента:', error);
+            this.allContent = {};
+            this.showNotification('⚠️ Не удалось загрузить контент', 'error');
+        }
+    }
 
-async function loadContent() {
-    try {
-        const response = await fetch('/api/content');
-        const data = await response.json();
+    renderPage(page) {
+        this.currentPage = page;
+        const mainContent = document.getElementById('mainContent');
         
-        if (data.success) {
-            allContent = data.data;
-            console.log('✅ Контент загружен:', allContent);
-        } else {
-            throw new Error('Failed to load content');
-        }
-    } catch (error) {
-        console.error('❌ Ошибка загрузки контента:', error);
-        allContent = {};
-        showNotification('⚠️ Не удалось загрузить контент', 'error');
-    }
-}
+        if (!mainContent) return;
 
-function renderPage(page) {
-    currentPage = page;
-    const pageData = pages[page];
-    
-    document.getElementById('mainContent').innerHTML = `
-        <div class="page">
-            <h2>${pageData.title}</h2>
-            ${pageData.content}
-        </div>
-    `;
-
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.page === page);
-    });
-
-    initializePage(page);
-}
-
-function initializePage(page) {
-    switch (page) {
-        case 'home':
-            initHomePage();
-            break;
-        case 'catalog':
-            loadCatalogContent();
-            initCatalogFilters();
-            break;
-        case 'community':
-            initCommunityPage();
-            break;
-        case 'favorites':
-            loadFavorites();
-            initFavoritesPage();
-            break;
-        case 'profile':
-            updateProfileData();
-            break;
-    }
-}
-
-// ==================== ГЛАВНАЯ СТРАНИЦА ====================
-
-async function initHomePage() {
-    await loadNews();
-    initNewsFilters();
-}
-
-async function loadNews() {
-    const newsList = document.getElementById('newsList');
-    if (!newsList) return;
-
-    try {
-        const response = await fetch('/api/news');
-        const data = await response.json();
-        
-        if (data.success && data.news.length > 0) {
-            displayNews(data.news);
-        } else {
-            await loadContent();
-            generateNewsFromContent();
-        }
-    } catch (error) {
-        console.error('❌ Ошибка загрузки новостей:', error);
-        generateNewsFromContent();
-    }
-}
-
-function generateNewsFromContent() {
-    const news = [];
-    
-    if (allContent.courses && allContent.courses.length > 0) {
-        allContent.courses.slice(0, 2).forEach(course => {
-            news.push({
-                category: 'Профессиональное развитие',
-                title: `Новый курс: "${course.title}"`,
-                date: new Date(course.created_at).toLocaleDateString('ru-RU'),
-                excerpt: course.description,
-                type: 'courses'
-            });
+        // Обновляем навигацию
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.page === page);
         });
-    }
-    
-    if (allContent.streams && allContent.streams.length > 0) {
-        allContent.streams.slice(0, 2).forEach(stream => {
-            news.push({
-                category: 'Вебинар',
-                title: `Предстоящий эфир: "${stream.title}"`,
-                date: new Date(stream.created_at).toLocaleDateString('ru-RU'),
-                excerpt: stream.description,
-                type: 'streams'
-            });
-        });
-    }
-    
-    // Добавляем общие новости если мало контента
-    if (news.length < 3) {
-        news.push({
-            category: 'Развитие',
-            title: 'Запуск новой образовательной платформы',
-            date: new Date().toLocaleDateString('ru-RU'),
-            excerpt: 'Академия АНБ представляет обновленную платформу для профессионального развития врачей',
-            type: 'development'
-        });
-    }
-    
-    displayNews(news.slice(0, 5));
-}
 
-function displayNews(news) {
-    const newsList = document.getElementById('newsList');
-    if (!newsList) return;
-
-    if (news.length === 0) {
-        newsList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📰</div>
-                <div class="empty-text">Новости пока не добавлены</div>
-                <div class="empty-hint">Следите за обновлениями</div>
-            </div>
-        `;
-        return;
-    }
-
-    newsList.innerHTML = news.map(item => `
-        <div class="news-item" data-type="${item.type || 'news'}">
-            <div class="news-category">${item.category}</div>
-            <div class="news-title">${item.title}</div>
-            <div class="news-date">${item.date}</div>
-            <div class="news-excerpt">${item.excerpt}</div>
-        </div>
-    `).join('');
-}
-
-function initNewsFilters() {
-    document.querySelectorAll('#newsFilters .filter-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('#newsFilters .filter-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            filterNews(this.dataset.filter);
-        });
-    });
-}
-
-function filterNews(filter) {
-    const newsItems = document.querySelectorAll('.news-item');
-    let visibleCount = 0;
-    
-    newsItems.forEach(item => {
-        if (filter === 'all' || item.dataset.type === filter) {
-            item.style.display = 'block';
-            visibleCount++;
-        } else {
-            item.style.display = 'none';
+        // Показываем/скрываем кнопку "Назад" в Telegram
+        if (window.Telegram && Telegram.WebApp) {
+            if (page !== 'home') {
+                Telegram.WebApp.BackButton.show();
+            } else {
+                Telegram.WebApp.BackButton.hide();
+            }
         }
-    });
-    
-    if (visibleCount === 0) {
-        document.getElementById('newsList').innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">🔍</div>
-                <div class="empty-text">Новости не найдены</div>
-                <div class="empty-hint">Попробуйте другой фильтр</div>
-            </div>
-        `;
-    }
-}
 
-// ==================== КАТАЛОГ КОНТЕНТА ====================
+        // Рендерим страницу
+        mainContent.innerHTML = this.pages[page] || this.pages.home;
 
-async function loadCatalogContent() {
-    await loadContent();
-    renderCatalogContent();
-}
-
-function renderCatalogContent() {
-    const contentGrid = document.getElementById('contentGrid');
-    if (!contentGrid) return;
-    
-    if (!allContent || Object.keys(allContent).length === 0) {
-        contentGrid.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📚</div>
-                <div class="empty-text">Контент пока не добавлен</div>
-                <div class="empty-hint">Следите за обновлениями</div>
-            </div>
-        `;
-        return;
+        // Инициализируем страницу
+        this.initializePage(page);
     }
 
-    let allItems = [];
-    Object.keys(allContent).forEach(type => {
-        if (allContent[type] && Array.isArray(allContent[type])) {
-            allContent[type].forEach(item => {
-                item.contentType = type;
-                allItems.push(item);
-            });
-        }
-    });
-
-    if (allItems.length === 0) {
-        contentGrid.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📚</div>
-                <div class="empty-text">Контент пока не добавлен</div>
-            </div>
-        `;
-        return;
-    }
-
-    // Сортируем по дате создания (новые первыми)
-    allItems.sort((a, b) => new Date(b.created_at || b.created) - new Date(a.created_at || a.created));
-
-    contentGrid.innerHTML = allItems.map(item => `
-        <div class="content-card" data-type="${item.contentType}">
-            <div class="content-card-header">
-                <div class="content-icon">${getContentIcon(item.contentType)}</div>
-                <button class="favorite-btn ${isFavorite(item.contentType, item.id) ? 'active' : ''}" 
-                        onclick="toggleFavorite('${item.contentType}', ${item.id})">
-                    ${isFavorite(item.contentType, item.id) ? '★' : '☆'}
-                </button>
-            </div>
-            <div class="content-card-body">
-                <div class="content-title">${item.title}</div>
-                <div class="content-description">${item.description || 'Описание отсутствует'}</div>
-                <div class="content-meta">
-                    ${item.duration ? `<span class="meta-item">⏱️ ${item.duration}</span>` : ''}
-                    ${item.price ? `<span class="meta-item">💰 ${formatPrice(item.price)}</span>` : ''}
-                    ${!item.price && item.contentType !== 'courses' ? `<span class="meta-item free">🆓 Бесплатно</span>` : ''}
-                    ${item.modules ? `<span class="meta-item">📚 ${item.modules} модулей</span>` : ''}
-                    ${item.type ? `<span class="meta-item">📁 ${getMaterialType(item.type)}</span>` : ''}
-                </div>
-            </div>
-            <div class="content-card-actions">
-                <button class="btn btn-outline" onclick="addToWatchLater('${item.contentType}', ${item.id})">📥 Позже</button>
-                <button class="btn btn-primary" onclick="openContent('${item.contentType}', ${item.id})">
-                    ${getActionButtonText(item.contentType)}
-                </button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function initCatalogFilters() {
-    const searchInput = document.getElementById('catalogSearch');
-    const typeFilter = document.getElementById('contentTypeFilter');
-    const contentTabs = document.querySelectorAll('.content-tab');
-    
-    if (searchInput) {
-        searchInput.addEventListener('input', debounce(filterCatalogContent, 300));
-    }
-    
-    if (typeFilter) {
-        typeFilter.addEventListener('change', filterCatalogContent);
-    }
-    
-    contentTabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-            contentTabs.forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            filterCatalogContent();
-        });
-    });
-}
-
-function filterCatalogContent() {
-    const searchTerm = document.getElementById('catalogSearch')?.value.toLowerCase() || '';
-    const contentType = document.getElementById('contentTypeFilter')?.value || 'all';
-    const activeTab = document.querySelector('.content-tab.active')?.dataset.tab || 'all';
-    
-    const cards = document.querySelectorAll('.content-card');
-    let visibleCount = 0;
-    
-    cards.forEach(card => {
-        const title = card.querySelector('.content-title').textContent.toLowerCase();
-        const description = card.querySelector('.content-description').textContent.toLowerCase();
-        const cardType = card.dataset.type;
-        const isFree = card.querySelector('.meta-item.free');
-        const isNew = true;
-        
-        const matchesSearch = title.includes(searchTerm) || description.includes(searchTerm);
-        const matchesType = contentType === 'all' || cardType === contentType;
-        const matchesTab = activeTab === 'all' || 
-                          (activeTab === 'free' && isFree) ||
-                          (activeTab === 'new' && isNew) ||
-                          (activeTab === 'popular' && cardType === 'streams');
-        
-        if (matchesSearch && matchesType && matchesTab) {
-            card.style.display = 'block';
-            visibleCount++;
-        } else {
-            card.style.display = 'none';
-        }
-    });
-    
-    const contentGrid = document.getElementById('contentGrid');
-    const noResults = contentGrid.querySelector('.no-results');
-    
-    if (visibleCount === 0) {
-        if (!noResults) {
-            const noResultsMsg = document.createElement('div');
-            noResultsMsg.className = 'empty-state no-results';
-            noResultsMsg.innerHTML = `
-                <div class="empty-icon">🔍</div>
-                <div class="empty-text">Ничего не найдено</div>
-                <div class="empty-hint">Попробуйте изменить параметры поиска</div>
-            `;
-            contentGrid.appendChild(noResultsMsg);
-        }
-    } else if (noResults) {
-        noResults.remove();
-    }
-}
-
-// ==================== ИЗБРАННОЕ И МАТЕРИАЛЫ ====================
-
-async function loadFavorites() {
-    if (!currentUser) return;
-    
-    await loadContent();
-    await loadWatchLater();
-    await loadFavoritesList();
-    await loadPracticeMaterials();
-    updatePracticeCounts();
-}
-
-async function loadWatchLater() {
-    const watchLaterList = document.getElementById('watchLaterList');
-    if (!watchLaterList) return;
-    
-    const watchLaterItems = currentUser.favorites.watchLater.map(id => {
-        for (const type in allContent) {
-            const item = allContent[type].find(item => item.id === id);
-            if (item) return { ...item, contentType: type };
-        }
-        return null;
-    }).filter(item => item);
-    
-    if (watchLaterItems.length === 0) {
-        watchLaterList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📥</div>
-                <div class="empty-text">Здесь будут материалы, которые вы отложили на потом</div>
-                <div class="empty-hint">Нажимайте "Посмотреть позже" на карточках контента</div>
-            </div>
-        `;
-    } else {
-        watchLaterList.innerHTML = watchLaterItems.map(item => `
-            <div class="material-item">
-                <div class="material-icon">${getContentIcon(item.contentType)}</div>
-                <div class="material-info">
-                    <div class="material-title">${item.title}</div>
-                    <div class="material-description">${item.description}</div>
-                    <div class="material-meta">
-                        <span class="material-type">${getContentTypeName(item.contentType)}</span>
-                        <span class="material-date">Добавлено ${formatDate(item.created_at || item.created)}</span>
+    createHomePage() {
+        return `
+            <div class="page">
+                <div class="hero-section">
+                    <div class="hero-text">
+                        <h2>Академия АНБ</h2>
+                        <p>Профессиональное развитие в неврологии и реабилитации</p>
                     </div>
                 </div>
-                <div class="material-actions">
-                    <button class="btn btn-small" onclick="openContent('${item.contentType}', ${item.id})">Открыть</button>
-                    <button class="btn btn-small btn-outline" onclick="removeFromWatchLater(${item.id})">❌ Удалить</button>
+
+                <div class="quick-nav">
+                    <h3>🚀 Быстрый старт</h3>
+                    <div class="grid">
+                        ${this.createNavigationCard('courses', '📚', 'Курсы', 'Системное обучение с сертификатами')}
+                        ${this.createNavigationCard('podcasts', '🎧', 'АНБ FM', 'Аудио-подкасты и интервью')}
+                        ${this.createNavigationCard('streams', '📹', 'Эфиры', 'Прямые эфиры и разборы кейсов')}
+                        ${this.createNavigationCard('videos', '🎯', 'Шпаргалки', 'Короткие видео с техниками')}
+                        ${this.createNavigationCard('materials', '📋', 'Материалы', 'Практические инструменты')}
+                        ${this.createNavigationCard('events', '🗺️', 'Мероприятия', 'Онлайн и офлайн события')}
+                    </div>
                 </div>
+
+                <div class="news-section">
+                    <div class="section-header">
+                        <h3>📰 Последние новости</h3>
+                        <div class="filters" id="newsFilters">
+                            <button class="filter-btn active" data-filter="all">Все</button>
+                            <button class="filter-btn" data-filter="courses">Курсы</button>
+                            <button class="filter-btn" data-filter="events">События</button>
+                        </div>
+                    </div>
+                    <div class="news-list" id="newsList">
+                        <div class="loading">Загрузка новостей...</div>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <div class="section-header">
+                        <h3>📊 Ваша активность</h3>
+                    </div>
+                    <div class="stats-grid" id="homeStats">
+                        <div class="stat-card">
+                            <div class="stat-icon">📚</div>
+                            <div class="stat-info">
+                                <div class="stat-value">0</div>
+                                <div class="stat-label">Курсов пройдено</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🎯</div>
+                            <div class="stat-info">
+                                <div class="stat-value">0</div>
+                                <div class="stat-label">Материалов изучено</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createNavigationCard(page, icon, title, description) {
+        const navItem = this.allContent.navigation?.find(item => item.target_page === page);
+        const imageUrl = navItem?.image_url || `/uploads/nav-${page}.jpg`;
+        
+        return `
+            <div class="card" onclick="academyApp.renderPage('${page}')">
+                <div class="card-icon">${icon}</div>
+                <div class="card-title">${title}</div>
+                <div class="card-desc">${description}</div>
+            </div>
+        `;
+    }
+
+    createContentPage(type, title) {
+        return `
+            <div class="page">
+                <h2>${title}</h2>
+                
+                <div class="content-filters">
+                    <div class="search-container">
+                        <input type="text" placeholder="Поиск..." class="search-input" id="${type}Search">
+                    </div>
+                    <div class="category-filters" id="${type}Categories">
+                        <button class="filter-btn active" data-category="all">Все</button>
+                    </div>
+                </div>
+
+                <div class="content-grid" id="${type}Grid">
+                    <div class="loading">Загрузка ${title.toLowerCase()}...</div>
+                </div>
+            </div>
+        `;
+    }
+
+    createCommunityPage() {
+        return `
+            <div class="page">
+                <h2>👥 Сообщество</h2>
+                
+                <div class="community-stats">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="communityMembers">1.2K</div>
+                            <div class="stat-label">Участников</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="activeDiscussions">45</div>
+                            <div class="stat-label">Обсуждений</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="community-chats">
+                    <h3>💬 Чаты сообщества</h3>
+                    <div class="chats-list">
+                        <div class="chat-item" onclick="academyApp.openChat('general')">
+                            <div class="chat-icon">💬</div>
+                            <div class="chat-info">
+                                <div class="chat-name">Флудилка</div>
+                                <div class="chat-desc">Неформальное общение</div>
+                                <div class="chat-meta">1.2K участников</div>
+                            </div>
+                        </div>
+                        <div class="chat-item" onclick="academyApp.openChat('specialists')">
+                            <div class="chat-icon">👥</div>
+                            <div class="chat-info">
+                                <div class="chat-name">Чат специалистов</div>
+                                <div class="chat-desc">Профессиональные обсуждения</div>
+                                <div class="chat-meta">856 участников</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-section">
+                    <h3>❓ Частые вопросы</h3>
+                    <div class="faq-list" id="faqList">
+                        <div class="loading">Загрузка вопросов...</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createProfilePage() {
+        return `
+            <div class="page">
+                <div class="profile-header">
+                    <div class="avatar-section">
+                        <div class="avatar-large" id="profileAvatar">👤</div>
+                        <div class="profile-info">
+                            <div class="profile-name" id="userName">Пользователь</div>
+                            <div class="profile-status">Член Академии АНБ с <span id="joinDate"></span></div>
+                            <div class="profile-badge" id="userBadge">Активный участник</div>
+                        </div>
+                    </div>
+                    
+                    <div class="subscription-info">
+                        <div class="subscription-status" id="subscriptionStatus">
+                            <div class="status-icon">❌</div>
+                            <div class="status-text">Подписка: не активна</div>
+                        </div>
+                        <button class="btn btn-primary" onclick="academyApp.changeSubscription()">Изменить подписку</button>
+                    </div>
+                </div>
+
+                <div class="journey-section">
+                    <h3>🎯 Мой путь развития</h3>
+                    <div class="journey-progress" id="journeyProgress">
+                        <div class="loading">Загрузка прогресса...</div>
+                    </div>
+                </div>
+
+                <div class="profile-stats">
+                    <h3>📊 Моя активность</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📚</div>
+                            <div class="stat-info">
+                                <div class="stat-value" id="coursesCompleted">0</div>
+                                <div class="stat-label">Пройдено курсов</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🎯</div>
+                            <div class="stat-info">
+                                <div class="stat-value" id="materialsWatched">0</div>
+                                <div class="stat-label">Просмотрено материалов</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-info">
+                                <div class="stat-value" id="eventsAttended">0</div>
+                                <div class="stat-label">Мероприятий посещено</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">💾</div>
+                            <div class="stat-info">
+                                <div class="stat-value" id="materialsSaved">0</div>
+                                <div class="stat-label">Материалов сохранено</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-actions">
+                    <button class="btn btn-outline" onclick="academyApp.editProfile()">✏️ Редактировать профиль</button>
+                    <button class="btn btn-outline" onclick="academyApp.showAchievements()">🏆 Мои достижения</button>
+                    ${this.currentUser?.isAdmin ? `
+                        <button class="btn btn-primary" onclick="academyApp.goToAdminPanel()">🔧 Админ-панель</button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    initializePage(page) {
+        switch (page) {
+            case 'home':
+                this.initHomePage();
+                break;
+            case 'courses':
+            case 'podcasts':
+            case 'streams':
+            case 'videos':
+            case 'materials':
+            case 'events':
+                this.initContentPage(page);
+                break;
+            case 'community':
+                this.initCommunityPage();
+                break;
+            case 'profile':
+                this.updateProfileData();
+                break;
+        }
+    }
+
+    async initHomePage() {
+        await this.loadNews();
+        this.initNewsFilters();
+        this.updateHomeStats();
+    }
+
+    async loadNews() {
+        const newsList = document.getElementById('newsList');
+        if (!newsList) return;
+
+        try {
+            const response = await fetch('/api/news?limit=5');
+            const data = await response.json();
+            
+            if (data.success && data.news.length > 0) {
+                this.displayNews(data.news);
+            } else {
+                this.generateNewsFromContent();
+            }
+        } catch (error) {
+            console.error('❌ Ошибка загрузки новостей:', error);
+            this.generateNewsFromContent();
+        }
+    }
+
+    displayNews(news) {
+        const newsList = document.getElementById('newsList');
+        if (!newsList) return;
+
+        if (news.length === 0) {
+            newsList.innerHTML = this.createEmptyState('📰', 'Новости пока не добавлены', 'Следите за обновлениями');
+            return;
+        }
+
+        newsList.innerHTML = news.map(item => `
+            <div class="news-item" data-type="${item.category}">
+                ${item.image_url ? `
+                    <div class="news-image">
+                        <img src="${item.image_url}" alt="${item.title}" onerror="this.style.display='none'">
+                    </div>
+                ` : ''}
+                <div class="news-category">${item.category}</div>
+                <div class="news-title">${item.title}</div>
+                <div class="news-date">${new Date(item.created_at).toLocaleDateString('ru-RU')}</div>
+                <div class="news-excerpt">${item.content}</div>
             </div>
         `).join('');
     }
-}
 
-async function loadFavoritesList() {
-    const favoritesList = document.getElementById('favoritesList');
-    if (!favoritesList) return;
-    
-    const allFavorites = [];
-    for (const type in currentUser.favorites) {
-        if (type !== 'watchLater') {
-            currentUser.favorites[type].forEach(id => {
-                for (const contentType in allContent) {
-                    const item = allContent[contentType].find(item => item.id === id);
-                    if (item) {
-                        allFavorites.push({ ...item, contentType });
-                    }
-                }
+    generateNewsFromContent() {
+        const news = [];
+        
+        if (this.allContent.courses && this.allContent.courses.length > 0) {
+            this.allContent.courses.slice(0, 2).forEach(course => {
+                news.push({
+                    category: 'Курсы',
+                    title: `Новый курс: "${course.title}"`,
+                    date: new Date(course.created_at).toLocaleDateString('ru-RU'),
+                    content: course.description,
+                    image_url: course.image_url
+                });
             });
         }
+        
+        if (this.allContent.events && this.allContent.events.length > 0) {
+            this.allContent.events.slice(0, 2).forEach(event => {
+                news.push({
+                    category: 'Мероприятия',
+                    title: `Предстоящее мероприятие: "${event.title}"`,
+                    date: new Date(event.created_at).toLocaleDateString('ru-RU'),
+                    content: event.description,
+                    image_url: event.image_url
+                });
+            });
+        }
+        
+        if (news.length < 3) {
+            news.push({
+                category: 'Развитие',
+                title: 'Запуск новой образовательной платформы',
+                date: new Date().toLocaleDateString('ru-RU'),
+                content: 'Академия АНБ представляет обновленную платформу для профессионального развития врачей',
+                image_url: '/uploads/news-launch.jpg'
+            });
+        }
+        
+        this.displayNews(news.slice(0, 5));
     }
-    
-    if (allFavorites.length === 0) {
-        favoritesList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">⭐</div>
-                <div class="empty-text">Добавляйте материалы в избранное, нажимая на звездочку</div>
-                <div class="empty-hint">Ваши избранные материалы появятся здесь</div>
-            </div>
-        `;
-    } else {
-        favoritesList.innerHTML = allFavorites.map(item => `
-            <div class="material-item">
-                <div class="material-icon">${getContentIcon(item.contentType)}</div>
-                <div class="material-info">
-                    <div class="material-title">${item.title}</div>
-                    <div class="material-description">${item.description}</div>
-                    <div class="material-meta">
-                        <span class="material-type">${getContentTypeName(item.contentType)}</span>
-                    </div>
-                </div>
-                <div class="material-actions">
-                    <button class="btn btn-small btn-outline" onclick="toggleFavorite('${item.contentType}', ${item.id})">
-                        ❌ Удалить
+
+    initNewsFilters() {
+        document.querySelectorAll('#newsFilters .filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#newsFilters .filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.filterNews(btn.dataset.filter);
+            });
+        });
+    }
+
+    filterNews(filter) {
+        const newsItems = document.querySelectorAll('.news-item');
+        let visibleCount = 0;
+        
+        newsItems.forEach(item => {
+            if (filter === 'all' || item.dataset.type === filter) {
+                item.style.display = 'block';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        if (visibleCount === 0) {
+            document.getElementById('newsList').innerHTML = this.createEmptyState('🔍', 'Новости не найдены', 'Попробуйте другой фильтр');
+        }
+    }
+
+    updateHomeStats() {
+        if (!this.currentUser) return;
+
+        const coursesCompleted = document.getElementById('coursesCompleted');
+        const materialsWatched = document.getElementById('materialsWatched');
+
+        if (coursesCompleted) coursesCompleted.textContent = this.currentUser.progress.steps.coursesBought || 0;
+        if (materialsWatched) materialsWatched.textContent = this.currentUser.progress.steps.materialsWatched || 0;
+    }
+
+    async initContentPage(contentType) {
+        await this.loadContentData(contentType);
+        this.initContentFilters(contentType);
+    }
+
+    async loadContentData(contentType) {
+        const contentGrid = document.getElementById(`${contentType}Grid`);
+        if (!contentGrid) return;
+
+        contentGrid.innerHTML = '<div class="loading">Загрузка...</div>';
+
+        try {
+            const content = this.allContent[contentType] || [];
+            
+            if (content.length === 0) {
+                contentGrid.innerHTML = this.createEmptyState(
+                    this.getContentIcon(contentType),
+                    `${this.getContentTypeName(contentType)} не найдены`,
+                    'Здесь скоро появятся новые материалы'
+                );
+                return;
+            }
+
+            contentGrid.innerHTML = content.map(item => this.createContentCard(contentType, item)).join('');
+
+        } catch (error) {
+            console.error(`❌ Ошибка загрузки ${contentType}:`, error);
+            contentGrid.innerHTML = '<div class="error">Ошибка загрузки</div>';
+        }
+    }
+
+    createContentCard(contentType, item) {
+        const isFavorite = this.isFavorite(contentType, item.id);
+        
+        return `
+            <div class="content-card">
+                <div class="content-card-header">
+                    <div class="content-icon">${this.getContentIcon(contentType)}</div>
+                    <button class="favorite-btn ${isFavorite ? 'active' : ''}" 
+                            onclick="academyApp.toggleFavorite('${contentType}', ${item.id})">
+                        ${isFavorite ? '★' : '☆'}
                     </button>
-                    <button class="btn btn-small" onclick="openContent('${item.contentType}', ${item.id})">Открыть</button>
+                </div>
+                ${item.image_url ? `
+                    <div class="content-image">
+                        <img src="${item.image_url}" alt="${item.title}" onerror="this.style.display='none'">
+                    </div>
+                ` : ''}
+                <div class="content-card-body">
+                    <div class="content-title">${item.title}</div>
+                    <div class="content-description">${item.description || 'Описание отсутствует'}</div>
+                    <div class="content-meta">
+                        ${item.duration ? `<span class="meta-item">⏱️ ${item.duration}</span>` : ''}
+                        ${item.price ? `<span class="meta-item">💰 ${this.formatPrice(item.price)}</span>` : ''}
+                        ${!item.price && contentType !== 'courses' ? `<span class="meta-item free">🆓 Бесплатно</span>` : ''}
+                        ${item.modules ? `<span class="meta-item">📚 ${item.modules} модулей</span>` : ''}
+                        ${item.category ? `<span class="meta-item">🏷️ ${item.category}</span>` : ''}
+                    </div>
+                </div>
+                <div class="content-card-actions">
+                    <button class="btn btn-outline" onclick="academyApp.addToWatchLater('${contentType}', ${item.id})">📥 Позже</button>
+                    <button class="btn btn-primary" onclick="academyApp.openContent('${contentType}', ${item.id})">
+                        ${this.getActionButtonText(contentType)}
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    initContentFilters(contentType) {
+        const searchInput = document.getElementById(`${contentType}Search`);
+        const categoriesContainer = document.getElementById(`${contentType}Categories`);
+
+        if (searchInput) {
+            searchInput.addEventListener('input', this.debounce((e) => {
+                this.searchQuery = e.target.value;
+                this.filterContent(contentType);
+            }, 300));
+        }
+
+        if (categoriesContainer) {
+            this.initCategoryFilters(contentType, categoriesContainer);
+        }
+    }
+
+    initCategoryFilters(contentType, container) {
+        const categories = this.allContent.categories?.filter(cat => cat.type === contentType) || [];
+        const uniqueCategories = [...new Set(categories.map(cat => cat.name))];
+        
+        if (uniqueCategories.length > 0) {
+            container.innerHTML = `
+                <button class="filter-btn active" data-category="all">Все</button>
+                ${uniqueCategories.map(category => `
+                    <button class="filter-btn" data-category="${category}">${category}</button>
+                `).join('')}
+            `;
+
+            container.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    this.currentCategory = btn.dataset.category;
+                    this.filterContent(contentType);
+                });
+            });
+        }
+    }
+
+    filterContent(contentType) {
+        const contentGrid = document.getElementById(`${contentType}Grid`);
+        const cards = contentGrid?.querySelectorAll('.content-card');
+        
+        if (!cards) return;
+
+        let visibleCount = 0;
+        
+        cards.forEach(card => {
+            const title = card.querySelector('.content-title').textContent.toLowerCase();
+            const description = card.querySelector('.content-description').textContent.toLowerCase();
+            const category = card.querySelector('.meta-item:last-child')?.textContent || '';
+            
+            const matchesSearch = !this.searchQuery || 
+                                title.includes(this.searchQuery.toLowerCase()) ||
+                                description.includes(this.searchQuery.toLowerCase());
+            
+            const matchesCategory = this.currentCategory === 'all' || 
+                                  category.includes(this.currentCategory);
+            
+            if (matchesSearch && matchesCategory) {
+                card.style.display = 'block';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        
+        if (visibleCount === 0) {
+            contentGrid.innerHTML = this.createEmptyState('🔍', 'Ничего не найдено', 'Попробуйте изменить параметры поиска');
+        }
+    }
+
+    async initCommunityPage() {
+        await this.loadFAQ();
+        this.initFAQ();
+    }
+
+    async loadFAQ() {
+        const faqList = document.getElementById('faqList');
+        if (!faqList) return;
+
+        try {
+            const response = await fetch('/api/faq');
+            const data = await response.json();
+            
+            if (data.success) {
+                this.displayFAQ(data.faq);
+            } else {
+                this.displayDefaultFAQ();
+            }
+        } catch (error) {
+            console.error('❌ Ошибка загрузки FAQ:', error);
+            this.displayDefaultFAQ();
+        }
+    }
+
+    displayFAQ(faqItems) {
+        const faqList = document.getElementById('faqList');
+        if (!faqList) return;
+
+        faqList.innerHTML = faqItems.map(item => `
+            <div class="faq-item">
+                <div class="faq-question" onclick="academyApp.toggleFAQ(this)">
+                    ${item.question}
+                    <span class="faq-toggle">+</span>
+                </div>
+                <div class="faq-answer">${item.answer}</div>
+            </div>
+        `).join('');
+    }
+
+    displayDefaultFAQ() {
+        const defaultFAQ = [
+            {
+                question: "Как оформить подписку?",
+                answer: "Подписку можно оформить в разделе «Профиль» через кнопку «Изменить подписку»."
+            },
+            {
+                question: "Что входит в подписку?",
+                answer: "Полный доступ ко всем курсам, материалам, эфирам и участие в сообществе."
+            }
+        ];
+        
+        this.displayFAQ(defaultFAQ);
+    }
+
+    initFAQ() {
+        // Инициализация уже выполнена в displayFAQ
+    }
+
+    toggleFAQ(element) {
+        const answer = element.nextElementSibling;
+        const isVisible = answer.style.display === 'block';
+        
+        document.querySelectorAll('.faq-answer').forEach(ans => {
+            ans.style.display = 'none';
+        });
+        
+        document.querySelectorAll('.faq-toggle').forEach(toggle => {
+            toggle.textContent = '+';
+        });
+        
+        answer.style.display = isVisible ? 'none' : 'block';
+        element.querySelector('.faq-toggle').textContent = isVisible ? '+' : '−';
+    }
+
+    updateUIWithUserData() {
+        if (!this.currentUser) return;
+        
+        const adminBadge = document.getElementById('adminBadge');
+        if (adminBadge) {
+            adminBadge.style.display = this.currentUser.isAdmin ? 'block' : 'none';
+        }
+    }
+
+    updateProfileData() {
+        if (!this.currentUser) return;
+        
+        this.updateProfileUI();
+        this.updateProfileStats();
+        this.loadJourneyProgress();
+    }
+
+    updateProfileUI() {
+        const userName = document.getElementById('userName');
+        const profileAvatar = document.getElementById('profileAvatar');
+        const joinDate = document.getElementById('joinDate');
+        const userBadge = document.getElementById('userBadge');
+        const subscriptionStatus = document.getElementById('subscriptionStatus');
+
+        if (userName) userName.textContent = this.currentUser.firstName + (this.currentUser.lastName ? ' ' + this.currentUser.lastName : '');
+        if (profileAvatar) profileAvatar.textContent = this.currentUser.profileImage ? '' : '👤';
+        if (joinDate) joinDate.textContent = new Date(this.currentUser.joinedAt).toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'});
+        if (userBadge) userBadge.textContent = this.getUserBadge(this.currentUser.progress.level);
+
+        if (subscriptionStatus) {
+            let statusHTML = '';
+            
+            if (this.currentUser.subscription.status === 'trial') {
+                const endDate = this.currentUser.subscription.endDate ? 
+                    new Date(this.currentUser.subscription.endDate).toLocaleDateString('ru-RU') : 'неизвестно';
+                statusHTML = `
+                    <div class="status-icon">🆓</div>
+                    <div class="status-text">
+                        <div>Подписка: пробный период</div>
+                        <div class="status-date">до ${endDate}</div>
+                    </div>
+                `;
+                subscriptionStatus.className = 'subscription-status trial';
+            } else if (this.currentUser.subscription.status === 'active') {
+                const endDate = this.currentUser.subscription.endDate ? 
+                    new Date(this.currentUser.subscription.endDate).toLocaleDateString('ru-RU') : 'неизвестно';
+                statusHTML = `
+                    <div class="status-icon">✅</div>
+                    <div class="status-text">
+                        <div>Подписка: активна</div>
+                        <div class="status-date">до ${endDate}</div>
+                    </div>
+                `;
+                subscriptionStatus.className = 'subscription-status active';
+            } else {
+                statusHTML = `
+                    <div class="status-icon">❌</div>
+                    <div class="status-text">Подписка: не активна</div>
+                `;
+                subscriptionStatus.className = 'subscription-status inactive';
+            }
+            
+            subscriptionStatus.innerHTML = statusHTML;
+        }
+    }
+
+    updateProfileStats() {
+        if (!this.currentUser) return;
+        
+        const coursesCompleted = document.getElementById('coursesCompleted');
+        const materialsWatched = document.getElementById('materialsWatched');
+        const eventsAttended = document.getElementById('eventsAttended');
+        const materialsSaved = document.getElementById('materialsSaved');
+
+        if (coursesCompleted) coursesCompleted.textContent = this.currentUser.progress.steps.coursesBought || 0;
+        if (materialsWatched) materialsWatched.textContent = this.currentUser.progress.steps.materialsWatched || 0;
+        if (eventsAttended) eventsAttended.textContent = this.currentUser.progress.steps.eventsParticipated || 0;
+        if (materialsSaved) materialsSaved.textContent = this.currentUser.progress.steps.materialsSaved || 0;
+    }
+
+    loadJourneyProgress() {
+        const journeyProgress = document.getElementById('journeyProgress');
+        if (!journeyProgress) return;
+
+        const levels = [
+            {
+                level: 'Понимаю',
+                title: 'Понимаю',
+                description: 'Начинаю замечать закономерности и связи. Не просто слышу жалобы — вижу структуру боли.',
+                progress: this.calculateLevelProgress('Понимаю'),
+                total: 9,
+                current: this.calculateCurrentProgress('Понимаю'),
+                hint: 'Чтобы перейти к следующему этапу — продолжайте участвовать в эфирах и сохраняйте всё, что откликается, в «Мои материалы».',
+                active: this.currentUser.progress.level === 'Понимаю'
+            },
+            {
+                level: 'Связываю', 
+                title: 'Связываю',
+                description: 'Закономерности и связи складываются в единую картину. Боль приобретает смысл.',
+                progress: this.calculateLevelProgress('Связываю'),
+                total: 25,
+                current: this.calculateCurrentProgress('Связываю'),
+                hint: 'Чтобы перейти к следующему этапу — участвуйте в разборах и ищите взаимосвязи между изученными материалами.',
+                active: this.currentUser.progress.level === 'Связываю'
+            }
+        ];
+
+        journeyProgress.innerHTML = levels.map(level => `
+            <div class="journey-step ${level.active ? 'active' : ''}">
+                <div class="step-marker">${levels.indexOf(level) + 1}</div>
+                <div class="step-content">
+                    <div class="step-title">${level.title}</div>
+                    <div class="step-description">${level.description}</div>
+                    <div class="step-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${level.progress}%"></div>
+                        </div>
+                        <div class="progress-text">${level.current} из ${level.total}</div>
+                    </div>
+                    ${level.hint ? `<div class="step-hint">${level.hint}</div>` : ''}
                 </div>
             </div>
         `).join('');
     }
-}
 
-async function loadPracticeMaterials() {
-    const practiceList = document.getElementById('practiceMaterialsList');
-    if (!practiceList) return;
-    
-    const materials = allContent.materials || [];
-    const practiceMaterials = materials.filter(m => m.type && ['mri', 'case', 'checklist'].includes(m.type));
-    
-    if (practiceMaterials.length === 0) {
-        practiceList.innerHTML = `
+    calculateLevelProgress(level) {
+        // Упрощенная логика для демонстрации
+        return this.currentUser.progress.level === level ? 65 : 
+               this.currentUser.progress.level > level ? 100 : 0;
+    }
+
+    calculateCurrentProgress(level) {
+        // Упрощенная логика для демонстрации
+        return this.currentUser.progress.level === level ? 6 : 0;
+    }
+
+    // Вспомогательные методы
+    getContentIcon(contentType) {
+        const icons = {
+            'courses': '📚',
+            'podcasts': '🎧',
+            'streams': '📹',
+            'videos': '🎯',
+            'materials': '📋',
+            'events': '🗺️'
+        };
+        return icons[contentType] || '📄';
+    }
+
+    getContentTypeName(contentType) {
+        const names = {
+            'courses': 'Курсы',
+            'podcasts': 'Подкасты',
+            'streams': 'Эфиры',
+            'videos': 'Видео',
+            'materials': 'Материалы',
+            'events': 'Мероприятия'
+        };
+        return names[contentType] || contentType;
+    }
+
+    getActionButtonText(contentType) {
+        const actions = {
+            'courses': 'Записаться',
+            'podcasts': 'Слушать',
+            'streams': 'Смотреть',
+            'videos': 'Смотреть',
+            'materials': 'Открыть',
+            'events': 'Участвовать'
+        };
+        return actions[contentType] || 'Открыть';
+    }
+
+    getUserBadge(level) {
+        const badges = {
+            'Понимаю': 'Начинающий специалист',
+            'Связываю': 'Активный участник',
+            'Применяю': 'Практикующий специалист'
+        };
+        return badges[level] || 'Участник академии';
+    }
+
+    isFavorite(contentType, contentId) {
+        return this.currentUser && this.currentUser.favorites && 
+               this.currentUser.favorites[contentType]?.includes(contentId);
+    }
+
+    formatPrice(price) {
+        return new Intl.NumberFormat('ru-RU').format(price) + ' ₽';
+    }
+
+    createEmptyState(icon, text, hint) {
+        return `
             <div class="empty-state">
-                <div class="empty-icon">📋</div>
-                <div class="empty-text">Практические материалы появятся здесь</div>
+                <div class="empty-icon">${icon}</div>
+                <div class="empty-text">${text}</div>
+                <div class="empty-hint">${hint}</div>
             </div>
         `;
-        return;
     }
-    
-    practiceList.innerHTML = practiceMaterials.map(material => `
-        <div class="material-item">
-            <div class="material-icon">${getMaterialIcon(material.type)}</div>
-            <div class="material-info">
-                <div class="material-title">${material.title}</div>
-                <div class="material-description">${material.description}</div>
-                <div class="material-meta">
-                    <span class="material-type">${getMaterialType(material.type)}</span>
-                    ${material.duration ? `<span class="material-duration">⏱️ ${material.duration}</span>` : ''}
-                </div>
-            </div>
-            <div class="material-actions">
-                <button class="btn btn-small btn-outline ${isFavorite('materials', material.id) ? 'active' : ''}" 
-                        onclick="toggleFavorite('materials', ${material.id})">
-                    ${isFavorite('materials', material.id) ? '★' : '☆'}
-                </button>
-                <button class="btn btn-small" onclick="openContent('materials', ${material.id})">Открыть</button>
-            </div>
-        </div>
-    `).join('');
-}
 
-function updatePracticeCounts() {
-    const materials = allContent.materials || [];
-    
-    const mriCount = materials.filter(m => m.type === 'mri').length;
-    const casesCount = materials.filter(m => m.type === 'case').length;
-    const checklistsCount = materials.filter(m => m.type === 'checklist').length;
-    
-    const mriElement = document.getElementById('mriCount');
-    const casesElement = document.getElementById('casesCount');
-    const checklistsElement = document.getElementById('checklistsCount');
-    
-    if (mriElement) mriElement.textContent = `${mriCount} материалов`;
-    if (casesElement) casesElement.textContent = `${casesCount} кейсов`;
-    if (checklistsElement) checklistsElement.textContent = `${checklistsCount} чек-листов`;
-}
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
 
-function initFavoritesPage() {
-    const materialTabs = document.querySelectorAll('.material-tab');
-    
-    materialTabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-            const tabName = this.dataset.tab;
-            
-            materialTabs.forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            
-            document.querySelectorAll('.material-section').forEach(section => {
-                section.classList.remove('active');
+    // Интерактивные методы
+    async toggleFavorite(contentType, contentId) {
+        if (!this.currentUser) {
+            this.showNotification('⚠️ Необходимо войти в систему');
+            return;
+        }
+
+        const isCurrentlyFavorite = this.isFavorite(contentType, contentId);
+        
+        try {
+            const response = await fetch(`/api/user/${this.currentUser.id}/favorites`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contentType,
+                    contentId,
+                    action: isCurrentlyFavorite ? 'remove' : 'add'
+                })
             });
-            document.getElementById(tabName).classList.add('active');
-        });
-    });
-}
-
-// ==================== ПРОФИЛЬ И ПРОГРЕСС ====================
-
-function updateProfileData() {
-    if (!currentUser) return;
-    
-    updateUIWithUserData();
-    updateProfileStats();
-    loadJourneyProgress();
-}
-
-function updateUIWithUserData() {
-    if (!currentUser) return;
-    
-    const userNameElement = document.getElementById('userName');
-    const subscriptionStatusElement = document.getElementById('subscriptionStatus');
-    const joinDateElement = document.getElementById('joinDate');
-    const userBadgeElement = document.getElementById('userBadge');
-    
-    if (userNameElement) {
-        userNameElement.textContent = currentUser.firstName + (currentUser.lastName ? ' ' + currentUser.lastName : '');
-    }
-    
-    if (joinDateElement && currentUser.joinedAt) {
-        joinDateElement.textContent = new Date(currentUser.joinedAt).toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'});
-    }
-    
-    if (userBadgeElement) {
-        userBadgeElement.textContent = getUserBadge(currentUser.progress.level);
-    }
-    
-    if (subscriptionStatusElement) {
-        let statusHTML = '';
-        
-        if (currentUser.subscription.status === 'trial') {
-            const endDate = currentUser.subscription.endDate ? 
-                new Date(currentUser.subscription.endDate).toLocaleDateString('ru-RU') : 'неизвестно';
-            statusHTML = `
-                <div class="status-icon">🆓</div>
-                <div class="status-text">
-                    <div>Подписка: пробный период</div>
-                    <div class="status-date">до ${endDate}</div>
-                </div>
-            `;
-            subscriptionStatusElement.className = 'subscription-status trial';
-        } else if (currentUser.subscription.status === 'active') {
-            const endDate = currentUser.subscription.endDate ? 
-                new Date(currentUser.subscription.endDate).toLocaleDateString('ru-RU') : 'неизвестно';
-            statusHTML = `
-                <div class="status-icon">✅</div>
-                <div class="status-text">
-                    <div>Подписка: активна</div>
-                    <div class="status-date">до ${endDate}</div>
-                </div>
-            `;
-            subscriptionStatusElement.className = 'subscription-status active';
-        } else {
-            statusHTML = `
-                <div class="status-icon">❌</div>
-                <div class="status-text">Подписка: не активна</div>
-            `;
-            subscriptionStatusElement.className = 'subscription-status inactive';
+            
+            const data = await response.json();
+            if (data.success) {
+                this.currentUser.favorites = data.favorites;
+                this.showNotification(isCurrentlyFavorite ? '❌ Удалено из избранного' : '⭐ Добавлено в избранное');
+                
+                // Обновляем UI если нужно
+                if (this.currentPage === contentType) {
+                    this.loadContentData(contentType);
+                }
+            }
+        } catch (error) {
+            console.error('❌ Ошибка обновления избранного:', error);
+            this.showNotification('❌ Ошибка при обновлении избранного', 'error');
         }
-        
-        subscriptionStatusElement.innerHTML = statusHTML;
     }
-}
 
-function updateProfileStats() {
-    if (!currentUser) return;
-    
-    const coursesElement = document.getElementById('coursesCompleted');
-    const materialsElement = document.getElementById('materialsWatched');
-    const eventsElement = document.getElementById('eventsAttended');
-    const savedElement = document.getElementById('materialsSaved');
-    
-    if (coursesElement) coursesElement.textContent = currentUser.progress.steps.coursesBought || 0;
-    if (materialsElement) materialsElement.textContent = currentUser.progress.steps.materialsWatched || 0;
-    if (eventsElement) eventsElement.textContent = currentUser.progress.steps.eventsParticipated || 0;
-    if (savedElement) savedElement.textContent = currentUser.progress.steps.materialsSaved || 0;
-}
-
-function loadJourneyProgress() {
-    const journeyProgress = document.getElementById('journeyProgress');
-    if (!journeyProgress) return;
-
-    const levels = [
-        {
-            level: 'Понимаю',
-            title: 'Понимаю',
-            description: 'Начинаю замечать закономерности и связи. Не просто слышу жалобы — вижу структуру боли.',
-            progress: calculateLevelProgress('Понимаю'),
-            total: 9,
-            current: calculateCurrentProgress('Понимаю'),
-            hint: 'Чтобы перейти к следующему этапу — продолжайте участвовать в эфирах и сохраняйте всё, что откликается, в «Мои материалы».',
-            active: currentUser.progress.level === 'Понимаю'
-        },
-        {
-            level: 'Связываю', 
-            title: 'Связываю',
-            description: 'Закономерности и связи складываются в единую картину. Боль приобретает смысл.',
-            progress: calculateLevelProgress('Связываю'),
-            total: 25,
-            current: calculateCurrentProgress('Связываю'),
-            hint: 'Чтобы перейти к следующему этапу — участвуйте в разборах и ищите взаимосвязи между изученными материалами.',
-            active: currentUser.progress.level === 'Связываю'
-        },
-        {
-            level: 'Применяю',
-            title: 'Применяю',
-            description: 'При взгляде на единую картину - боль воспринимается как следствие. Работа направлена на устранение причины.',
-            progress: calculateLevelProgress('Применяю'),
-            total: 23,
-            current: calculateCurrentProgress('Применяю'),
-            hint: 'Чтобы перейти к следующему этапу — выберите тему, в которой хотите углубиться, и пройдите обучение в Академии.',
-            active: currentUser.progress.level === 'Применяю'
-        },
-        {
-            level: 'Систематизирую',
-            title: 'Систематизирую',
-            description: 'Знания становятся инструментом, а не набором методик.',
-            progress: calculateLevelProgress('Систематизирую'),
-            total: 13,
-            current: calculateCurrentProgress('Систематизирую'),
-            hint: 'Продолжайте обучение и участвуйте в разборах как приглашенный гость.',
-            active: currentUser.progress.level === 'Систематизирую'
-        },
-        {
-            level: 'Делюсь',
-            title: 'Делюсь',
-            description: 'Опыт становится вкладом. Появляется желание обсуждать, помогать и развивать других.',
-            progress: calculateLevelProgress('Делюсь'),
-            total: 7,
-            current: calculateCurrentProgress('Делюсь'),
-            hint: 'Публикуйте собственные клинические кейсы и участвуйте в закрытых мероприятиях.',
-            active: currentUser.progress.level === 'Делюсь'
+    async addToWatchLater(contentType, contentId) {
+        if (!this.currentUser) {
+            this.showNotification('⚠️ Необходимо войти в систему');
+            return;
         }
-    ];
 
-    journeyProgress.innerHTML = levels.map(level => `
-        <div class="journey-step ${level.active ? 'active' : ''}">
-            <div class="step-marker">${levels.indexOf(level) + 1}</div>
-            <div class="step-content">
-                <div class="step-title">${level.title}</div>
-                <div class="step-description">${level.description}</div>
-                <div class="step-progress">
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${level.progress}%"></div>
+        try {
+            const response = await fetch(`/api/user/${this.currentUser.id}/watch-later`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contentType,
+                    contentId,
+                    action: 'add'
+                })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                this.currentUser.favorites.watchLater = data.watchLater;
+                this.showNotification('📥 Добавлено в "Посмотреть позже"');
+            }
+        } catch (error) {
+            console.error('❌ Ошибка добавления в список:', error);
+            this.showNotification('❌ Ошибка при добавлении в список', 'error');
+        }
+    }
+
+    openContent(contentType, contentId) {
+        const content = this.allContent[contentType]?.find(item => item.id === contentId);
+        if (!content) {
+            this.showNotification('❌ Контент не найден');
+            return;
+        }
+
+        // Проверяем доступ
+        if (!this.hasAccessToContent(content)) {
+            this.showNotification('🔒 Для доступа к этому контенту нужна активная подписка');
+            this.changeSubscription();
+            return;
+        }
+
+        this.showContentModal(contentType, content);
+    }
+
+    hasAccessToContent(content) {
+        if (!this.currentUser) return false;
+        
+        // Бесплатный контент доступен всем
+        if (!content.price || content.price === 0) return true;
+        
+        // Проверяем активную подписку
+        return this.currentUser.subscription.status === 'active' || 
+               this.currentUser.subscription.status === 'trial' ||
+               this.currentUser.isAdmin;
+    }
+
+    showContentModal(contentType, content) {
+        const modalHTML = `
+            <div class="modal" id="contentModal">
+                <div class="modal-content large">
+                    <div class="modal-header">
+                        <h3>${content.title}</h3>
+                        <button class="close-btn" onclick="academyApp.closeModal('contentModal')">×</button>
                     </div>
-                    <div class="progress-text">${level.current} из ${level.total}</div>
-                </div>
-                ${level.hint ? `<div class="step-hint">${level.hint}</div>` : ''}
-            </div>
-        </div>
-    `).join('');
-}
-
-function calculateLevelProgress(level) {
-    const currentLevel = currentUser.progress.level;
-    const levelIndex = ['Понимаю', 'Связываю', 'Применяю', 'Систематизирую', 'Делюсь'].indexOf(level);
-    const currentIndex = ['Понимаю', 'Связываю', 'Применяешь', 'Систематизирую', 'Делюсь'].indexOf(currentLevel);
-    
-    if (levelIndex < currentIndex) {
-        return 100;
-    } else if (levelIndex > currentIndex) {
-        return 0;
-    } else {
-        const progress = currentUser.progress.steps;
-        let completed = 0;
-        let total = 0;
-        
-        switch(level) {
-            case 'Понимаю':
-                completed = (progress.materialsWatched >= 1 ? 1 : 0) + 
-                           (progress.eventsParticipated >= 3 ? 1 : 0) + 
-                           (progress.materialsSaved >= 5 ? 1 : 0);
-                total = 3;
-                break;
-            case 'Связываю':
-                completed = (progress.materialsWatched >= 10 ? 1 : 0) + 
-                           (progress.eventsParticipated >= 5 ? 1 : 0) + 
-                           (progress.materialsSaved >= 10 ? 1 : 0);
-                total = 3;
-                break;
-            case 'Применяю':
-                completed = (progress.coursesBought >= 1 ? 1 : 0) + 
-                           (progress.materialsWatched >= 15 ? 1 : 0) + 
-                           (progress.eventsParticipated >= 7 ? 1 : 0);
-                total = 3;
-                break;
-            default:
-                completed = 1;
-                total = 3;
-        }
-        
-        return Math.round((completed / total) * 100);
-    }
-}
-
-function calculateCurrentProgress(level) {
-    const progress = currentUser.progress.steps;
-    
-    switch(level) {
-        case 'Понимаю':
-            return Math.min(progress.materialsWatched, 1) + 
-                   Math.min(progress.eventsParticipated, 3) + 
-                   Math.min(progress.materialsSaved, 5);
-        case 'Связываю':
-            return Math.min(progress.materialsWatched, 10) + 
-                   Math.min(progress.eventsParticipated, 5) + 
-                   Math.min(progress.materialsSaved, 10);
-        case 'Применяю':
-            return Math.min(progress.coursesBought, 1) + 
-                   Math.min(progress.materialsWatched, 15) + 
-                   Math.min(progress.eventsParticipated, 7);
-        default:
-            return 0;
-    }
-}
-
-// ==================== ИНТЕРАКТИВНЫЕ ФУНКЦИИ ====================
-
-async function toggleFavorite(contentType, contentId) {
-    if (!currentUser) {
-        showNotification('⚠️ Необходимо войти в систему');
-        return;
-    }
-
-    const isCurrentlyFavorite = isFavorite(contentType, contentId);
-    
-    try {
-        const response = await fetch(`/api/user/${currentUser.id}/favorites`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contentType,
-                contentId,
-                action: isCurrentlyFavorite ? 'remove' : 'add'
-            })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-            currentUser.favorites = data.favorites;
-            showNotification(isCurrentlyFavorite ? '❌ Удалено из избранного' : '⭐ Добавлено в избранное');
-            
-            if (currentPage === 'catalog') {
-                renderCatalogContent();
-            } else if (currentPage === 'favorites') {
-                loadFavorites();
-            }
-        }
-    } catch (error) {
-        console.error('❌ Ошибка обновления избранного:', error);
-        showNotification('❌ Ошибка при обновлении избранного', 'error');
-    }
-}
-
-async function addToWatchLater(contentType, contentId) {
-    if (!currentUser) {
-        showNotification('⚠️ Необходимо войти в систему');
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/user/${currentUser.id}/watch-later`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contentType,
-                contentId,
-                action: 'add'
-            })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-            currentUser.favorites.watchLater = data.watchLater;
-            showNotification('📥 Добавлено в "Посмотреть позже"');
-            
-            if (currentPage === 'favorites') {
-                loadFavorites();
-            }
-        }
-    } catch (error) {
-        console.error('❌ Ошибка добавления в список:', error);
-        showNotification('❌ Ошибка при добавлении в список', 'error');
-    }
-}
-
-async function removeFromWatchLater(contentId) {
-    if (!currentUser) return;
-    
-    try {
-        const response = await fetch(`/api/user/${currentUser.id}/watch-later`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contentId,
-                action: 'remove'
-            })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-            currentUser.favorites.watchLater = data.watchLater;
-            showNotification('❌ Удалено из "Посмотреть позже"');
-            loadFavorites();
-        }
-    } catch (error) {
-        console.error('❌ Ошибка удаления из списка:', error);
-        showNotification('❌ Ошибка при удалении из списка', 'error');
-    }
-}
-
-async function openContent(contentType, contentId) {
-    if (!currentUser) {
-        showNotification('⚠️ Необходимо войти в систему');
-        return;
-    }
-
-    const content = allContent[contentType]?.find(item => item.id === contentId);
-    if (!content) {
-        showNotification('❌ Контент не найден');
-        return;
-    }
-
-    // Проверяем доступ к контенту
-    if (!hasAccessToContent(content)) {
-        showNotification('🔒 Для доступа к этому контенту нужна активная подписка');
-        changeSubscription();
-        return;
-    }
-
-    const modalHTML = `
-        <div class="modal" id="contentModal">
-            <div class="modal-content large">
-                <div class="modal-header">
-                    <h3>${content.title}</h3>
-                    <button class="close-btn" onclick="closeModal('contentModal')">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="content-preview">
-                        <div class="preview-header">
-                            <div class="content-icon-large">${getContentIcon(contentType)}</div>
+                    <div class="modal-body">
+                        <div class="content-preview">
+                            ${content.image_url ? `
+                                <div class="preview-image">
+                                    <img src="${content.image_url}" alt="${content.title}">
+                                </div>
+                            ` : ''}
                             <div class="preview-info">
                                 <div class="preview-title">${content.title}</div>
                                 <div class="preview-description">${content.description || ''}</div>
                                 <div class="preview-meta">
                                     ${content.duration ? `<span>⏱️ ${content.duration}</span>` : ''}
-                                    ${content.price ? `<span>💰 ${formatPrice(content.price)}</span>` : ''}
-                                    ${content.modules ? `<span>📚 ${content.modules} модулей</span>` : ''}
-                                    ${content.type ? `<span>📁 ${getMaterialType(content.type)}</span>` : ''}
+                                    ${content.price ? `<span>💰 ${this.formatPrice(content.price)}</span>` : ''}
+                                    ${content.category ? `<span>🏷️ ${content.category}</span>` : ''}
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="content-actions-full">
-                            <button class="btn btn-primary" onclick="startContent('${contentType}', ${contentId})">
-                                ${getActionButtonText(contentType)}
-                            </button>
-                            <button class="btn btn-outline ${isFavorite(contentType, contentId) ? 'active' : ''}" 
-                                    onclick="toggleFavorite('${contentType}', ${contentId})">
-                                ${isFavorite(contentType, contentId) ? '★ В избранном' : '☆ В избранное'}
-                            </button>
-                            <button class="btn btn-outline" onclick="addToWatchLater('${contentType}', ${contentId})">
-                                📥 Посмотреть позже
-                            </button>
-                        </div>
-                        
-                        ${content.full_description ? `
-                            <div class="content-full-description">
-                                <h4>Описание</h4>
-                                <p>${content.full_description}</p>
+                            
+                            <div class="content-actions-full">
+                                <button class="btn btn-primary" onclick="academyApp.startContent('${contentType}', ${content.id})">
+                                    ${this.getActionButtonText(contentType)}
+                                </button>
+                                <button class="btn btn-outline" onclick="academyApp.toggleFavorite('${contentType}', ${content.id})">
+                                    ${this.isFavorite(contentType, content.id) ? '★ В избранном' : '☆ В избранное'}
+                                </button>
                             </div>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-function hasAccessToContent(content) {
-    if (!currentUser) return false;
-    
-    // Бесплатный контент доступен всем
-    if (!content.price || content.price === 0) return true;
-    
-    // Проверяем активную подписку
-    return currentUser.subscription.status === 'active' || 
-           currentUser.subscription.status === 'trial' ||
-           currentUser.isAdmin;
-}
-
-function startContent(contentType, contentId) {
-    const content = allContent[contentType]?.find(item => item.id === contentId);
-    if (!content) return;
-
-    // Обновляем прогресс просмотра
-    updateUserProgress('materialsWatched');
-
-    const actions = {
-        'courses': () => {
-            showNotification('🎓 Начинаем курс...');
-            openCoursePlayer(content);
-        },
-        'podcasts': () => {
-            showNotification('🎧 Запускаем подкаст...');
-            openAudioPlayer(content);
-        },
-        'streams': () => {
-            showNotification('📹 Начинаем трансляцию...');
-            openVideoPlayer(content);
-        },
-        'videos': () => {
-            showNotification('🎯 Воспроизводим видео...');
-            openVideoPlayer(content);
-        },
-        'materials': () => {
-            showNotification('📄 Открываем материал...');
-            openMaterialViewer(content);
-        },
-        'events': () => {
-            showNotification('🗺️ Переходим к мероприятию...');
-            openEventRegistration(content);
-        }
-    };
-    
-    if (actions[contentType]) {
-        actions[contentType]();
-    }
-    
-    closeModal('contentModal');
-}
-
-// ==================== СИСТЕМА ВОСПРОИЗВЕДЕНИЯ ====================
-
-function openCoursePlayer(course) {
-    const modalHTML = `
-        <div class="modal" id="coursePlayerModal">
-            <div class="modal-content large">
-                <div class="modal-header">
-                    <h3>${course.title}</h3>
-                    <button class="close-btn" onclick="closeModal('coursePlayerModal')">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="video-player">
-                        <div class="player-placeholder">
-                            <div class="placeholder-icon">🎓</div>
-                            <div class="placeholder-text">Видеоплеер курса</div>
-                            <div class="placeholder-note">Здесь будет видео-контент курса</div>
-                        </div>
-                    </div>
-                    <div class="player-controls">
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 30%"></div>
-                        </div>
-                        <div class="control-buttons">
-                            <button class="btn btn-outline" onclick="pauseContent()">⏸️ Пауза</button>
-                            <button class="btn btn-outline" onclick="skipForward()">⏩ +15с</button>
-                            <button class="btn btn-primary" onclick="completeContent('course')">✅ Завершить модуль</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-function openVideoPlayer(video) {
-    const modalHTML = `
-        <div class="modal" id="videoPlayerModal">
-            <div class="modal-content large">
-                <div class="modal-header">
-                    <h3>${video.title}</h3>
-                    <button class="close-btn" onclick="closeModal('videoPlayerModal')">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="video-player">
-                        <div class="player-placeholder">
-                            <div class="placeholder-icon">📹</div>
-                            <div class="placeholder-text">Видеоплеер</div>
-                            <div class="placeholder-note">Продолжительность: ${video.duration}</div>
-                        </div>
-                    </div>
-                    <div class="player-controls">
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 0%"></div>
-                        </div>
-                        <div class="control-buttons">
-                            <button class="btn btn-outline" onclick="pauseContent()">⏸️ Пауза</button>
-                            <button class="btn btn-outline" onclick="skipForward()">⏩ +15с</button>
-                            <button class="btn btn-primary" onclick="completeContent('video')">✅ Завершить просмотр</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-function openAudioPlayer(podcast) {
-    const modalHTML = `
-        <div class="modal" id="audioPlayerModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>${podcast.title}</h3>
-                    <button class="close-btn" onclick="closeModal('audioPlayerModal')">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="audio-player">
-                        <div class="player-placeholder">
-                            <div class="placeholder-icon">🎧</div>
-                            <div class="placeholder-text">Аудиоплеер подкаста</div>
-                            <div class="placeholder-note">Продолжительность: ${podcast.duration}</div>
-                        </div>
-                    </div>
-                    <div class="player-controls">
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 0%"></div>
-                        </div>
-                        <div class="control-buttons">
-                            <button class="btn btn-outline" onclick="pauseContent()">⏸️ Пауза</button>
-                            <button class="btn btn-outline" onclick="skipForward()">⏩ +30с</button>
-                            <button class="btn btn-primary" onclick="completeContent('audio')">✅ Завершить прослушивание</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-function openMaterialViewer(material) {
-    const modalHTML = `
-        <div class="modal" id="materialModal">
-            <div class="modal-content large">
-                <div class="modal-header">
-                    <h3>${material.title}</h3>
-                    <button class="close-btn" onclick="closeModal('materialModal')">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="material-viewer">
-                        <div class="viewer-placeholder">
-                            <div class="placeholder-icon">📄</div>
-                            <div class="placeholder-text">Просмотр материала</div>
-                            <div class="placeholder-note">Тип: ${getMaterialType(material.type)}</div>
-                            ${material.duration ? `<div class="placeholder-note">Время изучения: ${material.duration}</div>` : ''}
-                        </div>
-                        <div class="material-content">
-                            <h4>Содержание материала:</h4>
-                            <p>${material.full_description || material.description || 'Подробное содержание материала будет отображено здесь.'}</p>
-                        </div>
-                    </div>
-                    <div class="material-actions">
-                        <button class="btn btn-primary" onclick="completeContent('material')">✅ Изучил материал</button>
-                        <button class="btn btn-outline" onclick="downloadMaterial()">📥 Скачать</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-function openEventRegistration(event) {
-    const modalHTML = `
-        <div class="modal" id="eventModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>${event.title}</h3>
-                    <button class="close-btn" onclick="closeModal('eventModal')">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="event-details">
-                        <div class="event-info">
-                            <div class="info-item">
-                                <span class="info-label">📅 Дата:</span>
-                                <span class="info-value">${event.date || 'Скоро будет объявлено'}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">⏰ Время:</span>
-                                <span class="info-value">${event.time || 'Уточняется'}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">📍 Формат:</span>
-                                <span class="info-value">${event.type === 'online' ? '🌐 Онлайн' : '🏢 Офлайн'}</span>
-                            </div>
-                            ${event.location ? `
-                                <div class="info-item">
-                                    <span class="info-label">🏢 Место:</span>
-                                    <span class="info-value">${event.location}</span>
+                            
+                            ${content.full_description ? `
+                                <div class="content-full-description">
+                                    <h4>Описание</h4>
+                                    <p>${content.full_description}</p>
                                 </div>
                             ` : ''}
                         </div>
-                        
-                        <div class="event-description">
-                            <p>${event.full_description || event.description || 'Подробности мероприятия будут объявлены дополнительно.'}</p>
-                        </div>
-                        
-                        <div class="event-registration">
-                            <h4>Регистрация на мероприятие</h4>
-                            <form id="eventRegistrationForm">
-                                <div class="form-group">
-                                    <label>Ваше имя *</label>
-                                    <input type="text" value="${currentUser.firstName}" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Email для связи *</label>
-                                    <input type="email" value="${currentUser.email}" required>
-                                </div>
-                                ${event.type === 'online' ? `
-                                    <div class="form-group">
-                                        <label>
-                                            <input type="checkbox" checked> 
-                                            Получить ссылку на подключение
-                                        </label>
-                                    </div>
-                                ` : ''}
-                                <div class="form-actions">
-                                    <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
-                                </div>
-                            </form>
-                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    document.getElementById('eventRegistrationForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        registerForEvent(event.id);
-    });
-}
-
-// Функции управления контентом
-function pauseContent() {
-    showNotification('⏸️ Воспроизведение приостановлено');
-}
-
-function skipForward() {
-    showNotification('⏩ Перемотка вперед');
-}
-
-async function completeContent(type) {
-    await updateUserProgress('materialsWatched');
-    
-    let message = '✅ Контент завершен!';
-    switch(type) {
-        case 'course': message = '✅ Модуль завершен!'; break;
-        case 'video': message = '✅ Видео завершено!'; break;
-        case 'audio': message = '✅ Аудио завершено!'; break;
-        case 'material': message = '✅ Материал изучен!'; break;
-    }
-    
-    showNotification(message);
-    
-    // Закрываем соответствующий модал
-    switch(type) {
-        case 'course': closeModal('coursePlayerModal'); break;
-        case 'video': closeModal('videoPlayerModal'); break;
-        case 'audio': closeModal('audioPlayerModal'); break;
-        case 'material': closeModal('materialModal'); break;
-    }
-}
-
-function downloadMaterial() {
-    showNotification('📥 Начато скачивание материала...');
-}
-
-async function registerForEvent(eventId) {
-    try {
-        const response = await fetch(`/api/user/${currentUser.id}/events`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ eventId, action: 'register' })
-        });
+        `;
         
-        const data = await response.json();
-        if (data.success) {
-            showNotification('✅ Вы успешно зарегистрированы на мероприятие!');
-            await updateUserProgress('eventsAttended');
-            closeModal('eventModal');
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('❌ Ошибка регистрации на мероприятие:', error);
-        showNotification('❌ Ошибка при регистрации на мероприятие', 'error');
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
     }
-}
 
-// ==================== СИСТЕМА ПОДПИСКИ ====================
+    startContent(contentType, contentId) {
+        this.showNotification(`🎬 Начинаем ${this.getContentTypeName(contentType).toLowerCase()}...`);
+        this.closeModal('contentModal');
+        this.updateUserProgress('materialsWatched');
+    }
 
-async function changeSubscription() {
-    if (!currentUser) return;
-    
-    const modalHTML = `
-        <div class="modal" id="subscriptionModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>💳 Управление подпиской</h3>
-                    <button class="close-btn" onclick="closeModal('subscriptionModal')">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="current-subscription">
-                        <h4>Текущий статус</h4>
-                        <div class="subscription-status-large ${currentUser.subscription.status}">
-                            <div class="status-icon">${currentUser.subscription.status === 'active' ? '✅' : currentUser.subscription.status === 'trial' ? '🆓' : '❌'}</div>
-                            <div class="status-info">
-                                <div class="status-title">${getSubscriptionStatusText(currentUser.subscription.status)}</div>
-                                ${currentUser.subscription.endDate ? `
-                                    <div class="status-date">до ${new Date(currentUser.subscription.endDate).toLocaleDateString('ru-RU')}</div>
-                                ` : ''}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="subscription-plans">
-                        <h4>Доступные тарифы</h4>
-                        <div class="plan-card">
-                            <div class="plan-header">
-                                <div class="plan-name">1 месяц</div>
-                                <div class="plan-price">2 900 ₽</div>
-                            </div>
-                            <ul class="plan-features">
-                                <li>✅ Полный доступ к курсам</li>
-                                <li>✅ Участие в эфирах</li>
-                                <li>✅ Практические материалы</li>
-                                <li>✅ Чат специалистов</li>
-                            </ul>
-                            <button class="btn btn-primary" onclick="selectPlan('1_month')">Выбрать</button>
-                        </div>
-                        
-                        <div class="plan-card popular">
-                            <div class="plan-badge">Выгодно</div>
-                            <div class="plan-header">
-                                <div class="plan-name">3 месяца</div>
-                                <div class="plan-price">7 500 ₽</div>
-                                <div class="plan-save">Экономия 600 ₽</div>
-                            </div>
-                            <ul class="plan-features">
-                                <li>✅ Полный доступ к курсам</li>
-                                <li>✅ Участие в эфирах</li>
-                                <li>✅ Практические материалы</li>
-                                <li>✅ Чат специалистов</li>
-                                <li>✅ Персональный сертификат</li>
-                            </ul>
-                            <button class="btn btn-primary" onclick="selectPlan('3_months')">Выбрать</button>
-                        </div>
+    changeSubscription() {
+        this.showNotification('💳 Открываем выбор подписки...');
+        // В реальном приложении здесь будет открытие модального окна с выбором тарифов
+    }
 
-                        <div class="plan-card">
-                            <div class="plan-header">
-                                <div class="plan-name">12 месяцев</div>
-                                <div class="plan-price">24 000 ₽</div>
-                                <div class="plan-save">Экономия 10 800 ₽</div>
-                            </div>
-                            <ul class="plan-features">
-                                <li>✅ Полный доступ к курсам</li>
-                                <li>✅ Участие в эфирах</li>
-                                <li>✅ Практические материалы</li>
-                                <li>✅ Чат специалистов</li>
-                                <li>✅ Доступ к закрытым мероприятиям</li>
-                                <li>✅ Индивидуальные консультации</li>
-                            </ul>
-                            <button class="btn btn-primary" onclick="selectPlan('12_months')">Выбрать</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
+    editProfile() {
+        this.showNotification('✏️ Редактирование профиля в разработке');
+    }
 
-async function selectPlan(plan) {
-    if (!currentUser) return;
-    
-    try {
-        const response = await fetch(`/api/user/${currentUser.id}/subscription`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plan })
-        });
+    showAchievements() {
+        this.showNotification('🏆 Достижения в разработке');
+    }
+
+    goToAdminPanel() {
+        window.location.href = '/admin.html';
+    }
+
+    openChat(chatType) {
+        if (!this.currentUser || this.currentUser.subscription.status === 'inactive') {
+            this.showNotification('💬 Для доступа к чатам необходима активная подписка');
+            return;
+        }
         
-        const data = await response.json();
-        if (data.success) {
-            currentUser.subscription = data.subscription;
-            showNotification('🎉 Подписка успешно оформлена!');
-            closeModal('subscriptionModal');
-            updateUIWithUserData();
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('❌ Ошибка оформления подписки:', error);
-        showNotification('❌ Ошибка при оформлении подписки', 'error');
+        this.showNotification(`💬 Открываем чат...`);
     }
-}
 
-// ==================== СООБЩЕСТВО И ПОДДЕРЖКА ====================
+    performSearch() {
+        if (this.searchQuery.trim()) {
+            this.showNotification(`🔍 Поиск: "${this.searchQuery}"`);
+            // В реальном приложении здесь будет переход на страницу поиска
+        }
+    }
 
-function initCommunityPage() {
-    loadFAQ();
-    initFAQ();
-}
-
-async function loadFAQ() {
-    const faqList = document.getElementById('faqList');
-    if (!faqList) return;
-
-    try {
-        const response = await fetch('/api/faq');
-        const data = await response.json();
+    async updateUserProgress(metric) {
+        if (!this.currentUser) return;
         
-        if (data.success) {
-            displayFAQ(data.faq);
-        } else {
-            displayDefaultFAQ();
+        try {
+            const response = await fetch(`/api/user/${this.currentUser.id}/progress`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ metric })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                this.currentUser.progress = data.progress;
+                if (this.currentPage === 'profile') {
+                    this.updateProfileStats();
+                    this.loadJourneyProgress();
+                }
+            }
+        } catch (error) {
+            console.error('❌ Ошибка обновления прогресса:', error);
         }
-    } catch (error) {
-        console.error('❌ Ошибка загрузки FAQ:', error);
-        displayDefaultFAQ();
     }
-}
 
-function displayFAQ(faqItems) {
-    const faqList = document.getElementById('faqList');
-    if (!faqList) return;
+    showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#58b8e7'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 1000;
+            animation: slideInRight 0.3s ease;
+            max-width: 300px;
+            word-wrap: break-word;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
 
-    faqList.innerHTML = faqItems.map(item => `
-        <div class="faq-item">
-            <div class="faq-question" onclick="toggleFAQ(this)">${item.question}</div>
-            <div class="faq-answer">${item.answer}</div>
-        </div>
-    `).join('');
-}
-
-function displayDefaultFAQ() {
-    const defaultFAQ = [
-        {
-            question: "Как оформить, продлить или отменить подписку?",
-            answer: "Подписку можно оформить или продлить в разделе «Личный кабинет». Там же доступна отмена — через кнопку «Изменить подписку»."
-        },
-        {
-            question: "Что входит в подписку Академии?",
-            answer: "Доступ к эфирам, разборам (в том числе в записи), практическим материалам, видео-шпаргалкам на разные темы, а также к чату специалистов и интерактивной карте офлайн-мероприятий."
-        },
-        {
-            question: "Можно ли смотреть материалы без подписки?",
-            answer: "Да, часть контента доступна в пробном периоде для ознакомления. Полный доступ и участие в развитии открываются при активной подписке."
-        },
-        {
-            question: "Чем отличаются курсы, эфиры, разборы, видео-шпаргалки и практические материалы?",
-            answer: "Курсы — системное обучение с сертификатами. Эфиры — живые встречи. Разборы — реальные кейсы врачей. Видео-шпаргалки — короткие видео с техниками. Практические материалы — полезные инструменты для работы."
+    closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.remove();
         }
-    ];
-    
-    displayFAQ(defaultFAQ);
-}
-
-function initFAQ() {
-    const faqQuestions = document.querySelectorAll('.faq-question');
-    faqQuestions.forEach(question => {
-        question.addEventListener('click', function() {
-            toggleFAQ(this);
-        });
-    });
-}
-
-function toggleFAQ(element) {
-    const answer = element.nextElementSibling;
-    const isVisible = answer.style.display === 'block';
-    
-    // Скрываем все ответы
-    document.querySelectorAll('.faq-answer').forEach(ans => {
-        ans.style.display = 'none';
-    });
-    
-    // Показываем/скрываем текущий ответ
-    answer.style.display = isVisible ? 'none' : 'block';
-}
-
-function showCommunityRules() {
-    const modalHTML = `
-        <div class="modal" id="rulesModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>📜 Правила сообщества</h3>
-                    <button class="close-btn" onclick="closeModal('rulesModal')">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="rules-content">
-                        <h4>Основные принципы взаимодействия</h4>
-                        <ol>
-                            <li><strong>Уважение к коллегам:</strong> Поддерживайте доброжелательную атмосферу</li>
-                            <li><strong>Профессионализм:</strong> Делитесь только проверенной информацией</li>
-                            <li><strong>Конфиденциальность:</strong> Не разглашайте данные пациентов</li>
-                            <li><strong>Взаимопомощь:</strong> Помогайте коллегам в профессиональных вопросах</li>
-                            <li><strong>Соблюдение этики:</strong> Придерживайтесь врачебной этики</li>
-                        </ol>
-                        
-                        <h4>Что запрещено:</h4>
-                        <ul>
-                            <li>Реклама сторонних услуг</li>
-                            <li>Некорректное поведение</li>
-                            <li>Распространение недостоверной информации</li>
-                            <li>Нарушение конфиденциальности</li>
-                        </ul>
-                        
-                        <div class="rules-footer">
-                            <p>Координатор проекта отвечает с ПН-ПТ с 11:00 до 19:00</p>
-                            <p>Сообщить о нарушении: @academy_anb</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-function showFAQ() {
-    renderPage('community');
-}
-
-function openChat(chatType) {
-    if (!currentUser || currentUser.subscription.status === 'inactive') {
-        showNotification('💬 Для доступа к чатам необходима активная подписка');
-        return;
-    }
-    
-    const chatNames = {
-        'general': 'Флудилка',
-        'specialists': 'Чат специалистов'
-    };
-    
-    showNotification(`💬 Открываем чат: ${chatNames[chatType]}`);
-}
-
-function openMaterials(materialType) {
-    const types = {
-        'mri': 'МРТ разборы',
-        'cases': 'Клинические случаи',
-        'checklists': 'Чек-листы'
-    };
-    
-    showNotification(`📋 Открываем: ${types[materialType]}`);
-    if (currentPage === 'favorites') {
-        document.querySelector('[data-tab="practice"]').click();
     }
 }
 
-// ==================== ПРОФИЛЬ И ДОСТИЖЕНИЯ ====================
+// Инициализация приложения
+const academyApp = new AcademyApp();
 
-function editProfile() {
-    showNotification('✏️ Редактирование профиля в разработке');
-}
-
-function showAchievements() {
-    const modalHTML = `
-        <div class="modal" id="achievementsModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>🏆 Мои достижения</h3>
-                    <button class="close-btn" onclick="closeModal('achievementsModal')">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="achievements-list">
-                        <div class="achievement-item completed">
-                            <div class="achievement-icon">🎯</div>
-                            <div class="achievement-info">
-                                <div class="achievement-title">Первый шаг</div>
-                                <div class="achievement-description">Завершил первый материал</div>
-                            </div>
-                        </div>
-                        <div class="achievement-item completed">
-                            <div class="achievement-icon">👥</div>
-                            <div class="achievement-info">
-                                <div class="achievement-title">Активный участник</div>
-                                <div class="achievement-description">Участвовал в 3+ мероприятиях</div>
-                            </div>
-                        </div>
-                        <div class="achievement-item">
-                            <div class="achievement-icon">📚</div>
-                            <div class="achievement-info">
-                                <div class="achievement-title">Знаток</div>
-                                <div class="achievement-description">Изучил 10+ материалов</div>
-                            </div>
-                        </div>
-                        <div class="achievement-item">
-                            <div class="achievement-icon">💎</div>
-                            <div class="achievement-info">
-                                <div class="achievement-title">Эксперт</div>
-                                <div class="achievement-description">Завершил полный курс</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-function exportData() {
-    if (!currentUser) return;
-    
-    const userData = {
-        profile: currentUser,
-        stats: {
-            coursesCompleted: currentUser.progress.steps.coursesBought || 0,
-            materialsWatched: currentUser.progress.steps.materialsWatched || 0,
-            eventsAttended: currentUser.progress.steps.eventsParticipated || 0,
-            materialsSaved: currentUser.progress.steps.materialsSaved || 0
-        },
-        exportDate: new Date().toISOString()
-    };
-    
-    const dataStr = JSON.stringify(userData, null, 2);
-    const dataBlob = new Blob([dataStr], {type: 'application/json'});
-    
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `anb_academy_data_${currentUser.id}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    showNotification('📥 Данные экспортированы', 'success');
-}
-
-// ==================== НАВИГАЦИЯ И ПОИСК ====================
-
-function openSection(section) {
-    const sections = {
-        'courses': () => { 
-            renderPage('catalog');
-            setTimeout(() => {
-                document.getElementById('contentTypeFilter').value = 'courses';
-                filterCatalogContent();
-            }, 100);
-        },
-        'podcasts': () => { 
-            renderPage('catalog');
-            setTimeout(() => {
-                document.getElementById('contentTypeFilter').value = 'podcasts';
-                filterCatalogContent();
-            }, 100);
-        },
-        'streams': () => { 
-            renderPage('catalog');
-            setTimeout(() => {
-                document.getElementById('contentTypeFilter').value = 'streams';
-                filterCatalogContent();
-            }, 100);
-        },
-        'videos': () => { 
-            renderPage('catalog');
-            setTimeout(() => {
-                document.getElementById('contentTypeFilter').value = 'videos';
-                filterCatalogContent();
-            }, 100);
-        },
-        'materials': () => { 
-            renderPage('catalog');
-            setTimeout(() => {
-                document.getElementById('contentTypeFilter').value = 'materials';
-                filterCatalogContent();
-            }, 100);
-        },
-        'events': () => { 
-            renderPage('catalog');
-            setTimeout(() => {
-                document.getElementById('contentTypeFilter').value = 'events';
-                filterCatalogContent();
-            }, 100);
-        },
-        'offers': () => { 
-            showNotification('🔥 Ограниченные предложения - специальные условия и акции');
-        }
-    };
-    
-    if (sections[section]) {
-        sections[section]();
-    }
-}
-
-function openSupport() {
-    if (window.Telegram && Telegram.WebApp) {
-        Telegram.WebApp.openTelegramLink('https://t.me/academy_anb');
-    } else {
-        showNotification('💬 Поддержка: @academy_anb');
-    }
-}
-
-function toggleSearch() {
+// Глобальные функции для onclick атрибутов
+window.toggleSearch = function() {
     const searchContainer = document.getElementById('searchContainer');
-    searchContainer.style.display = searchContainer.style.display === 'none' ? 'block' : 'none';
-    
-    if (searchContainer.style.display === 'block') {
-        document.getElementById('searchInput').focus();
-    }
-}
-
-function performSearch(query) {
-    if (query.trim()) {
-        showNotification(`🔍 Поиск: "${query}"`);
-        renderPage('catalog');
-        
-        setTimeout(() => {
-            const catalogSearch = document.getElementById('catalogSearch');
-            if (catalogSearch) {
-                catalogSearch.value = query;
-                filterCatalogContent();
-            }
-        }, 100);
-    }
-}
-
-function goToAdminPanel() {
-    window.location.href = '/admin.html';
-}
-
-// ==================== УТИЛИТЫ ====================
-
-function getContentIcon(contentType) {
-    const icons = {
-        'courses': '📚',
-        'podcasts': '🎧',
-        'streams': '📹',
-        'videos': '🎯',
-        'materials': '📋',
-        'events': '🗺️'
-    };
-    return icons[contentType] || '📄';
-}
-
-function getMaterialIcon(materialType) {
-    const icons = {
-        'mri': '🩻',
-        'case': '📋',
-        'checklist': '✅'
-    };
-    return icons[materialType] || '📄';
-}
-
-function getActionButtonText(contentType) {
-    const actions = {
-        'courses': 'Записаться',
-        'podcasts': 'Слушать',
-        'streams': 'Смотреть',
-        'videos': 'Смотреть',
-        'materials': 'Открыть',
-        'events': 'Участвовать'
-    };
-    return actions[contentType] || 'Открыть';
-}
-
-function getMaterialType(type) {
-    const types = {
-        'mri': 'МРТ разбор',
-        'case': 'Клинический случай',
-        'checklist': 'Чек-лист'
-    };
-    return types[type] || 'Материал';
-}
-
-function getContentTypeName(type) {
-    const names = {
-        'courses': 'Курс',
-        'podcasts': 'Подкаст',
-        'streams': 'Эфир',
-        'videos': 'Видео-шпаргалка',
-        'materials': 'Материал',
-        'events': 'Мероприятие'
-    };
-    return names[type] || type;
-}
-
-function getSubscriptionStatusText(status) {
-    const statuses = {
-        'active': 'Активная подписка',
-        'trial': 'Пробный период',
-        'inactive': 'Подписка не активна'
-    };
-    return statuses[status] || 'Не активна';
-}
-
-function getUserBadge(level) {
-    const badges = {
-        'Понимаю': 'Начинающий специалист',
-        'Связываю': 'Активный участник',
-        'Применяю': 'Практикующий специалист',
-        'Систематизирую': 'Опытный врач',
-        'Делюсь': 'Эксперт сообщества'
-    };
-    return badges[level] || 'Участник академии';
-}
-
-function isFavorite(contentType, contentId) {
-    return currentUser && currentUser.favorites && currentUser.favorites[contentType].includes(contentId);
-}
-
-function formatPrice(price) {
-    return new Intl.NumberFormat('ru-RU').format(price);
-}
-
-function formatDate(date) {
-    return new Date(date).toLocaleDateString('ru-RU');
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-async function updateUserProgress(metric) {
-    if (!currentUser) return;
-    
-    try {
-        const response = await fetch(`/api/user/${currentUser.id}/progress`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ metric })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-            currentUser.progress = data.progress;
-            updateProfileStats();
-            if (currentPage === 'profile') {
-                loadJourneyProgress();
-            }
+    if (searchContainer) {
+        searchContainer.style.display = searchContainer.style.display === 'none' ? 'block' : 'none';
+        if (searchContainer.style.display === 'block') {
+            document.getElementById('searchInput')?.focus();
         }
-    } catch (error) {
-        console.error('❌ Ошибка обновления прогресса:', error);
     }
-}
-
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#58b8e7'};
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        z-index: 1000;
-        animation: slideIn 0.3s ease;
-        max-width: 300px;
-        word-wrap: break-word;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
-}
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// ==================== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ====================
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Инициализация приложения...');
-    
-    // Инициализация навигации
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            renderPage(this.dataset.page);
-        });
-    });
-
-    // Инициализация поиска
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                performSearch(this.value);
-            }
-        });
-    }
-
-    // Загрузка пользователя и контента
-    Promise.all([loadUserData(), loadContent()]).then(() => {
-        console.log('✅ Приложение готово');
-        renderPage('home');
-    });
-
-    // Интеграция с Telegram
-    if (window.Telegram && Telegram.WebApp) {
-        console.log('📱 Интеграция с Telegram WebApp');
-        Telegram.WebApp.expand();
-        Telegram.WebApp.ready();
-        Telegram.WebApp.setHeaderColor('#58b8e7');
-        Telegram.WebApp.setBackgroundColor('#ffffff');
-        
-        // Обработка нажатия кнопки "Назад" в Telegram
-        Telegram.WebApp.BackButton.onClick(() => {
-            if (currentPage !== 'home') {
-                renderPage('home');
-            }
-        });
-    }
-});
-
-// CSS анимации
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-    
-    .player-placeholder {
-        text-align: center;
-        padding: 40px 20px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        margin-bottom: 16px;
-        border: 2px dashed #e3f2fd;
-    }
-    
-    .placeholder-icon {
-        font-size: 48px;
-        margin-bottom: 16px;
-        opacity: 0.7;
-    }
-    
-    .placeholder-text {
-        font-size: 18px;
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: #2c3e50;
-    }
-    
-    .placeholder-note {
-        color: #6c757d;
-        font-size: 14px;
-    }
-    
-    .achievement-item {
-        display: flex;
-        align-items: center;
-        padding: 16px;
-        border: 2px solid #e3f2fd;
-        border-radius: 8px;
-        margin-bottom: 12px;
-        transition: all 0.3s ease;
-    }
-    
-    .achievement-item.completed {
-        border-color: #28a745;
-        background: #f0fff4;
-    }
-    
-    .achievement-item:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    
-    .achievement-icon {
-        font-size: 24px;
-        margin-right: 16px;
-    }
-    
-    .rules-content ol, .rules-content ul {
-        margin-left: 20px;
-        margin-bottom: 16px;
-    }
-    
-    .rules-content li {
-        margin-bottom: 8px;
-        line-height: 1.5;
-    }
-    
-    .rules-footer {
-        margin-top: 20px;
-        padding-top: 16px;
-        border-top: 1px solid #e3f2fd;
-        color: #6c757d;
-        font-size: 14px;
-    }
-    
-    .info-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 0;
-        border-bottom: 1px solid #f8f9fa;
-    }
-    
-    .info-label {
-        font-weight: 600;
-        color: #2c3e50;
-    }
-    
-    .info-value {
-        color: #6c757d;
-    }
-`;
-document.head.appendChild(style);
-
-console.log('📦 app.js загружен');
+};
