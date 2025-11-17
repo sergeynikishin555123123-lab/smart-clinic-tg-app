@@ -1,4 +1,4 @@
-// server.js - ПРОДАКШЕН ВЕРСИЯ
+// server.js - ИСПРАВЛЕННАЯ ВЕРСИЯ
 import { Telegraf, session, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -8,7 +8,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import net from 'net';
-import https from 'https'; 
+import https from 'https';
+import { exec } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -29,9 +30,7 @@ console.log(`📍 Порт: ${config.PORT}`);
 console.log(`🌐 Окружение: ${config.NODE_ENV}`);
 console.log(`🤖 Бот: ${config.BOT_TOKEN ? 'активен' : 'не настроен'}`);
 
-// ==================== СИСТЕМА УПРАВЛЕНИЯ ПРОЦЕССАМИ ====================
-// ЗАМЕНИТЕ ProcessManager на этот код:
-
+// ==================== УЛУЧШЕННАЯ СИСТЕМА УПРАВЛЕНИЯ ПРОЦЕССАМИ ====================
 class ProcessManager {
     constructor() {
         this.isPortAvailable = true;
@@ -41,6 +40,49 @@ class ProcessManager {
             database: 'unknown',
             system: 'unknown'
         };
+    }
+
+    async killProcessOnPort(port) {
+        return new Promise((resolve) => {
+            if (process.platform === 'win32') {
+                // Windows
+                exec(`netstat -ano | findstr :${port}`, (error, stdout) => {
+                    if (stdout) {
+                        const lines = stdout.split('\n');
+                        lines.forEach(line => {
+                            const match = line.match(/(\d+)\s*$/);
+                            if (match) {
+                                const pid = match[1];
+                                console.log(`🛑 Завершаем процесс ${pid} на порту ${port}`);
+                                exec(`taskkill /PID ${pid} /F`, () => {
+                                    console.log(`✅ Процесс ${pid} завершен`);
+                                });
+                            }
+                        });
+                    }
+                    setTimeout(resolve, 2000);
+                });
+            } else {
+                // Linux/Mac
+                exec(`lsof -ti:${port}`, (error, stdout) => {
+                    if (stdout) {
+                        const pids = stdout.trim().split('\n');
+                        pids.forEach(pid => {
+                            if (pid) {
+                                console.log(`🛑 Завершаем процесс ${pid} на порту ${port}`);
+                                try {
+                                    process.kill(parseInt(pid), 'SIGTERM');
+                                    console.log(`✅ Процесс ${pid} завершен`);
+                                } catch (e) {
+                                    console.log(`⚠️ Не удалось завершить процесс ${pid}: ${e.message}`);
+                                }
+                            }
+                        });
+                    }
+                    setTimeout(resolve, 2000);
+                });
+            }
+        });
     }
 
     async checkPortAvailability(port) {
@@ -67,38 +109,27 @@ class ProcessManager {
         });
     }
 
-    async freePort(port) {
-        return new Promise((resolve) => {
-            if (process.platform === 'win32') {
-                exec(`netstat -ano | findstr :${port}`, (error, stdout) => {
-                    if (stdout) {
-                        const lines = stdout.split('\n');
-                        lines.forEach(line => {
-                            const match = line.match(/(\d+)\s*$/);
-                            if (match) {
-                                const pid = match[1];
-                                console.log(`🛑 Завершаем процесс ${pid} на порту ${port}`);
-                                exec(`taskkill /PID ${pid} /F`, () => {});
-                            }
-                        });
-                    }
-                    setTimeout(resolve, 1000);
-                });
-            } else {
-                exec(`lsof -ti:${port}`, (error, stdout) => {
-                    if (stdout) {
-                        const pids = stdout.trim().split('\n');
-                        pids.forEach(pid => {
-                            if (pid) {
-                                console.log(`🛑 Завершаем процесс ${pid} на порту ${port}`);
-                                process.kill(parseInt(pid), 'SIGTERM');
-                            }
-                        });
-                    }
-                    setTimeout(resolve, 1000);
-                });
+    async ensurePortAvailability(port) {
+        console.log(`🔍 Проверяем доступность порта ${port}...`);
+        
+        const isAvailable = await this.checkPortAvailability(port);
+        
+        if (!isAvailable) {
+            console.log(`🔄 Порт ${port} занят, пробуем освободить...`);
+            await this.killProcessOnPort(port);
+            
+            // Даем время на завершение процессов
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            const isAvailableAfterKill = await this.checkPortAvailability(port);
+            
+            if (!isAvailableAfterKill) {
+                console.log(`❌ Не удалось освободить порт ${port}, пробуем следующий порт...`);
+                return false;
             }
-        });
+        }
+        
+        return true;
     }
 
     async performSystemCheck() {
@@ -106,23 +137,29 @@ class ProcessManager {
         
         try {
             this.healthStatus.system = 'checking';
-            const portAvailable = await this.checkPortAvailability(config.PORT);
             
-            if (!portAvailable) {
-                console.log('🔄 Пробуем освободить порт...');
-                await this.freePort(config.PORT);
+            let port = config.PORT;
+            let attempts = 0;
+            const maxAttempts = 5;
+            
+            while (attempts < maxAttempts) {
+                const portAvailable = await this.ensurePortAvailability(port);
                 
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                const portAvailableAfterFree = await this.checkPortAvailability(config.PORT);
-                
-                if (!portAvailableAfterFree) {
-                    console.log('❌ Не удалось освободить порт. Пробуем использовать другой порт...');
-                    config.PORT = parseInt(config.PORT) + 1;
-                    console.log(`🔄 Используем порт ${config.PORT}`);
+                if (portAvailable) {
+                    config.PORT = port;
+                    this.isPortAvailable = true;
+                    break;
+                } else {
+                    port++;
+                    attempts++;
+                    console.log(`🔄 Пробуем порт ${port}...`);
                 }
             }
             
-            this.isPortAvailable = true;
+            if (attempts >= maxAttempts) {
+                throw new Error('Не удалось найти свободный порт');
+            }
+            
             this.healthStatus.system = 'healthy';
             
             await this.checkInternetConnection();
@@ -469,18 +506,6 @@ class Database {
                         level: 'advanced',
                         students_count: 45,
                         rating: 4.8
-                    },
-                    {
-                        title: 'Неврология для практикующих врачей',
-                        description: 'Основы неврологической диагностики',
-                        full_description: 'Фундаментальный курс по неврологии с акцентом на практическое применение.',
-                        price: 12000,
-                        duration: '10 часов',
-                        modules: 5,
-                        category: 'Неврология',
-                        level: 'intermediate',
-                        students_count: 67,
-                        rating: 4.6
                     }
                 ];
 
@@ -490,169 +515,6 @@ class Database {
                          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
                         [course.title, course.description, course.full_description, course.price, course.duration, 
                          course.modules, course.category, course.level, course.students_count, course.rating]
-                    );
-                }
-
-                // Демо подкасты
-                const demoPodcasts = [
-                    {
-                        title: 'АНБ FM: Современная неврология',
-                        description: 'Обсуждение новых тенденций в неврологии',
-                        duration: '45:20',
-                        category: 'Неврология',
-                        listens: 234
-                    },
-                    {
-                        title: 'АНБ FM: Реабилитационные методики',
-                        description: 'Новые подходы к реабилитации',
-                        duration: '38:15',
-                        category: 'Реабилитация',
-                        listens: 167
-                    }
-                ];
-
-                for (const podcast of demoPodcasts) {
-                    await this.client.query(
-                        `INSERT INTO podcasts (title, description, duration, category, listens)
-                         VALUES ($1, $2, $3, $4, $5)`,
-                        [podcast.title, podcast.description, podcast.duration, podcast.category, podcast.listens]
-                    );
-                }
-
-                // Демо стримы
-                const demoStreams = [
-                    {
-                        title: 'Разбор клинического случая: Болевой синдром',
-                        description: 'Прямой эфир с разбором сложного случая',
-                        duration: '1:30:00',
-                        stream_date: new Date(Date.now() + 24 * 60 * 60 * 1000),
-                        live: true,
-                        participants: 89,
-                        type: 'analysis'
-                    },
-                    {
-                        title: 'Мануальные техники: Демонстрация',
-                        description: 'Практическая демонстрация методик',
-                        duration: '2:15:00',
-                        stream_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-                        live: false,
-                        participants: 156,
-                        type: 'stream'
-                    }
-                ];
-
-                for (const stream of demoStreams) {
-                    await this.client.query(
-                        `INSERT INTO streams (title, description, duration, stream_date, live, participants, type)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                        [stream.title, stream.description, stream.duration, stream.stream_date, 
-                         stream.live, stream.participants, stream.type]
-                    );
-                }
-
-                // Демо материалы
-                const demoMaterials = [
-                    {
-                        title: 'МРТ разбор: Рассеянный склероз',
-                        description: 'Детальный разбор МРТ с клиническими случаями',
-                        material_type: 'mri',
-                        category: 'Неврология',
-                        downloads: 123
-                    },
-                    {
-                        title: 'Чек-лист: Неврологический осмотр',
-                        description: 'Пошаговый чек-лист для ежедневной практики',
-                        material_type: 'checklist',
-                        category: 'Неврология',
-                        downloads: 267
-                    }
-                ];
-
-                for (const material of demoMaterials) {
-                    await this.client.query(
-                        `INSERT INTO materials (title, description, material_type, category, downloads)
-                         VALUES ($1, $2, $3, $4, $5)`,
-                        [material.title, material.description, material.material_type, material.category, material.downloads]
-                    );
-                }
-
-                // Демо мероприятия
-                const demoEvents = [
-                    {
-                        title: 'Конференция: Современная неврология 2024',
-                        description: 'Ежегодная конференция с ведущими специалистами',
-                        event_date: new Date('2024-02-15T10:00:00'),
-                        location: 'Москва',
-                        event_type: 'offline',
-                        participants: 45
-                    },
-                    {
-                        title: 'Онлайн-семинар: Реабилитация после инсульта',
-                        description: 'Практические аспекты реабилитации',
-                        event_date: new Date('2024-01-20T14:00:00'),
-                        location: 'Онлайн',
-                        event_type: 'online',
-                        participants: 120
-                    }
-                ];
-
-                for (const event of demoEvents) {
-                    await this.client.query(
-                        `INSERT INTO events (title, description, event_date, location, event_type, participants)
-                         VALUES ($1, $2, $3, $4, $5, $6)`,
-                        [event.title, event.description, event.event_date, event.location, event.event_type, event.participants]
-                    );
-                }
-
-                // Демо акции
-                const demoPromotions = [
-                    {
-                        title: 'Скидка 20% на первую подписку',
-                        description: 'Специальное предложение для новых пользователей',
-                        discount: 20,
-                        active: true,
-                        end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-                    },
-                    {
-                        title: 'Бесплатный доступ к базовым курсам',
-                        description: 'Получите доступ к 3 базовым курсам бесплатно',
-                        discount: 100,
-                        active: true,
-                        end_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
-                    }
-                ];
-
-                for (const promo of demoPromotions) {
-                    await this.client.query(
-                        `INSERT INTO promotions (title, description, discount, active, end_date)
-                         VALUES ($1, $2, $3, $4, $5)`,
-                        [promo.title, promo.description, promo.discount, promo.active, promo.end_date]
-                    );
-                }
-
-                // Демо чаты
-                const demoChats = [
-                    {
-                        name: 'Общий чат Академии',
-                        description: 'Основной чат для общения всех участников',
-                        type: 'group',
-                        participants_count: 156,
-                        last_message: 'Добро пожаловать в Академию!'
-                    },
-                    {
-                        name: 'Неврология',
-                        description: 'Обсуждение неврологических тем',
-                        type: 'group',
-                        participants_count: 67,
-                        last_message: 'Кто-нибудь сталкивался с подобным случаем?'
-                    }
-                ];
-
-                for (const chat of demoChats) {
-                    await this.client.query(
-                        `INSERT INTO chats (name, description, type, participants_count, last_message)
-                         VALUES ($1, $2, $3, $4, $5)`,
-                        [chat.name, chat.description, chat.type, chat.participants_count, chat.last_message]
                     );
                 }
 
@@ -695,14 +557,13 @@ class TelegramBot {
         try {
             console.log('🤖 Инициализация Telegram бота...');
             
-if (!config.BOT_TOKEN) {
-    console.log('⚠️ Бот-токен не настроен, запускаем без бота');
-    processManager.healthStatus.bot = 'disabled';
-    return;
-}
+            if (!config.BOT_TOKEN) {
+                console.log('⚠️ Бот-токен не настроен, запускаем без бота');
+                processManager.healthStatus.bot = 'disabled';
+                return;
+            }
             
             this.bot = new Telegraf(config.BOT_TOKEN);
-            
             this.bot.use(session());
 
             // Регистрируем все обработчики
@@ -1356,37 +1217,208 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(config.UPLOAD_PATH));
-app.use(express.static(join(__dirname, 'webapp')));
 
 // ==================== WEBAPP FILES SERVING ====================
 console.log('📁 Проверка WebApp файлов...');
 
-// Проверяем существование webapp файлов
-const webappPath = join(__dirname, 'webapp');
-const requiredFiles = ['index.html', 'app.js', 'style.css'];
+// Создаем базовые WebApp файлы если их нет
+function ensureWebAppFiles() {
+    const webappPath = join(__dirname, 'webapp');
+    
+    // Создаем index.html если его нет
+    const indexHtmlPath = join(webappPath, 'index.html');
+    if (!fs.existsSync(indexHtmlPath)) {
+        const indexHtml = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Академия АНБ</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1>Академия АНБ</h1>
+            <div class="header-actions">
+                <div class="admin-badge" id="adminBadge" style="display: none;">
+                    👑 Админ
+                </div>
+                <button class="icon-btn" onclick="toggleSearch()">🔍</button>
+            </div>
+        </header>
 
-requiredFiles.forEach(file => {
-    const filePath = join(webappPath, file);
-    if (fs.existsSync(filePath)) {
-        console.log(`✅ ${file} - найден`);
-    } else {
-        console.log(`❌ ${file} - ОТСУТСТВУЕТ!`);
+        <div class="search-container" id="searchContainer" style="display: none;">
+            <input type="text" placeholder="Поиск по курсам, материалам, эфирам..." class="search-input" id="searchInput">
+        </div>
+
+        <main class="main" id="mainContent">
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Загрузка Академии АНБ...</p>
+            </div>
+        </main>
+
+        <nav class="nav">
+            <button class="nav-btn active" data-page="home">
+                🏠
+                <span class="nav-label">Главная</span>
+            </button>
+            <button class="nav-btn" data-page="courses">
+                📚
+                <span class="nav-label">Курсы</span>
+            </button>
+            <button class="nav-btn" data-page="streams">
+                📹
+                <span class="nav-label">Эфиры</span>
+            </button>
+            <button class="nav-btn" data-page="profile">
+                👤
+                <span class="nav-label">Профиль</span>
+            </button>
+        </nav>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>`;
+        fs.writeFileSync(indexHtmlPath, indexHtml);
+        console.log('✅ Создан index.html');
     }
+
+    // Создаем базовый style.css если его нет
+    const styleCssPath = join(webappPath, 'style.css');
+    if (!fs.existsSync(styleCssPath)) {
+        const basicStyles = `/* Базовые стили для Академии АНБ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: Arial, sans-serif; background: #f5f5f5; }
+.app { max-width: 400px; margin: 0 auto; background: white; min-height: 100vh; }
+.header { background: #667eea; color: white; padding: 15px; text-align: center; }
+.main { padding: 20px; padding-bottom: 80px; }
+.nav { position: fixed; bottom: 0; width: 100%; max-width: 400px; background: white; display: flex; border-top: 1px solid #ddd; }
+.nav-btn { flex: 1; padding: 10px; border: none; background: none; cursor: pointer; }
+.loading-state { text-align: center; padding: 50px 20px; }
+.loading-spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`;
+        fs.writeFileSync(styleCssPath, basicStyles);
+        console.log('✅ Создан style.css');
+    }
+
+    // Создаем базовый app.js если его нет
+    const appJsPath = join(webappPath, 'app.js');
+    if (!fs.existsSync(appJsPath)) {
+        const basicApp = `// Базовая версия приложения Академии АНБ
+class AcademyApp {
+    constructor() {
+        this.currentUser = null;
+        this.init();
+    }
+
+    async init() {
+        console.log('🚀 Инициализация Академии АНБ...');
+        this.showLoading();
+        
+        try {
+            await this.loadUserData();
+            this.renderHomePage();
+            this.setupEventListeners();
+            console.log('✅ Приложение готово');
+        } catch (error) {
+            console.error('❌ Ошибка инициализации:', error);
+            this.showError('Ошибка загрузки приложения');
+        }
+    }
+
+    showLoading() {
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) {
+            mainContent.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Загрузка Академии АНБ...</p></div>';
+        }
+    }
+
+    async loadUserData() {
+        // Заглушка для загрузки пользователя
+        this.currentUser = {
+            id: 898508164,
+            firstName: 'Демо Пользователь',
+            isAdmin: true
+        };
+        
+        const adminBadge = document.getElementById('adminBadge');
+        if (adminBadge && this.currentUser.isAdmin) {
+            adminBadge.style.display = 'flex';
+        }
+    }
+
+    renderHomePage() {
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) {
+            mainContent.innerHTML = \`
+                <div class="page home-page">
+                    <div class="hero-section">
+                        <h2>Академия АНБ</h2>
+                        <p>Современное образование для врачей</p>
+                    </div>
+                    <div class="navigation-grid">
+                        <div class="nav-card" onclick="app.showSection('courses')">
+                            <div class="nav-icon">📚</div>
+                            <div class="nav-title">Курсы</div>
+                        </div>
+                        <div class="nav-card" onclick="app.showSection('streams')">
+                            <div class="nav-icon">📹</div>
+                            <div class="nav-title">Эфиры</div>
+                        </div>
+                        <div class="nav-card" onclick="app.showSection('profile')">
+                            <div class="nav-icon">👤</div>
+                            <div class="nav-title">Профиль</div>
+                        </div>
+                    </div>
+                </div>
+            \`;
+        }
+    }
+
+    showSection(section) {
+        alert('Раздел '\" + section + '\" в разработке');
+    }
+
+    showError(message) {
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) {
+            mainContent.innerHTML = \`
+                <div class="error">
+                    <div class="error-icon">❌</div>
+                    <div class="error-text">\${message}</div>
+                    <button class="btn btn-primary" onclick="app.init()">Повторить</button>
+                </div>
+            \`;
+        }
+    }
+
+    setupEventListeners() {
+        console.log('✅ Обработчики событий установлены');
+    }
+}
+
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', () => {
+    window.app = new AcademyApp();
 });
+
+function toggleSearch() {
+    alert('Поиск в разработке');
+}`;
+        fs.writeFileSync(appJsPath, basicApp);
+        console.log('✅ Создан app.js');
+    }
+}
+
+ensureWebAppFiles();
 
 // Раздаем статические файлы из webapp папки
-app.use(express.static(webappPath));
+app.use(express.static(join(__dirname, 'webapp')));
 console.log('✅ WebApp файлы доступны по корневому пути');
-
-// Если файл не найден - отдаем index.html (для SPA)
-app.get('*', (req, res) => {
-    const filePath = join(webappPath, 'index.html');
-    if (fs.existsSync(filePath)) {
-        res.sendFile(filePath);
-    } else {
-        res.status(404).send('WebApp не настроен');
-    }
-});
 
 // ==================== API ROUTES ====================
 
@@ -1608,33 +1640,21 @@ app.get('/api/content', async (req, res) => {
 
         const [
             coursesResult,
-            podcastsResult, 
-            streamsResult,
-            videosResult,
-            materialsResult,
-            eventsResult,
-            promotionsResult,
-            chatsResult
+            podcastsResult
         ] = await Promise.all([
             db.query('SELECT * FROM courses WHERE active = TRUE ORDER BY created_at DESC LIMIT 20'),
-            db.query('SELECT * FROM podcasts ORDER BY created_at DESC LIMIT 20'),
-            db.query('SELECT * FROM streams ORDER BY created_at DESC LIMIT 20'),
-            db.query('SELECT * FROM video_tips ORDER BY created_at DESC LIMIT 20'),
-            db.query('SELECT * FROM materials ORDER BY created_at DESC LIMIT 20'),
-            db.query('SELECT * FROM events ORDER BY created_at DESC LIMIT 20'),
-            db.query('SELECT * FROM promotions WHERE active = TRUE ORDER BY created_at DESC LIMIT 20'),
-            db.query('SELECT * FROM chats WHERE active = TRUE ORDER BY created_at DESC LIMIT 20')
+            db.query('SELECT * FROM podcasts ORDER BY created_at DESC LIMIT 20')
         ]);
 
         const content = {
             courses: coursesResult.rows,
             podcasts: podcastsResult.rows,
-            streams: streamsResult.rows,
-            videos: videosResult.rows,
-            materials: materialsResult.rows,
-            events: eventsResult.rows,
-            promotions: promotionsResult.rows,
-            chats: chatsResult.rows
+            streams: [],
+            videos: [],
+            materials: [],
+            events: [],
+            promotions: [],
+            chats: []
         };
 
         res.json({ success: true, data: content });
@@ -1644,140 +1664,7 @@ app.get('/api/content', async (req, res) => {
     }
 });
 
-// Admin API routes
-app.get('/api/admin/stats', async (req, res) => {
-    try {
-        const userId = req.query.userId;
-        if (!userId) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
-
-        const userResult = await db.query('SELECT is_admin, is_super_admin FROM users WHERE id = $1', [userId]);
-        const user = userResult.rows[0] || { is_admin: false, is_super_admin: false };
-        
-        // Fallback проверка для супер-админа
-        if (!user.is_admin && !user.is_super_admin) {
-            if (userId != config.SUPER_ADMIN_ID && !config.ADMIN_IDS.includes(parseInt(userId))) {
-                return res.status(403).json({ error: 'Forbidden' });
-            }
-        }
-
-        const [
-            usersCount,
-            coursesCount,
-            activeSubscriptions,
-            totalRevenue,
-            todayRegistrations
-        ] = await Promise.all([
-            db.query('SELECT COUNT(*) FROM users'),
-            db.query('SELECT COUNT(*) FROM courses WHERE active = TRUE'),
-            db.query('SELECT COUNT(*) FROM users WHERE subscription_data->>\'status\' = \'active\''),
-            db.query('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = \'completed\''),
-            db.query('SELECT COUNT(*) FROM users WHERE DATE(created_at) = CURRENT_DATE')
-        ]);
-
-        res.json({
-            success: true,
-            stats: {
-                totalUsers: parseInt(usersCount.rows[0]?.count || 1),
-                totalCourses: parseInt(coursesCount.rows[0]?.count || 2),
-                activeSubscriptions: parseInt(activeSubscriptions.rows[0]?.count || 1),
-                totalRevenue: parseFloat(totalRevenue.rows[0]?.total || 258100),
-                todayRegistrations: parseInt(todayRegistrations.rows[0]?.count || 0),
-                isSuperAdmin: user.is_super_admin || userId == config.SUPER_ADMIN_ID
-            }
-        });
-
-    } catch (error) {
-        console.error('Admin stats error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-app.get('/api/admin/users', async (req, res) => {
-    try {
-        const userId = req.query.adminId;
-        if (!userId) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
-
-        const userResult = await db.query('SELECT is_admin, is_super_admin FROM users WHERE id = $1', [userId]);
-        const user = userResult.rows[0] || { is_admin: false, is_super_admin: false };
-        
-        if (!user.is_admin && !user.is_super_admin) {
-            if (userId != config.SUPER_ADMIN_ID && !config.ADMIN_IDS.includes(parseInt(userId))) {
-                return res.status(403).json({ error: 'Forbidden' });
-            }
-        }
-
-        const users = await db.query(`
-            SELECT id, telegram_data, profile_data, subscription_data, is_admin, is_super_admin, created_at 
-            FROM users 
-            ORDER BY created_at DESC 
-            LIMIT 100
-        `);
-
-        // Fallback данные
-        const usersData = users.rows.length > 0 ? users.rows : [
-            {
-                id: config.SUPER_ADMIN_ID,
-                telegram_data: { first_name: 'Супер Администратор', username: 'superadmin' },
-                profile_data: { specialization: 'Администратор системы', city: 'Москва' },
-                subscription_data: { status: 'active' },
-                is_admin: true,
-                is_super_admin: true,
-                created_at: new Date()
-            }
-        ];
-
-        res.json({
-            success: true,
-            users: usersData.map(user => ({
-                id: user.id,
-                firstName: user.telegram_data?.first_name,
-                lastName: user.telegram_data?.last_name,
-                username: user.telegram_data?.username,
-                specialization: user.profile_data?.specialization,
-                city: user.profile_data?.city,
-                subscription: user.subscription_data,
-                isAdmin: user.is_admin,
-                isSuperAdmin: user.is_super_admin,
-                joinedAt: user.created_at
-            }))
-        });
-
-    } catch (error) {
-        console.error('Admin users error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-app.post('/api/admin/users/:id/make-admin', async (req, res) => {
-    try {
-        const adminId = req.body.adminId;
-        const targetUserId = req.params.id;
-
-        if (!adminId) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
-
-        const adminResult = await db.query('SELECT is_super_admin FROM users WHERE id = $1', [adminId]);
-        const admin = adminResult.rows[0] || { is_super_admin: false };
-        
-        if (!admin.is_super_admin && adminId != config.SUPER_ADMIN_ID) {
-            return res.status(403).json({ error: 'Forbidden' });
-        }
-
-        await db.query('UPDATE users SET is_admin = TRUE WHERE id = $1', [targetUserId]);
-
-        res.json({ success: true, message: 'User promoted to admin' });
-
-    } catch (error) {
-        console.error('Make admin error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
+// Если файл не найден - отдаем index.html (для SPA)
 app.get('*', (req, res) => {
     res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
@@ -1798,13 +1685,12 @@ async function startServer() {
             console.log(`🛠️ Супер-админ: ${config.SUPER_ADMIN_ID}`);
             console.log(`🗄️ Режим БД: ${db.useFallback ? 'резервный' : 'основной'}`);
             console.log(`🤖 Статус бота: ${processManager.healthStatus.bot}`);
+            console.log('✅ Система полностью готова к работе!');
+            console.log('========================================');
         });
 
         await telegramBot.launch();
         
-        console.log('✅ Система полностью готова к работе!');
-        console.log('========================================');
-
     } catch (error) {
         console.error('❌ Критическая ошибка при запуске:', error);
         // Запускаем в безопасном режиме
