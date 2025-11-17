@@ -1,4 +1,4 @@
-// server.js - ИСПРАВЛЕННАЯ ВЕРСИЯ БЕЗ RATE LIMITING
+// server.js - ИСПРАВЛЕННАЯ ВЕРСИЯ С РАЗНЫМИ ПОРТАМИ
 import { Telegraf } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -14,7 +14,8 @@ const __dirname = dirname(__filename);
 // ==================== КОНФИГУРАЦИЯ ====================
 const config = {
     BOT_TOKEN: process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4',
-    PORT: process.env.PORT || 3000,
+    PORT: process.env.PORT || 3000, // Основной порт для сервера
+    BOT_PORT: process.env.BOT_PORT || 3001, // Отдельный порт для бота (webhook)
     WEBAPP_URL: process.env.WEBAPP_URL || `https://anb-academy.timeweb.ru`,
     ADMIN_IDS: [898508164],
     NODE_ENV: process.env.NODE_ENV || 'production'
@@ -26,7 +27,6 @@ console.log('🚀 Запуск Академии АНБ...');
 class TelegramBotSystem {
     constructor() {
         this.bot = null;
-        this.setupBot();
     }
 
     setupBot() {
@@ -38,7 +38,6 @@ class TelegramBotSystem {
             
             this.bot = new Telegraf(config.BOT_TOKEN);
             this.setupHandlers();
-            this.launchBot();
             
         } catch (error) {
             console.error('❌ Ошибка инициализации бота:', error);
@@ -121,20 +120,30 @@ class TelegramBotSystem {
     async launchBot() {
         try {
             if (config.NODE_ENV === 'production') {
-                await this.bot.telegram.setWebhook(`${config.WEBAPP_URL}/bot${config.BOT_TOKEN}`);
+                console.log(`🤖 Настройка webhook на порту ${config.BOT_PORT}...`);
+                
+                // В production используем отдельный порт для webhook
                 await this.bot.launch({
                     webhook: {
                         domain: config.WEBAPP_URL,
-                        port: config.PORT
+                        port: config.BOT_PORT
                     }
                 });
                 console.log('✅ Бот запущен (webhook)');
             } else {
+                // В development используем polling
                 await this.bot.launch();
                 console.log('✅ Бот запущен (polling)');
             }
         } catch (error) {
             console.error('❌ Ошибка запуска бота:', error);
+            // Fallback: запускаем бота в polling режиме
+            try {
+                await this.bot.launch();
+                console.log('✅ Бот запущен в polling режиме (fallback)');
+            } catch (fallbackError) {
+                console.error('❌ Критическая ошибка запуска бота:', fallbackError);
+            }
         }
     }
 }
@@ -144,12 +153,11 @@ class ExpressServerSystem {
     constructor() {
         this.app = express();
         this.server = null;
-        this.setupServer();
     }
 
     setupServer() {
         this.setupMiddleware();
-        this.setupStaticFiles(); // Отдельно настраиваем статику
+        this.setupStaticFiles();
         this.setupRoutes();
         this.setupErrorHandling();
     }
@@ -181,37 +189,27 @@ class ExpressServerSystem {
     }
 
     setupStaticFiles() {
-        // Статические файлы БЕЗ rate limiting
+        // Статические файлы
         const staticOptions = {
             maxAge: '1d',
             etag: true,
             lastModified: true
         };
 
-        // Основные статические пути
         this.app.use('/webapp', express.static(join(__dirname, 'webapp'), staticOptions));
         this.app.use('/assets', express.static(join(__dirname, 'webapp/assets'), staticOptions));
         this.app.use('/uploads', express.static(join(__dirname, 'uploads'), staticOptions));
 
-        // Fallback для изображений - создаем placeholder если файла нет
+        // Fallback для изображений
         this.app.use('/webapp/assets/:filename', (req, res, next) => {
             const filename = req.params.filename;
             const filePath = join(__dirname, 'webapp/assets', filename);
             
-            // Проверяем существует ли файл
             const fs = require('fs');
             if (fs.existsSync(filePath)) {
-                next(); // Файл существует, передаем дальше
+                next();
             } else {
-                // Создаем простой placeholder
-                const svgPlaceholder = `
-                    <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="100%" height="100%" fill="#f0f0f0"/>
-                        <text x="50%" y="50%" text-anchor="middle" dy=".3em" font-family="Arial" font-size="16" fill="#666">
-                            ${filename}
-                        </text>
-                    </svg>
-                `;
+                const svgPlaceholder = createImagePlaceholder(filename);
                 res.setHeader('Content-Type', 'image/svg+xml');
                 res.send(svgPlaceholder);
             }
@@ -224,11 +222,7 @@ class ExpressServerSystem {
             res.json({
                 status: 'healthy',
                 timestamp: new Date().toISOString(),
-                version: '2.0.0',
-                services: {
-                    bot: telegramBot.bot ? 'active' : 'inactive',
-                    server: 'running'
-                }
+                version: '2.0.0'
             });
         });
 
@@ -251,15 +245,6 @@ class ExpressServerSystem {
 
         // Admin API
         this.app.get('/api/admin/stats', this.handleAdminStats.bind(this));
-
-        // Telegram webhook - БЕЗ rate limiting
-        this.app.post(`/bot${config.BOT_TOKEN}`, (req, res) => {
-            if (telegramBot.bot) {
-                telegramBot.bot.handleUpdate(req.body, res);
-            } else {
-                res.status(200).send();
-            }
-        });
 
         // SPA fallback
         this.app.get('*', (req, res) => {
@@ -574,7 +559,7 @@ class ExpressServerSystem {
                 description: '6 модулей по современным мануальным методикам',
                 price: 25000,
                 duration: '12 недель',
-                image_url: '/assets/course-manual.jpg',
+                image_url: '/assets/course-manual.svg',
                 featured: true,
                 active: true
             },
@@ -584,7 +569,7 @@ class ExpressServerSystem {
                 description: '5 модулей по современной диагностике',
                 price: 18000,
                 duration: '8 недель',
-                image_url: '/assets/course-diagnosis.jpg',
+                image_url: '/assets/course-diagnosis.svg',
                 featured: true,
                 active: true
             }
@@ -596,7 +581,7 @@ class ExpressServerSystem {
             id: 1,
             title: 'АНБ FM: Современная неврология',
             description: 'Обсуждение новых тенденций',
-            image_url: '/assets/podcast-neurology.jpg',
+            image_url: '/assets/podcast-neurology.svg',
             active: true
         }];
     }
@@ -606,7 +591,7 @@ class ExpressServerSystem {
             id: 1,
             title: 'Разбор клинического случая',
             description: 'Прямой эфир с разбором',
-            thumbnail_url: '/assets/stream-pain-syndrome.jpg',
+            thumbnail_url: '/assets/stream-pain-syndrome.svg',
             active: true
         }];
     }
@@ -616,7 +601,7 @@ class ExpressServerSystem {
             id: 1,
             title: 'Неврологический осмотр',
             description: 'Быстрый гайд',
-            thumbnail_url: '/assets/video-neurological-exam.jpg',
+            thumbnail_url: '/assets/video-neurological-exam.svg',
             active: true
         }];
     }
@@ -626,7 +611,7 @@ class ExpressServerSystem {
             id: 1,
             title: 'МРТ разбор',
             description: 'Детальный разбор МРТ',
-            image_url: '/assets/material-ms-mri.jpg',
+            image_url: '/assets/material-ms-mri.svg',
             active: true
         }];
     }
@@ -636,7 +621,7 @@ class ExpressServerSystem {
             id: 1,
             title: 'Конференция по неврологии',
             description: 'Ежегодная конференция',
-            image_url: '/assets/event-neurology-conf.jpg',
+            image_url: '/assets/event-neurology-conf.svg',
             active: true
         }];
     }
@@ -646,7 +631,7 @@ class ExpressServerSystem {
             id: 1,
             title: 'Скидка 25%',
             description: 'Специальное предложение',
-            image_url: '/assets/promo-welcome.jpg',
+            image_url: '/assets/promo-welcome.svg',
             active: true
         }];
     }
@@ -656,7 +641,7 @@ class ExpressServerSystem {
             id: 1,
             name: 'Общий чат',
             description: 'Основной чат',
-            image_url: '/assets/chat-main.jpg',
+            image_url: '/assets/chat-main.svg',
             active: true
         }];
     }
@@ -679,19 +664,82 @@ class ExpressServerSystem {
     }
 
     start() {
-        this.server = this.app.listen(config.PORT, '0.0.0.0', () => {
-            console.log(`🌐 Сервер запущен на порту ${config.PORT}`);
-            console.log(`📱 WebApp: ${config.WEBAPP_URL}`);
-            console.log('✅ Система готова к работе!');
+        return new Promise((resolve, reject) => {
+            this.server = this.app.listen(config.PORT, '0.0.0.0', (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    console.log(`🌐 Сервер запущен на порту ${config.PORT}`);
+                    resolve();
+                }
+            });
         });
     }
 }
 
-// ==================== ЗАПУСК СИСТЕМЫ ====================
-const telegramBot = new TelegramBotSystem();
-const expressServer = new ExpressServerSystem();
+// ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 
-expressServer.start();
+function createImagePlaceholder(filename) {
+    const name = filename.replace('.jpg', '').replace('.svg', '').replace(/-/g, ' ');
+    return `
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#3b82f6" />
+            <stop offset="100%" stop-color="#1e40af" />
+        </linearGradient>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#grad)"/>
+    <text x="50%" y="50%" text-anchor="middle" dy=".3em" font-family="Arial" font-size="18" fill="white" font-weight="bold">
+        ${name}
+    </text>
+    <text x="50%" y="65%" text-anchor="middle" font-family="Arial" font-size="14" fill="rgba(255,255,255,0.8)">
+        Академия АНБ
+    </text>
+</svg>`;
+}
+
+// ==================== ЗАПУСК СИСТЕМЫ ====================
+async function startSystem() {
+    try {
+        console.log('🚀 Запуск системы...');
+        
+        // Сначала запускаем сервер
+        const expressServer = new ExpressServerSystem();
+        expressServer.setupServer();
+        await expressServer.start();
+        
+        console.log(`📱 WebApp: ${config.WEBAPP_URL}`);
+        
+        // Затем запускаем бота
+        const telegramBot = new TelegramBotSystem();
+        telegramBot.setupBot();
+        
+        // В production используем только polling для бота
+        if (config.NODE_ENV === 'production') {
+            console.log('🤖 Запуск бота в polling режиме...');
+            await telegramBot.bot.launch();
+            console.log('✅ Бот запущен в polling режиме');
+        } else {
+            await telegramBot.launchBot();
+        }
+        
+        console.log('✅ Система полностью готова!');
+        
+    } catch (error) {
+        console.error('❌ Ошибка запуска системы:', error);
+        
+        // Fallback: запускаем только сервер
+        console.log('🔄 Запуск только сервера...');
+        const expressServer = new ExpressServerSystem();
+        expressServer.setupServer();
+        await expressServer.start();
+        console.log('✅ Сервер запущен (бот отключен)');
+    }
+}
+
+// Запускаем систему
+startSystem();
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
