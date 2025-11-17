@@ -7,19 +7,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "prestart": "node setup.js --non-interactive",
     "setup": "node setup.js --non-interactive",
-    "deploy": "npm run setup && npm start"
+    "docker:build": "docker build -t anb-academy .",
+    "docker:run": "docker run -p 3000:3000 anb-academy"
   },
-  "keywords": [
-    "academy",
-    "education",
-    "medical",
-    "telegram",
-    "bot"
-  ],
-  "author": "АНБ Академия",
-  "license": "MIT",
   "dependencies": {
     "telegraf": "4.16.3",
     "express": "4.18.2",
@@ -54,15 +45,7 @@
     "exceljs": "4.4.0",
     "archiver": "6.0.1",
     "node-fetch": "3.3.2",
-    "ws": "8.14.2",
-    "json2csv": "6.1.0",
-    "csv-parser": "3.0.0",
-    "xml2js": "0.6.2",
-    "cheerio": "1.0.0-rc.12",
-    "puppeteer": "21.6.1",
-    "canvas": "2.11.2",
-    "fluent-ffmpeg": "2.1.2",
-    "music-metadata": "7.14.0"
+    "ws": "8.14.2"
   },
   "engines": {
     "node": ">=18.0.0"
