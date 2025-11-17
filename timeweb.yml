@@ -1,13 +1,11 @@
 build:
-  - npm install --no-package-lock --legacy-peer-deps
-  - npm run setup
+  - npm install
+  - node setup.js --non-interactive
 
 start: npm start
 
 environment:
   NODE_ENV: production
   PORT: 3000
-  BOT_TOKEN: 8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4
-  WEBAPP_URL: https://sergeynikishin555123123-lab-smart-clinic-tg-app-f84f.twc1.net
 
 build_timeout: 600
