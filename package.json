@@ -1,26 +1,23 @@
 {
   "name": "smart-clinic-academy",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
-  "description": "Академия АНБ - образовательная платформа для врачей",
+  "description": "Академия АНБ - современная образовательная платформа для врачей",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
     "build": "node setup.js",
     "setup": "node setup.js",
-    "deploy": "npm run build && npm start",
-    "quick": "node quick-server.js",
-    "docker:build": "docker build -t anb-academy .",
-    "docker:run": "docker run -p 3000:3000 anb-academy",
-    "docker:prod": "npm run docker:build && npm run docker:run"
+    "deploy": "npm run build && npm start"
   },
   "keywords": [
     "academy",
     "education",
     "medical",
     "telegram",
-    "bot"
+    "bot",
+    "modern"
   ],
   "author": "АНБ Академия",
   "license": "MIT",
@@ -30,9 +27,14 @@
     "pg": "^8.11.3",
     "cors": "^2.8.5",
     "helmet": "^7.1.0",
-    "compression": "^1.7.4"
+    "compression": "^1.7.4",
+    "multer": "^1.4.5",
+    "sharp": "^0.33.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^9.0.1"
   },
   "engines": {
     "node": ">=18.0.0"
-  } 
+  }
 }
