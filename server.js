@@ -1358,6 +1358,36 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(config.UPLOAD_PATH));
 app.use(express.static(join(__dirname, 'webapp')));
 
+// ==================== WEBAPP FILES SERVING ====================
+console.log('📁 Проверка WebApp файлов...');
+
+// Проверяем существование webapp файлов
+const webappPath = join(__dirname, 'webapp');
+const requiredFiles = ['index.html', 'app.js', 'style.css'];
+
+requiredFiles.forEach(file => {
+    const filePath = join(webappPath, file);
+    if (fs.existsSync(filePath)) {
+        console.log(`✅ ${file} - найден`);
+    } else {
+        console.log(`❌ ${file} - ОТСУТСТВУЕТ!`);
+    }
+});
+
+// Раздаем статические файлы из webapp папки
+app.use(express.static(webappPath));
+console.log('✅ WebApp файлы доступны по корневому пути');
+
+// Если файл не найден - отдаем index.html (для SPA)
+app.get('*', (req, res) => {
+    const filePath = join(webappPath, 'index.html');
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+    } else {
+        res.status(404).send('WebApp не настроен');
+    }
+});
+
 // ==================== API ROUTES ====================
 
 app.get('/', (req, res) => {
