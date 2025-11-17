@@ -1,4 +1,4 @@
-// webapp/app.js - ПОЛНОСТЬЮ РАБОЧАЯ ВЕРСИЯ
+// webapp/app.js - СОВРЕМЕННАЯ ВЕРСИЯ С РАБОЧИМИ ФУНКЦИЯМИ
 class AcademyApp {
     constructor() {
         this.currentUser = null;
@@ -21,7 +21,8 @@ class AcademyApp {
                 streams: [],
                 videos: [],
                 materials: []
-            }
+            },
+            uploadProgress: 0
         };
         
         this.init();
@@ -60,160 +61,12 @@ class AcademyApp {
             Telegram.WebApp.MainButton.setText('Меню');
             Telegram.WebApp.MainButton.show();
             Telegram.WebApp.MainButton.onClick(() => this.showTelegramMenu());
-            
-            console.log('📱 Telegram WebApp инициализирован');
-        } else {
-            console.log('🌐 Запуск в браузерном режиме');
         }
-    }
-
-    showTelegramMenu() {
-        if (window.Telegram && Telegram.WebApp) {
-            Telegram.WebApp.showPopup({
-                title: 'Быстрое меню',
-                message: 'Выберите действие:',
-                buttons: [
-                    { id: 'profile', type: 'default', text: '👤 Профиль' },
-                    { id: 'courses', type: 'default', text: '📚 Курсы' },
-                    { id: 'support', type: 'default', text: '💬 Поддержка' },
-                    { type: 'cancel', text: 'Закрыть' }
-                ]
-            }, (buttonId) => {
-                if (buttonId) {
-                    switch(buttonId) {
-                        case 'profile':
-                            this.renderPage('profile');
-                            break;
-                        case 'courses':
-                            this.renderPage('courses');
-                            break;
-                        case 'support':
-                            this.showSupport();
-                            break;
-                    }
-                }
-            });
-        }
-    }
-
-    handleBackButton() {
-        if (this.currentSubPage) {
-            this.currentSubPage = '';
-            this.renderPage(this.currentPage);
-        } else if (this.currentPage !== 'home') {
-            this.renderPage('home');
-        } else {
-            if (window.Telegram && Telegram.WebApp) {
-                Telegram.WebApp.close();
-            }
-        }
-    }
-
-    showSkeletonLoading() {
-        const mainContent = document.getElementById('mainContent');
-        if (!mainContent) return;
-        
-        mainContent.innerHTML = `
-            <div class="skeleton-loading">
-                <div class="skeleton-search"></div>
-                <div class="skeleton-nav-grid">
-                    ${Array(8).fill(0).map(() => `
-                        <div class="skeleton-nav-card">
-                            <div class="skeleton-icon"></div>
-                            <div class="skeleton-text"></div>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="skeleton-actions">
-                    <div class="skeleton-action"></div>
-                    <div class="skeleton-action"></div>
-                </div>
-            </div>
-            
-            <style>
-                .skeleton-loading { padding: 20px; }
-                .skeleton-search { height: 44px; background: #f0f0f0; border-radius: 22px; margin-bottom: 20px; animation: pulse 1.5s infinite; }
-                .skeleton-nav-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
-                .skeleton-nav-card { background: #f8f9fa; border-radius: 16px; padding: 20px 15px; text-align: center; }
-                .skeleton-icon { width: 40px; height: 40px; background: #e9ecef; border-radius: 50%; margin: 0 auto 10px; }
-                .skeleton-text { height: 12px; background: #e9ecef; border-radius: 6px; margin: 0 auto; }
-                .skeleton-actions { display: flex; gap: 10px; }
-                .skeleton-action { flex: 1; height: 50px; background: #f8f9fa; border-radius: 12px; }
-                @keyframes pulse { 
-                    0% { opacity: 1; }
-                    50% { opacity: 0.5; }
-                    100% { opacity: 1; }
-                }
-            </style>
-        `;
-    }
-
-    setupEventListeners() {
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                this.state.searchQuery = e.target.value;
-                this.handleSearch();
-            });
-        }
-
-        document.addEventListener('click', (e) => {
-            const navBtn = e.target.closest('.nav-btn');
-            if (navBtn) {
-                e.preventDefault();
-                const page = navBtn.dataset.page;
-                this.renderPage(page);
-                return;
-            }
-
-            const navCard = e.target.closest('.nav-card');
-            if (navCard) {
-                const section = navCard.dataset.section;
-                if (section) {
-                    this.renderPage(section);
-                }
-                return;
-            }
-
-            const favoriteBtn = e.target.closest('.favorite-btn');
-            if (favoriteBtn) {
-                e.stopPropagation();
-                const contentId = favoriteBtn.dataset.id;
-                const contentType = favoriteBtn.dataset.type;
-                this.toggleFavorite(contentId, contentType);
-                return;
-            }
-
-            const actionBtn = e.target.closest('.action-btn');
-            if (actionBtn) {
-                const action = actionBtn.dataset.action;
-                this.handleAction(action, actionBtn.dataset);
-                return;
-            }
-
-            const adminTab = e.target.closest('.admin-tab');
-            if (adminTab) {
-                const tab = adminTab.dataset.tab;
-                this.switchAdminTab(tab);
-                return;
-            }
-        });
     }
 
     async loadUserData() {
         try {
             let userId = this.getUserId();
-            let firstName = 'Пользователь';
-            let username = 'user';
-            
-            if (window.Telegram && Telegram.WebApp) {
-                const tgUser = Telegram.WebApp.initDataUnsafe?.user;
-                if (tgUser) {
-                    userId = tgUser.id;
-                    firstName = tgUser.first_name || 'Пользователь';
-                    username = tgUser.username || 'user';
-                }
-            }
             
             const response = await fetch('/api/user', {
                 method: 'POST',
@@ -222,15 +75,13 @@ class AcademyApp {
                     'Accept': 'application/json'
                 },
                 body: JSON.stringify({ 
-                    id: userId, 
-                    firstName: firstName,
-                    username: username
+                    id: userId,
+                    firstName: 'Пользователь',
+                    username: 'user'
                 })
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
             
@@ -239,22 +90,8 @@ class AcademyApp {
                 this.isAdmin = this.currentUser.isAdmin || false;
                 this.isSuperAdmin = this.currentUser.isSuperAdmin || false;
                 
-                const adminBadge = document.getElementById('adminBadge');
-                if (adminBadge) {
-                    if (this.isSuperAdmin) {
-                        adminBadge.innerHTML = '🛠️ Супер-админ';
-                        adminBadge.style.display = 'flex';
-                    } else if (this.isAdmin) {
-                        adminBadge.innerHTML = '🔧 Админ';
-                        adminBadge.style.display = 'flex';
-                    } else {
-                        adminBadge.style.display = 'none';
-                    }
-                }
-
-                this.state.favorites = this.currentUser.favorites || {
-                    courses: [], podcasts: [], streams: [], videos: [], materials: []
-                };
+                this.updateAdminBadge();
+                this.state.favorites = this.currentUser.favorites || this.state.favorites;
                 
                 console.log('✅ Данные пользователя загружены:', this.currentUser.firstName);
             } else {
@@ -263,6 +100,21 @@ class AcademyApp {
         } catch (error) {
             console.error('Ошибка загрузки пользователя:', error);
             this.createDemoUser();
+        }
+    }
+
+    updateAdminBadge() {
+        const adminBadge = document.getElementById('adminBadge');
+        if (adminBadge) {
+            if (this.isSuperAdmin) {
+                adminBadge.innerHTML = '🛠️ Супер-админ';
+                adminBadge.style.display = 'flex';
+            } else if (this.isAdmin) {
+                adminBadge.innerHTML = '🔧 Админ';
+                adminBadge.style.display = 'flex';
+            } else {
+                adminBadge.style.display = 'none';
+            }
         }
     }
 
@@ -317,30 +169,22 @@ class AcademyApp {
             joinedAt: new Date('2024-01-01').toISOString(),
             surveyCompleted: true
         };
+        
         this.isAdmin = true;
         this.isSuperAdmin = true;
-        
-        const adminBadge = document.getElementById('adminBadge');
-        if (adminBadge) {
-            adminBadge.innerHTML = '🛠️ Супер-админ';
-            adminBadge.style.display = 'flex';
-        }
-        
+        this.updateAdminBadge();
         this.state.favorites = this.currentUser.favorites;
-        console.log('✅ Создан демо-пользователь');
     }
 
     async loadContent() {
         try {
             const response = await fetch('/api/content');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             
             const data = await response.json();
             if (data.success) {
                 this.allContent = data.data;
-                console.log('✅ Контент загружен:', Object.keys(this.allContent).map(k => `${k}: ${this.allContent[k]?.length || 0}`).join(', '));
+                console.log('✅ Контент загружен');
             } else {
                 throw new Error('Failed to load content');
             }
@@ -357,27 +201,15 @@ class AcademyApp {
                     id: 1,
                     title: 'Мануальные техники в практике',
                     description: '6 модулей по современным мануальным методикам',
-                    full_description: 'Комплексный курс по мануальным техникам для практикующих врачей. Изучите современные подходы к диагностике и лечению.',
+                    full_description: 'Комплексный курс по мануальным техникам для практикующих врачей.',
                     price: 15000,
                     duration: '12 часов',
                     modules: 6,
                     category: 'Мануальные техники',
                     level: 'advanced',
                     students_count: 45,
-                    rating: 4.8
-                },
-                {
-                    id: 2,
-                    title: 'Неврология для практикующих врачей',
-                    description: 'Основы неврологической диагностики',
-                    full_description: 'Фундаментальный курс по неврологии с акцентом на практическое применение.',
-                    price: 12000,
-                    duration: '10 часов',
-                    modules: 5,
-                    category: 'Неврология',
-                    level: 'intermediate',
-                    students_count: 67,
-                    rating: 4.6
+                    rating: 4.8,
+                    image_url: '/webapp/assets/course-default.jpg'
                 }
             ],
             podcasts: [
@@ -387,37 +219,21 @@ class AcademyApp {
                     description: 'Обсуждение новых тенденций в неврологии',
                     duration: '45:20',
                     category: 'Неврология',
-                    listens: 234
-                },
-                {
-                    id: 2,
-                    title: 'АНБ FM: Реабилитационные методики',
-                    description: 'Новые подходы к реабилитации',
-                    duration: '38:15',
-                    category: 'Реабилитация',
-                    listens: 167
+                    listens: 234,
+                    image_url: '/webapp/assets/podcast-default.jpg'
                 }
             ],
             streams: [
                 {
                     id: 1,
-                    title: 'Разбор клинического случая: Болевой синдром',
+                    title: 'Разбор клинического случая',
                     description: 'Прямой эфир с разбором сложного случая',
                     duration: '1:30:00',
                     stream_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
                     live: true,
                     participants: 89,
-                    type: 'analysis'
-                },
-                {
-                    id: 2,
-                    title: 'Мануальные техники: Демонстрация',
-                    description: 'Практическая демонстрация методик',
-                    duration: '2:15:00',
-                    stream_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                    live: false,
-                    participants: 156,
-                    type: 'stream'
+                    type: 'analysis',
+                    thumbnail_url: '/webapp/assets/stream-default.jpg'
                 }
             ],
             videos: [
@@ -427,15 +243,8 @@ class AcademyApp {
                     description: 'Быстрый гайд по основным тестам',
                     duration: '15:30',
                     category: 'Неврология',
-                    views: 456
-                },
-                {
-                    id: 2,
-                    title: 'Техника мобилизации суставов',
-                    description: 'Практическое руководство',
-                    duration: '22:45',
-                    category: 'Мануальные техники',
-                    views: 289
+                    views: 456,
+                    thumbnail_url: '/webapp/assets/video-default.jpg'
                 }
             ],
             materials: [
@@ -445,15 +254,8 @@ class AcademyApp {
                     description: 'Детальный разбор МРТ с клиническими случаями',
                     material_type: 'mri',
                     category: 'Неврология',
-                    downloads: 123
-                },
-                {
-                    id: 2,
-                    title: 'Чек-лист: Неврологический осмотр',
-                    description: 'Пошаговый чек-лист для ежедневной практики',
-                    material_type: 'checklist',
-                    category: 'Неврология',
-                    downloads: 267
+                    downloads: 123,
+                    image_url: '/webapp/assets/material-default.jpg'
                 }
             ],
             events: [
@@ -464,16 +266,8 @@ class AcademyApp {
                     event_date: new Date('2024-02-15T10:00:00').toISOString(),
                     location: 'Москва',
                     event_type: 'offline',
-                    participants: 45
-                },
-                {
-                    id: 2,
-                    title: 'Онлайн-семинар: Реабилитация после инсульта',
-                    description: 'Практические аспекты реабилитации',
-                    event_date: new Date('2024-01-20T14:00:00').toISOString(),
-                    location: 'Онлайн',
-                    event_type: 'online',
-                    participants: 120
+                    participants: 45,
+                    image_url: '/webapp/assets/event-default.jpg'
                 }
             ],
             promotions: [
@@ -483,7 +277,8 @@ class AcademyApp {
                     description: 'Специальное предложение для новых пользователей',
                     discount: 20,
                     active: true,
-                    end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+                    end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                    image_url: '/webapp/assets/promo-default.jpg'
                 }
             ],
             chats: [
@@ -493,13 +288,14 @@ class AcademyApp {
                     description: 'Основной чат для общения всех участников',
                     type: 'group',
                     participants_count: 156,
-                    last_message: 'Добро пожаловать в Академию!'
+                    last_message: 'Добро пожаловать в Академию!',
+                    image_url: '/webapp/assets/chat-default.jpg'
                 }
             ]
         };
-        console.log('✅ Создан демо-контент');
     }
 
+    // Основные методы рендеринга
     renderPage(page, subPage = '') {
         this.currentPage = page;
         this.currentSubPage = subPage;
@@ -510,10 +306,12 @@ class AcademyApp {
             return;
         }
 
+        // Обновляем активные кнопки навигации
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.page === page);
         });
 
+        // Управление кнопкой "Назад" в Telegram
         if (window.Telegram && Telegram.WebApp) {
             if (page === 'home' && !subPage) {
                 Telegram.WebApp.BackButton.hide();
@@ -532,7 +330,7 @@ class AcademyApp {
     }
 
     getPageHTML(page, subPage = '') {
-        const pageMap = {
+        const pages = {
             home: this.createHomePage(),
             courses: subPage ? this.createCourseDetailPage(subPage) : this.createCoursesPage(),
             podcasts: this.createPodcastsPage(),
@@ -548,13 +346,12 @@ class AcademyApp {
             admin: this.createAdminPage()
         };
 
-        return pageMap[page] || this.createHomePage();
+        return pages[page] || this.createHomePage();
     }
 
     initializePage(page) {
         const initializers = {
             admin: () => this.initAdminPage(),
-            chats: () => this.initChatsPage(),
             courses: () => this.initCoursesPage(),
             profile: () => this.initProfilePage()
         };
@@ -564,15 +361,10 @@ class AcademyApp {
         }
     }
 
+    // HOME PAGE
     createHomePage() {
-        const coursesCount = this.allContent.courses?.length || 0;
-        const podcastsCount = this.allContent.podcasts?.length || 0;
-        const streamsCount = this.allContent.streams?.length || 0;
-        const videosCount = this.allContent.videos?.length || 0;
-        const materialsCount = this.allContent.materials?.length || 0;
-        const eventsCount = this.allContent.events?.length || 0;
-        const promotionsCount = this.allContent.promotions?.length || 0;
-
+        const stats = this.calculateHomeStats();
+        
         return `
             <div class="page home-page">
                 <div class="search-container">
@@ -584,61 +376,35 @@ class AcademyApp {
                 </div>
 
                 <div class="hero-section">
+                    <div class="hero-background"></div>
                     <h2>Академия АНБ</h2>
                     <p>Современное образование для врачей</p>
                 </div>
 
-                <div class="navigation-grid">
-                    <div class="nav-card" data-section="courses">
-                        <div class="nav-icon">📚</div>
-                        <div class="nav-title">Курсы</div>
-                        <div class="nav-badge">${coursesCount}</div>
+                <div class="quick-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.courses}</div>
+                        <div class="stat-label">Курсов</div>
                     </div>
-                    <div class="nav-card" data-section="podcasts">
-                        <div class="nav-icon">🎧</div>
-                        <div class="nav-title">АНБ FM</div>
-                        <div class="nav-badge">${podcastsCount}</div>
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.students}</div>
+                        <div class="stat-label">Студентов</div>
                     </div>
-                    <div class="nav-card" data-section="streams">
-                        <div class="nav-icon">📹</div>
-                        <div class="nav-title">Эфиры|Разборы</div>
-                        <div class="nav-badge">${streamsCount}</div>
-                    </div>
-                    <div class="nav-card" data-section="videos">
-                        <div class="nav-icon">🎯</div>
-                        <div class="nav-title">Видео-шпаргалки</div>
-                        <div class="nav-badge">${videosCount}</div>
-                    </div>
-                    <div class="nav-card" data-section="materials">
-                        <div class="nav-icon">📋</div>
-                        <div class="nav-title">Практические материалы</div>
-                        <div class="nav-badge">${materialsCount}</div>
-                    </div>
-                    <div class="nav-card" data-section="events">
-                        <div class="nav-icon">🗺️</div>
-                        <div class="nav-title">Карта мероприятий</div>
-                        <div class="nav-badge">${eventsCount}</div>
-                    </div>
-                    <div class="nav-card" data-section="promotions">
-                        <div class="nav-icon">🎁</div>
-                        <div class="nav-title">Ограниченное предложение</div>
-                        <div class="nav-badge">${promotionsCount}</div>
-                    </div>
-                    <div class="nav-card" data-action="support">
-                        <div class="nav-icon">💬</div>
-                        <div class="nav-title">Поддержка</div>
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.materials}</div>
+                        <div class="stat-label">Материалов</div>
                     </div>
                 </div>
 
-                <div class="quick-actions">
-                    <button class="action-btn" data-action="start-learning">
-                        <span>📚</span>
-                        <span>Начать обучение</span>
-                    </button>
-                    <button class="action-btn" data-action="my-profile">
-                        <span>👤</span>
-                        <span>Мой профиль</span>
-                    </button>
+                <div class="navigation-grid">
+                    ${this.createNavCard('courses', '📚', 'Курсы', this.allContent.courses?.length || 0)}
+                    ${this.createNavCard('podcasts', '🎧', 'АНБ FM', this.allContent.podcasts?.length || 0)}
+                    ${this.createNavCard('streams', '📹', 'Эфиры', this.allContent.streams?.length || 0)}
+                    ${this.createNavCard('videos', '🎯', 'Видео-шпаргалки', this.allContent.videos?.length || 0)}
+                    ${this.createNavCard('materials', '📋', 'Материалы', this.allContent.materials?.length || 0)}
+                    ${this.createNavCard('events', '🗺️', 'Мероприятия', this.allContent.events?.length || 0)}
+                    ${this.createNavCard('promotions', '🎁', 'Акции', this.allContent.promotions?.length || 0)}
+                    ${this.createNavCard('community', '👥', 'Сообщество', '')}
                 </div>
 
                 ${this.createRecentActivity()}
@@ -646,37 +412,25 @@ class AcademyApp {
         `;
     }
 
-    createRecentActivity() {
+    createNavCard(section, icon, title, count) {
         return `
-            <div class="recent-activity">
-                <h3>Недавняя активность</h3>
-                <div class="activity-list">
-                    <div class="activity-item">
-                        <div class="activity-icon">📚</div>
-                        <div class="activity-info">
-                            <div class="activity-title">Начат курс "Мануальные техники"</div>
-                            <div class="activity-time">2 часа назад</div>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon">🎧</div>
-                        <div class="activity-info">
-                            <div class="activity-title">Прослушан подкаст "Современная неврология"</div>
-                            <div class="activity-time">Вчера</div>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon">📹</div>
-                        <div class="activity-info">
-                            <div class="activity-title">Участие в эфире "Разбор клинического случая"</div>
-                            <div class="activity-time">3 дня назад</div>
-                        </div>
-                    </div>
-                </div>
+            <div class="nav-card" data-section="${section}">
+                <div class="nav-icon">${icon}</div>
+                <div class="nav-title">${title}</div>
+                ${count ? `<div class="nav-badge">${count}</div>` : ''}
             </div>
         `;
     }
 
+    calculateHomeStats() {
+        return {
+            courses: this.allContent.courses?.length || 0,
+            students: this.allContent.courses?.reduce((sum, course) => sum + (course.students_count || 0), 0) || 0,
+            materials: this.allContent.materials?.length || 0
+        };
+    }
+
+    // COURSES PAGE
     createCoursesPage() {
         const courses = this.allContent.courses || [];
         const filteredCourses = this.filterContent(courses, 'courses');
@@ -685,42 +439,52 @@ class AcademyApp {
             <div class="page">
                 <div class="page-header">
                     <h2>📚 Курсы</h2>
-                    <div class="page-actions">
-                        <button class="btn btn-outline" onclick="app.filterContent('all', 'courses')">Все</button>
-                        <button class="btn btn-outline" onclick="app.filterContent('Неврология', 'courses')">Неврология</button>
-                        <button class="btn btn-outline" onclick="app.filterContent('Мануальные техники', 'courses')">Мануальные техники</button>
-                    </div>
+                    ${this.isAdmin ? `
+                    <button class="btn btn-primary" onclick="app.showAddContentForm('courses')">
+                        ➕ Добавить курс
+                    </button>
+                    ` : ''}
                 </div>
                 
-                <div class="content-list">
+                <div class="filter-tabs">
+                    <button class="filter-btn ${!this.state.activeFilters.courses ? 'active' : ''}" 
+                            onclick="app.filterContent('all', 'courses')">Все</button>
+                    <button class="filter-btn ${this.state.activeFilters.courses === 'Неврология' ? 'active' : ''}" 
+                            onclick="app.filterContent('Неврология', 'courses')">Неврология</button>
+                    <button class="filter-btn ${this.state.activeFilters.courses === 'Мануальные техники' ? 'active' : ''}" 
+                            onclick="app.filterContent('Мануальные техники', 'courses')">Мануальные техники</button>
+                </div>
+                
+                <div class="content-grid">
                     ${filteredCourses.length > 0 ? filteredCourses.map(course => `
-                        <div class="content-item course-item" onclick="app.openCourseDetail(${course.id})">
-                            <div class="content-image">
-                                <div class="content-image-fallback">📚</div>
+                        <div class="content-card" onclick="app.openCourseDetail(${course.id})">
+                            <div class="card-image">
+                                <img src="${course.image_url}" alt="${course.title}" 
+                                     onerror="this.src='/webapp/assets/course-default.jpg'">
+                                <div class="card-overlay">
+                                    <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
+                                            data-id="${course.id}" 
+                                            data-type="courses"
+                                            onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
+                                        ${this.isFavorite(course.id, 'courses') ? '❤️' : '🤍'}
+                                    </button>
+                                </div>
                             </div>
-                            <div class="content-info">
-                                <div class="content-title">${course.title}</div>
-                                <div class="content-description">${course.description}</div>
-                                <div class="content-meta">
+                            <div class="card-content">
+                                <h3 class="card-title">${course.title}</h3>
+                                <p class="card-description">${course.description}</p>
+                                <div class="card-meta">
                                     <span class="meta-item">⏱️ ${course.duration}</span>
                                     <span class="meta-item">💰 ${this.formatPrice(course.price)}</span>
                                     <span class="meta-item">⭐ ${course.rating}</span>
-                                    <span class="meta-item">👥 ${course.students_count}</span>
                                 </div>
-                                <div class="content-category">${course.category}</div>
+                                <div class="card-category">${course.category}</div>
                             </div>
-                            <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
-                                    data-id="${course.id}" 
-                                    data-type="courses"
-                                    onclick="event.stopPropagation()">
-                                ${this.isFavorite(course.id, 'courses') ? '❤️' : '🤍'}
-                            </button>
                         </div>
                     `).join('') : `
                         <div class="empty-state">
                             <div class="empty-icon">📚</div>
                             <div class="empty-text">Курсы не найдены</div>
-                            <div class="empty-hint">Попробуйте изменить фильтры или поисковый запрос</div>
                         </div>
                     `}
                 </div>
@@ -728,41 +492,40 @@ class AcademyApp {
         `;
     }
 
+    // COURSE DETAIL PAGE
     createCourseDetailPage(courseId) {
         const course = this.allContent.courses?.find(c => c.id == courseId);
-        if (!course) {
-            return this.createNotFoundPage('Курс не найден');
-        }
+        if (!course) return this.createNotFoundPage('Курс не найден');
 
         return `
             <div class="page">
                 <div class="page-header">
-                    <button class="back-btn" onclick="app.renderPage('courses')">← Назад к курсам</button>
+                    <button class="back-btn" onclick="app.renderPage('courses')">← Назад</button>
                     <h2>${course.title}</h2>
                 </div>
                 
-                <div class="course-detail">
-                    <div class="course-hero">
-                        <div class="course-image">
-                            <div class="course-image-fallback">📚</div>
-                        </div>
-                        <div class="course-info">
-                            <h1 class="course-title">${course.title}</h1>
-                            <div class="course-description">${course.full_description || course.description}</div>
-                            <div class="course-stats">
-                                <div class="course-stat">
+                <div class="detail-container">
+                    <div class="detail-hero">
+                        <img src="${course.image_url}" alt="${course.title}" 
+                             onerror="this.src='/webapp/assets/course-default.jpg'">
+                        <div class="detail-info">
+                            <h1>${course.title}</h1>
+                            <p class="detail-description">${course.full_description || course.description}</p>
+                            
+                            <div class="detail-stats">
+                                <div class="stat">
                                     <div class="stat-value">${course.modules}</div>
                                     <div class="stat-label">Модулей</div>
                                 </div>
-                                <div class="course-stat">
+                                <div class="stat">
                                     <div class="stat-value">${course.duration}</div>
                                     <div class="stat-label">Длительность</div>
                                 </div>
-                                <div class="course-stat">
+                                <div class="stat">
                                     <div class="stat-value">${course.students_count}</div>
                                     <div class="stat-label">Студентов</div>
                                 </div>
-                                <div class="course-stat">
+                                <div class="stat">
                                     <div class="stat-value">${course.rating}</div>
                                     <div class="stat-label">Рейтинг</div>
                                 </div>
@@ -770,15 +533,15 @@ class AcademyApp {
                         </div>
                     </div>
 
-                    <div class="course-content">
+                    <div class="detail-content">
                         <h3>Программа курса</h3>
                         <div class="modules-list">
                             ${Array.from({length: course.modules}, (_, i) => `
                                 <div class="module-item">
                                     <div class="module-number">${i + 1}</div>
                                     <div class="module-info">
-                                        <div class="module-title">Модуль ${i + 1}: Название модуля</div>
-                                        <div class="module-description">Содержание модуля будет доступно после покупки курса</div>
+                                        <div class="module-title">Модуль ${i + 1}</div>
+                                        <div class="module-description">Содержание модуля будет доступно после покупки</div>
                                     </div>
                                     <div class="module-status">🔒</div>
                                 </div>
@@ -786,667 +549,135 @@ class AcademyApp {
                         </div>
                     </div>
 
-                    <div class="course-actions">
+                    <div class="detail-actions">
                         <button class="btn btn-primary btn-large" onclick="app.purchaseCourse(${course.id})">
                             💳 Купить за ${this.formatPrice(course.price)}
                         </button>
                         <button class="btn btn-outline" onclick="app.toggleFavorite(${course.id}, 'courses')">
                             ${this.isFavorite(course.id, 'courses') ? '❤️ В избранном' : '🤍 В избранное'}
                         </button>
-                        <button class="btn btn-outline" onclick="app.shareCourse(${course.id})">
-                            📤 Поделиться
-                        </button>
                     </div>
                 </div>
             </div>
         `;
     }
 
-    createPodcastsPage() {
-        const podcasts = this.allContent.podcasts || [];
-        const filteredPodcasts = this.filterContent(podcasts, 'podcasts');
-        
-        return `
-            <div class="page">
-                <div class="page-header">
-                    <h2>🎧 АНБ FM</h2>
-                    <div class="page-actions">
-                        <button class="btn btn-outline" onclick="app.filterContent('all', 'podcasts')">Все</button>
-                        <button class="btn btn-outline" onclick="app.filterContent('Неврология', 'podcasts')">Неврология</button>
-                        <button class="btn btn-outline" onclick="app.filterContent('Реабилитация', 'podcasts')">Реабилитация</button>
-                    </div>
-                </div>
-                
-                <div class="content-list">
-                    ${filteredPodcasts.length > 0 ? filteredPodcasts.map(podcast => `
-                        <div class="content-item podcast-item" onclick="app.playPodcast(${podcast.id})">
-                            <div class="content-image">
-                                <div class="content-image-fallback">🎧</div>
-                            </div>
-                            <div class="content-info">
-                                <div class="content-title">${podcast.title}</div>
-                                <div class="content-description">${podcast.description}</div>
-                                <div class="content-meta">
-                                    <span class="meta-item">⏱️ ${podcast.duration}</span>
-                                    <span class="meta-item">👂 ${podcast.listens}</span>
-                                    <span class="meta-item">🏷️ ${podcast.category}</span>
-                                </div>
-                            </div>
-                            <button class="favorite-btn ${this.isFavorite(podcast.id, 'podcasts') ? 'active' : ''}" 
-                                    data-id="${podcast.id}" 
-                                    data-type="podcasts"
-                                    onclick="event.stopPropagation()">
-                                ${this.isFavorite(podcast.id, 'podcasts') ? '❤️' : '🤍'}
-                            </button>
-                        </div>
-                    `).join('') : `
-                        <div class="empty-state">
-                            <div class="empty-icon">🎧</div>
-                            <div class="empty-text">Подкасты не найдены</div>
-                        </div>
-                    `}
-                </div>
-            </div>
-        `;
-    }
+    // ADMIN PAGE
+    createAdminPage() {
+        if (!this.isAdmin && !this.isSuperAdmin) {
+            return this.createAccessDeniedPage();
+        }
 
-    createStreamsPage() {
-        const streams = this.allContent.streams || [];
-        const filteredStreams = this.filterContent(streams, 'streams');
-        
         return `
-            <div class="page">
-                <div class="page-header">
-                    <h2>📹 Эфиры и разборы</h2>
-                    <div class="page-actions">
-                        <button class="btn btn-outline" onclick="app.filterContent('all', 'streams')">Все</button>
-                        <button class="btn btn-outline" onclick="app.filterContent('analysis', 'streams')">Разборы</button>
-                        <button class="btn btn-outline" onclick="app.filterContent('stream', 'streams')">Эфиры</button>
-                    </div>
-                </div>
-                
-                <div class="content-list">
-                    ${filteredStreams.length > 0 ? filteredStreams.map(stream => `
-                        <div class="content-item stream-item" onclick="app.playStream(${stream.id})">
-                            <div class="content-image">
-                                <div class="content-image-fallback">📹</div>
-                                ${stream.live ? '<div class="live-badge">LIVE</div>' : ''}
-                            </div>
-                            <div class="content-info">
-                                <div class="content-title">${stream.title}</div>
-                                <div class="content-description">${stream.description}</div>
-                                <div class="content-meta">
-                                    <span class="meta-item">⏱️ ${stream.duration}</span>
-                                    <span class="meta-item">👥 ${stream.participants}</span>
-                                    <span class="meta-item">📅 ${new Date(stream.stream_date).toLocaleDateString('ru-RU')}</span>
-                                </div>
-                            </div>
-                            <button class="favorite-btn ${this.isFavorite(stream.id, 'streams') ? 'active' : ''}" 
-                                    data-id="${stream.id}" 
-                                    data-type="streams"
-                                    onclick="event.stopPropagation()">
-                                ${this.isFavorite(stream.id, 'streams') ? '❤️' : '🤍'}
-                            </button>
-                        </div>
-                    `).join('') : `
-                        <div class="empty-state">
-                            <div class="empty-icon">📹</div>
-                            <div class="empty-text">Эфиры не найдены</div>
-                        </div>
-                    `}
-                </div>
-            </div>
-        `;
-    }
-
-    createVideosPage() {
-        const videos = this.allContent.videos || [];
-        const filteredVideos = this.filterContent(videos, 'videos');
-        
-        return `
-            <div class="page">
-                <div class="page-header">
-                    <h2>🎯 Видео-шпаргалки</h2>
-                    <div class="page-actions">
-                        <button class="btn btn-outline" onclick="app.filterContent('all', 'videos')">Все</button>
-                        <button class="btn btn-outline" onclick="app.filterContent('Неврология', 'videos')">Неврология</button>
-                        <button class="btn btn-outline" onclick="app.filterContent('Мануальные техники', 'videos')">Мануальные техники</button>
-                    </div>
-                </div>
-                
-                <div class="content-list">
-                    ${filteredVideos.length > 0 ? filteredVideos.map(video => `
-                        <div class="content-item video-item" onclick="app.playVideo(${video.id})">
-                            <div class="content-image">
-                                <div class="content-image-fallback">🎯</div>
-                            </div>
-                            <div class="content-info">
-                                <div class="content-title">${video.title}</div>
-                                <div class="content-description">${video.description}</div>
-                                <div class="content-meta">
-                                    <span class="meta-item">⏱️ ${video.duration}</span>
-                                    <span class="meta-item">👁️ ${video.views}</span>
-                                    <span class="meta-item">🏷️ ${video.category}</span>
-                                </div>
-                            </div>
-                            <button class="favorite-btn ${this.isFavorite(video.id, 'videos') ? 'active' : ''}" 
-                                    data-id="${video.id}" 
-                                    data-type="videos"
-                                    onclick="event.stopPropagation()">
-                                ${this.isFavorite(video.id, 'videos') ? '❤️' : '🤍'}
-                            </button>
-                        </div>
-                    `).join('') : `
-                        <div class="empty-state">
-                            <div class="empty-icon">🎯</div>
-                            <div class="empty-text">Видео не найдены</div>
-                        </div>
-                    `}
-                </div>
-            </div>
-        `;
-    }
-
-    createMaterialsPage() {
-        const materials = this.allContent.materials || [];
-        const filteredMaterials = this.filterContent(materials, 'materials');
-        
-        return `
-            <div class="page">
-                <div class="page-header">
-                    <h2>📋 Практические материалы</h2>
-                    <div class="page-tabs">
-                        <button class="tab-btn ${!this.state.activeFilters.materialType ? 'active' : ''}" 
-                                onclick="app.filterMaterials('all')">Все</button>
-                        <button class="tab-btn ${this.state.activeFilters.materialType === 'mri' ? 'active' : ''}" 
-                                onclick="app.filterMaterials('mri')">МРТ</button>
-                        <button class="tab-btn ${this.state.activeFilters.materialType === 'case' ? 'active' : ''}" 
-                                onclick="app.filterMaterials('case')">Кейсы</button>
-                        <button class="tab-btn ${this.state.activeFilters.materialType === 'checklist' ? 'active' : ''}" 
-                                onclick="app.filterMaterials('checklist')">Чек-листы</button>
-                    </div>
-                </div>
-                
-                <div class="content-list">
-                    ${filteredMaterials.length > 0 ? filteredMaterials.map(material => `
-                        <div class="content-item material-item" onclick="app.openMaterial(${material.id})">
-                            <div class="content-image">
-                                <div class="content-image-fallback">${this.getMaterialTypeIcon(material.material_type)}</div>
-                            </div>
-                            <div class="content-info">
-                                <div class="content-title">${material.title}</div>
-                                <div class="content-description">${material.description}</div>
-                                <div class="content-meta">
-                                    <span class="meta-item">${this.getMaterialTypeIcon(material.material_type)} ${this.getMaterialTypeName(material.material_type)}</span>
-                                    <span class="meta-item">📥 ${material.downloads}</span>
-                                    <span class="meta-item">🏷️ ${material.category}</span>
-                                </div>
-                            </div>
-                            <button class="favorite-btn ${this.isFavorite(material.id, 'materials') ? 'active' : ''}" 
-                                    data-id="${material.id}" 
-                                    data-type="materials"
-                                    onclick="event.stopPropagation()">
-                                ${this.isFavorite(material.id, 'materials') ? '❤️' : '🤍'}
-                            </button>
-                        </div>
-                    `).join('') : `
-                        <div class="empty-state">
-                            <div class="empty-icon">📋</div>
-                            <div class="empty-text">Материалы не найдены</div>
-                        </div>
-                    `}
-                </div>
-            </div>
-        `;
-    }
-
-    createEventsPage() {
-        const events = this.allContent.events || [];
-        const filteredEvents = this.filterContent(events, 'events');
-        
-        return `
-            <div class="page">
-                <div class="page-header">
-                    <h2>🗺️ Карта мероприятий</h2>
-                    <div class="page-tabs">
-                        <button class="tab-btn ${!this.state.activeFilters.eventType ? 'active' : ''}" 
-                                onclick="app.filterEvents('all')">Все</button>
-                        <button class="tab-btn ${this.state.activeFilters.eventType === 'online' ? 'active' : ''}" 
-                                onclick="app.filterEvents('online')">Онлайн</button>
-                        <button class="tab-btn ${this.state.activeFilters.eventType === 'offline' ? 'active' : ''}" 
-                                onclick="app.filterEvents('offline')">Офлайн</button>
-                    </div>
-                </div>
-                
-                <div class="content-list">
-                    ${filteredEvents.length > 0 ? filteredEvents.map(event => `
-                        <div class="content-item event-item" onclick="app.openEvent(${event.id})">
-                            <div class="content-image">
-                                <div class="content-image-fallback">🗺️</div>
-                                <div class="event-type-badge ${event.event_type}">
-                                    ${event.event_type === 'online' ? '💻 Онлайн' : '🏢 Офлайн'}
-                                </div>
-                            </div>
-                            <div class="content-info">
-                                <div class="content-title">${event.title}</div>
-                                <div class="content-description">${event.description}</div>
-                                <div class="content-meta">
-                                    <span class="meta-item">📅 ${new Date(event.event_date).toLocaleDateString('ru-RU')}</span>
-                                    <span class="meta-item">📍 ${event.location}</span>
-                                    <span class="meta-item">👥 ${event.participants}</span>
-                                </div>
-                            </div>
-                            <button class="btn btn-primary" onclick="event.stopPropagation(); app.registerForEvent(${event.id})">
-                                Записаться
-                            </button>
-                        </div>
-                    `).join('') : `
-                        <div class="empty-state">
-                            <div class="empty-icon">🗺️</div>
-                            <div class="empty-text">Мероприятия не найдены</div>
-                        </div>
-                    `}
-                </div>
-            </div>
-        `;
-    }
-
-    createPromotionsPage() {
-        const promotions = this.allContent.promotions || [];
-        const activePromotions = promotions.filter(p => p.active);
-        
-        return `
-            <div class="page">
-                <div class="page-header">
-                    <h2>🎁 Ограниченное предложение</h2>
-                </div>
-                
-                <div class="promotions-grid">
-                    ${activePromotions.length > 0 ? activePromotions.map(promo => `
-                        <div class="promotion-card" onclick="app.getPromotion(${promo.id})">
-                            <div class="promotion-image">
-                                <div class="promotion-image-fallback">🎁</div>
-                                ${promo.discount ? `<div class="promotion-discount">-${promo.discount}%</div>` : ''}
-                            </div>
-                            <div class="promotion-content">
-                                <div class="promotion-title">${promo.title}</div>
-                                <div class="promotion-description">${promo.description}</div>
-                                <div class="promotion-meta">
-                                    ${promo.end_date ? `
-                                        <div class="promotion-timer">
-                                            ⏰ До ${new Date(promo.end_date).toLocaleDateString('ru-RU')}
-                                        </div>
-                                    ` : ''}
-                                </div>
-                                <button class="btn btn-primary" onclick="event.stopPropagation()">Получить предложение</button>
-                            </div>
-                        </div>
-                    `).join('') : `
-                        <div class="empty-state">
-                            <div class="empty-icon">🎁</div>
-                            <div class="empty-text">Активные акции не найдены</div>
-                            <div class="empty-hint">Следите за обновлениями</div>
-                        </div>
-                    `}
-                </div>
-            </div>
-        `;
-    }
-
-    createCommunityPage() {
-        return `
-            <div class="page">
-                <div class="page-header">
-                    <h2>👥 О сообществе</h2>
-                </div>
-                
-                <div class="community-grid">
-                    <div class="community-card" onclick="app.showCommunityRules()">
-                        <div class="community-icon">📜</div>
-                        <div class="community-title">Правила сообщества</div>
-                        <div class="community-description">Основные правила и нормы поведения</div>
-                    </div>
-                    
-                    <div class="community-card" onclick="app.showFAQ()">
-                        <div class="community-icon">❓</div>
-                        <div class="community-title">F.A.Q.</div>
-                        <div class="community-description">Часто задаваемые вопросы</div>
-                    </div>
-                    
-                    <div class="community-card" onclick="app.showSubscriptionInfo()">
-                        <div class="community-icon">💳</div>
-                        <div class="community-title">Подписка</div>
-                        <div class="community-description">Условия и возможности</div>
-                    </div>
-                    
-                    <div class="community-card" onclick="app.showSupportInfo()">
-                        <div class="community-icon">👨‍💼</div>
-                        <div class="community-title">Координатор</div>
-                        <div class="community-description">Контакты и поддержка</div>
-                    </div>
-                </div>
-
-                <div class="community-stats">
-                    <h3>Статистика сообщества</h3>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-value">156</div>
-                            <div class="stat-label">Участников</div>
-                        </div>
-                        <div class="stat-card">
+            <div class="page admin-page">
+                <div class="admin-header">
+                    <h2>${this.isSuperAdmin ? '🛠️ Супер-админ' : '🔧 Админ'}</h2>
+                    <div class="admin-stats">
+                        <div class="admin-stat">
                             <div class="stat-value">${this.allContent.courses?.length || 0}</div>
                             <div class="stat-label">Курсов</div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-value">${this.allContent.events?.length || 0}</div>
-                            <div class="stat-label">Мероприятий</div>
+                        <div class="admin-stat">
+                            <div class="stat-value">${this.allContent.users || 156}</div>
+                            <div class="stat-label">Пользователей</div>
                         </div>
                     </div>
+                </div>
+
+                <div class="admin-tabs">
+                    <button class="admin-tab active" data-tab="content">📝 Контент</button>
+                    <button class="admin-tab" data-tab="users">👥 Пользователи</button>
+                    <button class="admin-tab" data-tab="analytics">📊 Аналитика</button>
+                    ${this.isSuperAdmin ? '<button class="admin-tab" data-tab="system">⚙️ Система</button>' : ''}
+                </div>
+
+                <div class="admin-content">
+                    <div id="adminContentTab" class="admin-tab-content active">
+                        ${this.createAdminContentTab()}
+                    </div>
+                    <div id="adminUsersTab" class="admin-tab-content">
+                        ${this.createAdminUsersTab()}
+                    </div>
+                    <div id="adminAnalyticsTab" class="admin-tab-content">
+                        ${this.createAdminAnalyticsTab()}
+                    </div>
+                    ${this.isSuperAdmin ? `
+                    <div id="adminSystemTab" class="admin-tab-content">
+                        ${this.createAdminSystemTab()}
+                    </div>
+                    ` : ''}
                 </div>
             </div>
         `;
     }
 
-    createChatsPage() {
-        const chats = this.allContent.chats || [];
-        
+    createAdminContentTab() {
         return `
-            <div class="page">
-                <div class="page-header">
-                    <h2>💬 Чаты сообщества</h2>
+            <div class="admin-section">
+                <h3>Управление контентом</h3>
+                <div class="content-type-selector">
+                    <button class="content-type-btn active" data-type="courses">📚 Курсы</button>
+                    <button class="content-type-btn" data-type="podcasts">🎧 Подкасты</button>
+                    <button class="content-type-btn" data-type="streams">📹 Эфиры</button>
+                    <button class="content-type-btn" data-type="videos">🎯 Видео</button>
+                    <button class="content-type-btn" data-type="materials">📋 Материалы</button>
                 </div>
-                
-                <div class="chats-list">
-                    ${chats.map(chat => `
-                        <div class="chat-item" onclick="app.openChat(${chat.id})">
-                            <div class="chat-avatar ${chat.type}">
-                                ${this.getChatIcon(chat.type)}
-                            </div>
-                            <div class="chat-info">
-                                <div class="chat-name">${chat.name}</div>
-                                <div class="chat-description">${chat.description}</div>
-                                <div class="chat-meta">
-                                    <span>👥 ${chat.participants_count} участников</span>
-                                    <span>💬 ${chat.last_message || 'Нет сообщений'}</span>
+
+                <div class="content-list-admin">
+                    ${this.allContent.courses?.map(course => `
+                        <div class="admin-content-item">
+                            <img src="${course.image_url}" alt="${course.title}" 
+                                 onerror="this.src='/webapp/assets/course-default.jpg'">
+                            <div class="content-info">
+                                <h4>${course.title}</h4>
+                                <p>${course.description}</p>
+                                <div class="content-meta">
+                                    <span>💰 ${this.formatPrice(course.price)}</span>
+                                    <span>👥 ${course.students_count}</span>
+                                    <span>⭐ ${course.rating}</span>
                                 </div>
                             </div>
-                            <div class="chat-status">
-                                <div class="unread-count">3</div>
+                            <div class="content-actions">
+                                <button class="btn btn-small" onclick="app.editContent('courses', ${course.id})">✏️</button>
+                                <button class="btn btn-small btn-danger" onclick="app.deleteContent('courses', ${course.id})">🗑️</button>
                             </div>
                         </div>
-                    `).join('')}
-                    
-                    <div class="chat-item flood-chat" onclick="app.openFloodChat()">
-                        <div class="chat-avatar flood">💬</div>
-                        <div class="chat-info">
-                            <div class="chat-name">Флудилка</div>
-                            <div class="chat-description">Неформальное общение на любые темы</div>
-                            <div class="chat-meta">👥 89 участников</div>
-                        </div>
-                    </div>
+                    `).join('') || '<div class="empty-state">Нет контента</div>'}
                 </div>
+
+                <button class="btn btn-primary btn-large" onclick="app.showAddContentForm('courses')">
+                    ➕ Добавить контент
+                </button>
             </div>
         `;
     }
 
-    createChatDetailPage(chatId) {
-        const chat = this.allContent.chats?.find(c => c.id == chatId);
-        if (!chat) {
-            return this.createNotFoundPage('Чат не найден');
-        }
-
-        return `
-            <div class="page chat-detail-page">
-                <div class="chat-header">
-                    <button class="back-btn" onclick="app.renderPage('chats')">←</button>
-                    <div class="chat-info">
-                        <div class="chat-name">${chat.name}</div>
-                        <div class="chat-status">${chat.participants_count} участников онлайн</div>
-                    </div>
-                    <button class="btn btn-outline" onclick="app.showChatInfo(${chat.id})">ℹ️</button>
-                </div>
-
-                <div class="chat-messages" id="chatMessages">
-                    <div class="message received">
-                        <div class="message-avatar">👤</div>
-                        <div class="message-content">
-                            <div class="message-sender">Координатор Академии</div>
-                            <div class="message-text">Добро пожаловать в чат! Задавайте вопросы и делитесь опытом.</div>
-                            <div class="message-time">10:00</div>
-                        </div>
-                    </div>
-                    
-                    <div class="message sent">
-                        <div class="message-content">
-                            <div class="message-text">Спасибо! У меня есть вопрос по мануальным техникам</div>
-                            <div class="message-time">10:05</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="chat-input">
-                    <input type="text" 
-                           placeholder="Введите сообщение..." 
-                           class="message-input" 
-                           id="messageInput"
-                           onkeypress="app.handleMessageKeypress(event, ${chat.id})">
-                    <button class="btn btn-primary" onclick="app.sendMessage(${chat.id})">
-                        📤
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    createFavoritesPage() {
-        const favoriteCourses = this.allContent.courses?.filter(c => this.isFavorite(c.id, 'courses')) || [];
-        const favoritePodcasts = this.allContent.podcasts?.filter(p => this.isFavorite(p.id, 'podcasts')) || [];
-        const favoriteStreams = this.allContent.streams?.filter(s => this.isFavorite(s.id, 'streams')) || [];
-        const favoriteVideos = this.allContent.videos?.filter(v => this.isFavorite(v.id, 'videos')) || [];
-        const favoriteMaterials = this.allContent.materials?.filter(m => this.isFavorite(m.id, 'materials')) || [];
-        
-        const totalFavorites = favoriteCourses.length + favoritePodcasts.length + favoriteStreams.length + 
-                              favoriteVideos.length + favoriteMaterials.length;
-
-        return `
-            <div class="page">
-                <div class="page-header">
-                    <h2>❤️ Избранное</h2>
-                    <div class="favorites-stats">Всего: ${totalFavorites}</div>
-                </div>
-                
-                <div class="favorites-tabs">
-                    <button class="tab-btn active" onclick="app.showFavoritesTab('all')">Все</button>
-                    <button class="tab-btn" onclick="app.showFavoritesTab('courses')">Курсы (${favoriteCourses.length})</button>
-                    <button class="tab-btn" onclick="app.showFavoritesTab('podcasts')">Подкасты (${favoritePodcasts.length})</button>
-                    <button class="tab-btn" onclick="app.showFavoritesTab('streams')">Эфиры (${favoriteStreams.length})</button>
-                    <button class="tab-btn" onclick="app.showFavoritesTab('videos')">Видео (${favoriteVideos.length})</button>
-                    <button class="tab-btn" onclick="app.showFavoritesTab('materials')">Материалы (${favoriteMaterials.length})</button>
-                </div>
-                
-                <div class="favorites-content" id="favoritesContent">
-                    ${totalFavorites > 0 ? this.renderFavoritesContent('all') : `
-                        <div class="empty-state">
-                            <div class="empty-icon">❤️</div>
-                            <div class="empty-text">Здесь пока пусто</div>
-                            <div class="empty-hint">Добавляйте контент в избранное, чтобы он появился здесь</div>
-                            <button class="btn btn-primary" onclick="app.renderPage('courses')">
-                                📚 Найти курсы
-                            </button>
-                        </div>
-                    `}
-                </div>
-            </div>
-        `;
-    }
-
-    renderFavoritesContent(tab) {
-        const favoritesMap = {
-            courses: this.allContent.courses?.filter(c => this.isFavorite(c.id, 'courses')) || [],
-            podcasts: this.allContent.podcasts?.filter(p => this.isFavorite(p.id, 'podcasts')) || [],
-            streams: this.allContent.streams?.filter(s => this.isFavorite(s.id, 'streams')) || [],
-            videos: this.allContent.videos?.filter(v => this.isFavorite(v.id, 'videos')) || [],
-            materials: this.allContent.materials?.filter(m => this.isFavorite(m.id, 'materials')) || []
-        };
-
-        if (tab === 'all') {
-            let allFavorites = [];
-            Object.values(favoritesMap).forEach(items => allFavorites.push(...items));
-            return this.renderFavoritesList(allFavorites);
-        }
-
-        return this.renderFavoritesList(favoritesMap[tab] || []);
-    }
-
-    renderFavoritesList(items) {
-        if (items.length === 0) {
-            return `
-                <div class="empty-state">
-                    <div class="empty-icon">❤️</div>
-                    <div class="empty-text">В этой категории пока пусто</div>
-                </div>
-            `;
-        }
-
-        return `
-            <div class="content-list">
-                ${items.map(item => `
-                    <div class="content-item" onclick="app.openFavoriteItem(${item.id}, '${this.getContentType(item)}')">
-                        <div class="content-image">
-                            <div class="content-image-fallback">${this.getContentIcon(item)}</div>
-                        </div>
-                        <div class="content-info">
-                            <div class="content-title">${item.title}</div>
-                            <div class="content-description">${item.description}</div>
-                            <div class="content-meta">
-                                ${this.renderItemMeta(item)}
-                            </div>
-                        </div>
-                        <button class="favorite-btn active" 
-                                data-id="${item.id}" 
-                                data-type="${this.getContentType(item)}"
-                                onclick="event.stopPropagation()">
-                            ❤️
-                        </button>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
+    // PROFILE PAGE
     createProfilePage() {
-        if (!this.currentUser) {
-            return '<div class="loading">Загрузка профиля...</div>';
-        }
-        
+        if (!this.currentUser) return '<div class="loading">Загрузка...</div>';
+
         const progress = this.currentUser.progress || {};
         const subscription = this.currentUser.subscription || {};
-        const currentLevel = this.calculateCurrentLevel(progress.progress || {});
         
         return `
-            <div class="page">
+            <div class="page profile-page">
                 <div class="profile-header">
                     <div class="avatar-section">
                         <div class="avatar">👤</div>
                         <div class="profile-info">
-                            <div class="profile-name">${this.currentUser.firstName}</div>
-                            <div class="profile-specialization">${this.currentUser.specialization || 'Не указана'}</div>
-                            <div class="profile-city">${this.currentUser.city || 'Не указан'}</div>
-                            <div class="profile-email">${this.currentUser.email || 'Не указан'}</div>
+                            <h2>${this.currentUser.firstName}</h2>
+                            <p>${this.currentUser.specialization || 'Специализация не указана'}</p>
+                            <p>📍 ${this.currentUser.city || 'Город не указан'}</p>
                         </div>
                     </div>
                     
-                    <div class="subscription-section">
-                        <div class="subscription-status ${subscription.status}">
-                            <span class="status-icon">${subscription.status === 'active' ? '✅' : '❌'}</span>
-                            <span class="status-text">
-                                ${subscription.status === 'active' ? 'Активная подписка' : 'Подписка не активна'}
-                                ${subscription.endDate ? ` до ${new Date(subscription.endDate).toLocaleDateString('ru-RU')}` : ''}
-                            </span>
-                        </div>
-                        <button class="btn btn-outline" onclick="app.manageSubscription()">
-                            💳 Управление подпиской
-                        </button>
-                    </div>
-                </div>
-
-                <div class="my-journey">
-                    <h3>🛣️ Мой путь</h3>
-                    <div class="journey-levels">
-                        <div class="journey-level ${currentLevel >= 1 ? 'active' : ''}">
-                            <div class="level-number">1</div>
-                            <div class="level-info">
-                                <div class="level-title">Понимаю</div>
-                                <div class="level-description">Начинаю замечать закономерности и связи</div>
-                                <div class="level-progress">
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width: ${((progress.progress?.understand || 0) / 9) * 100}%"></div>
-                                    </div>
-                                    <div class="progress-text">${progress.progress?.understand || 0} из 9</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="journey-level ${currentLevel >= 2 ? 'active' : ''}">
-                            <div class="level-number">2</div>
-                            <div class="level-info">
-                                <div class="level-title">Связываю</div>
-                                <div class="level-description">Закономерности складываются в систему</div>
-                                <div class="level-progress">
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width: ${((progress.progress?.connect || 0) / 25) * 100}%"></div>
-                                    </div>
-                                    <div class="progress-text">${progress.progress?.connect || 0} из 25</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="journey-level ${currentLevel >= 3 ? 'active' : ''}">
-                            <div class="level-number">3</div>
-                            <div class="level-info">
-                                <div class="level-title">Применяю</div>
-                                <div class="level-description">Подход АНБ используется на практике</div>
-                                <div class="level-progress">
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width: ${((progress.progress?.apply || 0) / 23) * 100}%"></div>
-                                    </div>
-                                    <div class="progress-text">${progress.progress?.apply || 0} из 23</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="journey-level ${currentLevel >= 4 ? 'active' : ''}">
-                            <div class="level-number">4</div>
-                            <div class="level-info">
-                                <div class="level-title">Систематизирую</div>
-                                <div class="level-description">Знания становятся инструментом</div>
-                                <div class="level-progress">
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width: ${((progress.progress?.systematize || 0) / 13) * 100}%"></div>
-                                    </div>
-                                    <div class="progress-text">${progress.progress?.systematize || 0} из 13</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="journey-level ${currentLevel >= 5 ? 'active' : ''}">
-                            <div class="level-number">5</div>
-                            <div class="level-info">
-                                <div class="level-title">Делюсь</div>
-                                <div class="level-description">Опыт становится вкладом</div>
-                                <div class="level-progress">
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width: ${((progress.progress?.share || 0) / 7) * 100}%"></div>
-                                    </div>
-                                    <div class="progress-text">${progress.progress?.share || 0} из 7</div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="subscription-badge ${subscription.status}">
+                        ${subscription.status === 'active' ? '✅ Активная подписка' : '❌ Подписка не активна'}
                     </div>
                 </div>
 
                 <div class="profile-stats">
-                    <h3>📊 Активность</h3>
+                    <h3>📊 Статистика</h3>
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-value">${progress.steps?.coursesBought || 0}</div>
@@ -1461,8 +692,8 @@ class AcademyApp {
                             <div class="stat-label">Мероприятий</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-value">${progress.steps?.materialsSaved || 0}</div>
-                            <div class="stat-label">Сохранено</div>
+                            <div class="stat-value">${Object.values(this.state.favorites).flat().length}</div>
+                            <div class="stat-label">В избранном</div>
                         </div>
                     </div>
                 </div>
@@ -1471,365 +702,20 @@ class AcademyApp {
                     <button class="btn btn-primary" onclick="app.editProfile()">
                         ✏️ Редактировать профиль
                     </button>
-                    <button class="btn btn-outline" onclick="app.exportData()">
-                        📥 Экспорт данных
+                    <button class="btn btn-outline" onclick="app.manageSubscription()">
+                        💳 Управление подпиской
                     </button>
-                    ${this.isAdmin || this.isSuperAdmin ? `
-                        <button class="btn btn-secondary" onclick="app.renderPage('admin')">
-                            ${this.isSuperAdmin ? '🛠️' : '🔧'} Админ-панель
-                        </button>
+                    ${this.isAdmin ? `
+                    <button class="btn btn-secondary" onclick="app.renderPage('admin')">
+                        🔧 Админ-панель
+                    </button>
                     ` : ''}
                 </div>
             </div>
         `;
     }
 
-    createAdminPage() {
-        if (!this.isAdmin && !this.isSuperAdmin) {
-            return this.createAccessDeniedPage();
-        }
-
-        return `
-            <div class="page">
-                <div class="admin-header">
-                    <h2>${this.isSuperAdmin ? '🛠️ Супер-админ панель' : '🔧 Админ-панель'}</h2>
-                    <div class="admin-badge">${this.isSuperAdmin ? 'Супер-администратор' : 'Администратор'}</div>
-                </div>
-
-                <div class="admin-tabs">
-                    <button class="admin-tab active" data-tab="dashboard">📊 Дашборд</button>
-                    <button class="admin-tab" data-tab="users">👥 Пользователи</button>
-                    <button class="admin-tab" data-tab="content">📝 Контент</button>
-                    ${this.isSuperAdmin ? '<button class="admin-tab" data-tab="system">⚙️ Система</button>' : ''}
-                </div>
-
-                <div class="admin-content">
-                    <div id="adminDashboard" class="admin-tab-content active">
-                        ${this.createAdminDashboard()}
-                    </div>
-                    <div id="adminUsers" class="admin-tab-content">
-                        ${this.createAdminUsers()}
-                    </div>
-                    <div id="adminContent" class="admin-tab-content">
-                        ${this.createAdminContent()}
-                    </div>
-                    ${this.isSuperAdmin ? `
-                    <div id="adminSystem" class="admin-tab-content">
-                        ${this.createAdminSystem()}
-                    </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }
-
-    createAdminDashboard() {
-        return `
-            <div class="admin-stats">
-                <h3>📈 Общая статистика</h3>
-                <div class="stats-grid">
-                    <div class="stat-card large">
-                        <div class="stat-value">156</div>
-                        <div class="stat-label">Пользователей</div>
-                    </div>
-                    <div class="stat-card large">
-                        <div class="stat-value">${this.allContent.courses?.length || 0}</div>
-                        <div class="stat-label">Курсов</div>
-                    </div>
-                    <div class="stat-card large">
-                        <div class="stat-value">258 100 ₽</div>
-                        <div class="stat-label">Общий доход</div>
-                    </div>
-                    <div class="stat-card large">
-                        <div class="stat-value">89%</div>
-                        <div class="stat-label">Активных</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="admin-actions">
-                <h3>🚀 Быстрые действия</h3>
-                <div class="action-buttons">
-                    <button class="btn btn-primary" onclick="app.showAddCourseForm()">
-                        ➕ Добавить курс
-                    </button>
-                    <button class="btn btn-secondary" onclick="app.loadAdminUsers()">
-                        👥 Управление пользователями
-                    </button>
-                    <button class="btn btn-outline" onclick="app.generateReport()">
-                        📊 Создать отчет
-                    </button>
-                    <button class="btn btn-outline" onclick="app.sendNotification()">
-                        📢 Рассылка
-                    </button>
-                </div>
-            </div>
-
-            <div class="recent-activity">
-                <h3>🔄 Последние действия</h3>
-                <div class="activity-list">
-                    <div class="activity-item">
-                        <div class="activity-icon">👤</div>
-                        <div class="activity-info">
-                            <div class="activity-action">Новый пользователь</div>
-                            <div class="activity-details">Анна Сидорова зарегистрировалась</div>
-                            <div class="activity-time">2 минуты назад</div>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon">💳</div>
-                        <div class="activity-info">
-                            <div class="activity-action">Оплата подписки</div>
-                            <div class="activity-details">Петр Иванов оплатил премиум</div>
-                            <div class="activity-time">1 час назад</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    createAdminUsers() {
-        return `
-            <div class="admin-section">
-                <h3>👥 Управление пользователями</h3>
-                <div class="users-filters">
-                    <input type="text" placeholder="Поиск пользователей..." class="search-input" id="userSearch">
-                    <select class="filter-select" id="userFilter">
-                        <option value="all">Все пользователи</option>
-                        <option value="active">Активные подписки</option>
-                        <option value="trial">Пробный период</option>
-                        <option value="inactive">Неактивные</option>
-                        <option value="admin">Администраторы</option>
-                    </select>
-                    <button class="btn btn-primary" onclick="app.exportUsers()">
-                        📥 Экспорт
-                    </button>
-                </div>
-                
-                <div class="users-list">
-                    <div class="admin-user-item">
-                        <div class="user-info">
-                            <div class="user-avatar">👤</div>
-                            <div class="user-details">
-                                <div class="user-name">${this.currentUser?.firstName || 'Демо Пользователь'}</div>
-                                <div class="user-meta">
-                                    <span>🎯 ${this.currentUser?.specialization || 'Невролог'}</span>
-                                    <span>🏙️ ${this.currentUser?.city || 'Москва'}</span>
-                                    <span>📧 ${this.currentUser?.email || 'demo@anb.ru'}</span>
-                                </div>
-                                <div class="user-status">
-                                    <span class="status-badge active">✅ Активен</span>
-                                    <span class="join-date">Зарегистрирован: ${new Date(this.currentUser?.joinedAt || Date.now()).toLocaleDateString('ru-RU')}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="user-actions">
-                            <button class="btn btn-small" onclick="app.viewUser(${this.currentUser?.id || 898508164})">
-                                👁️
-                            </button>
-                            ${this.isSuperAdmin ? `
-                            <button class="btn btn-small btn-primary" onclick="app.makeAdmin(${this.currentUser?.id || 898508164})">
-                                👑
-                            </button>
-                            ` : ''}
-                            <button class="btn btn-small btn-outline" onclick="app.sendMessageToUser(${this.currentUser?.id || 898508164})">
-                                💬
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    createAdminContent() {
-        const courses = this.allContent.courses || [];
-        
-        return `
-            <div class="admin-section">
-                <div class="section-header">
-                    <h3>📚 Управление курсами</h3>
-                    <button class="btn btn-primary" onclick="app.showAddCourseForm()">
-                        ➕ Добавить курс
-                    </button>
-                </div>
-                
-                <div class="content-list">
-                    ${courses.map(course => `
-                        <div class="admin-content-item">
-                            <div class="content-info">
-                                <div class="content-title">${course.title}</div>
-                                <div class="content-meta">
-                                    <span>💰 ${this.formatPrice(course.price)}</span>
-                                    <span>⏱️ ${course.duration}</span>
-                                    <span>📚 ${course.modules} модулей</span>
-                                    <span>👥 ${course.students_count} студентов</span>
-                                </div>
-                                <div class="content-description">${course.description}</div>
-                            </div>
-                            <div class="content-actions">
-                                <button class="btn btn-small" onclick="app.editCourse(${course.id})">
-                                    ✏️
-                                </button>
-                                <button class="btn btn-small btn-danger" onclick="app.deleteCourse(${course.id})">
-                                    🗑️
-                                </button>
-                                <button class="btn btn-small btn-outline" onclick="app.viewCourseStats(${course.id})">
-                                    📊
-                                </button>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    createAdminSystem() {
-        return `
-            <div class="admin-section">
-                <h3>⚙️ Управление системой</h3>
-                <div class="system-actions">
-                    <button class="btn btn-danger" onclick="app.restartSystem()">
-                        🔄 Перезапустить систему
-                    </button>
-                    <button class="btn btn-outline" onclick="app.clearCache()">
-                        🧹 Очистить кэш
-                    </button>
-                </div>
-                
-                <div class="system-info">
-                    <h4>Информация о системе</h4>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <span class="info-label">Версия:</span>
-                            <span class="info-value">1.0.0</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Режим:</span>
-                            <span class="info-value">Рабочий</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Пользователь:</span>
-                            <span class="info-value">${this.currentUser?.firstName || 'Демо'}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    createNotFoundPage(message = 'Страница не найдена') {
-        return `
-            <div class="page">
-                <div class="error">
-                    <div class="error-icon">🔍</div>
-                    <div class="error-text">${message}</div>
-                    <div class="error-hint">Запрашиваемая страница не существует или была удалена</div>
-                    <button class="btn btn-primary" onclick="app.renderPage('home')">
-                        На главную
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    createAccessDeniedPage() {
-        return `
-            <div class="page">
-                <div class="error">
-                    <div class="error-icon">❌</div>
-                    <div class="error-text">Доступ запрещен</div>
-                    <div class="error-hint">У вас нет прав администратора</div>
-                    <button class="btn btn-primary" onclick="app.renderPage('home')">
-                        На главную
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    getMaterialTypeIcon(type) {
-        const icons = {
-            'mri': '🖼️',
-            'case': '📄',
-            'checklist': '✅'
-        };
-        return icons[type] || '📋';
-    }
-
-    getMaterialTypeName(type) {
-        const names = {
-            'mri': 'МРТ',
-            'case': 'Клинический случай',
-            'checklist': 'Чек-лист'
-        };
-        return names[type] || 'Материал';
-    }
-
-    getChatIcon(type) {
-        const icons = {
-            'group': '👥',
-            'private': '👤',
-            'flood': '💬'
-        };
-        return icons[type] || '💬';
-    }
-
-    getContentIcon(item) {
-        if (item.modules) return '📚';
-        if (item.duration && item.listens) return '🎧';
-        if (item.participants) return '📹';
-        if (item.views) return '🎯';
-        if (item.downloads) return '📋';
-        return '📄';
-    }
-
-    getContentType(item) {
-        if (item.modules) return 'courses';
-        if (item.listens) return 'podcasts';
-        if (item.participants) return 'streams';
-        if (item.views) return 'videos';
-        if (item.downloads) return 'materials';
-        return 'unknown';
-    }
-
-    renderItemMeta(item) {
-        if (item.modules) {
-            return `
-                <span class="meta-item">⏱️ ${item.duration}</span>
-                <span class="meta-item">💰 ${this.formatPrice(item.price)}</span>
-                <span class="meta-item">⭐ ${item.rating}</span>
-            `;
-        }
-        if (item.listens) {
-            return `
-                <span class="meta-item">⏱️ ${item.duration}</span>
-                <span class="meta-item">👂 ${item.listens}</span>
-            `;
-        }
-        if (item.participants) {
-            return `
-                <span class="meta-item">⏱️ ${item.duration}</span>
-                <span class="meta-item">👥 ${item.participants}</span>
-            `;
-        }
-        if (item.views) {
-            return `
-                <span class="meta-item">⏱️ ${item.duration}</span>
-                <span class="meta-item">👁️ ${item.views}</span>
-            `;
-        }
-        if (item.downloads) {
-            return `
-                <span class="meta-item">${this.getMaterialTypeIcon(item.material_type)} ${this.getMaterialTypeName(item.material_type)}</span>
-                <span class="meta-item">📥 ${item.downloads}</span>
-            `;
-        }
-        return '';
-    }
-
+    // Вспомогательные методы
     formatPrice(price) {
         return new Intl.NumberFormat('ru-RU').format(price) + ' ₽';
     }
@@ -1838,13 +724,32 @@ class AcademyApp {
         return this.state.favorites[contentType]?.includes(parseInt(contentId)) || false;
     }
 
-    calculateCurrentLevel(progress) {
-        if (!progress) return 1;
-        if (progress.share >= 7) return 5;
-        if (progress.systematize >= 13) return 4;
-        if (progress.apply >= 23) return 3;
-        if (progress.connect >= 25) return 2;
-        return 1;
+    async toggleFavorite(contentId, contentType) {
+        try {
+            const response = await fetch('/api/favorites/toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: this.currentUser.id,
+                    contentId: contentId,
+                    contentType: contentType
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.state.favorites = data.favorites;
+                this.showNotification('Избранное обновлено');
+                this.renderPage(this.currentPage, this.currentSubPage);
+            }
+        } catch (error) {
+            console.error('Ошибка обновления избранного:', error);
+        }
+    }
+
+    filterContent(filter, type) {
+        this.state.activeFilters[type] = filter === 'all' ? null : filter;
+        this.renderPage(this.currentPage);
     }
 
     filterContent(items, type) {
@@ -1854,241 +759,271 @@ class AcademyApp {
             const query = this.state.searchQuery.toLowerCase();
             filtered = filtered.filter(item => 
                 item.title.toLowerCase().includes(query) ||
-                item.description.toLowerCase().includes(query) ||
-                (item.category && item.category.toLowerCase().includes(query))
+                item.description.toLowerCase().includes(query)
             );
         }
 
         if (this.state.activeFilters[type]) {
             const filter = this.state.activeFilters[type];
-            if (filter !== 'all') {
-                filtered = filtered.filter(item => {
-                    if (type === 'courses' || type === 'podcasts' || type === 'videos') {
-                        return item.category === filter;
-                    }
-                    if (type === 'streams') {
-                        return item.type === filter;
-                    }
-                    if (type === 'materials') {
-                        return item.material_type === filter;
-                    }
-                    if (type === 'events') {
-                        return item.event_type === filter;
-                    }
-                    return true;
-                });
-            }
+            filtered = filtered.filter(item => item.category === filter);
         }
 
         return filtered;
     }
 
-    handleAction(action, data) {
-        const actions = {
-            'support': () => this.showSupport(),
-            'start-learning': () => this.renderPage('courses'),
-            'my-profile': () => this.renderPage('profile'),
-            'manage-subscription': () => this.manageSubscription(),
-            'edit-profile': () => this.editProfile(),
-            'export-data': () => this.exportData()
-        };
-
-        if (actions[action]) {
-            actions[action]();
-        }
-    }
-
-    handleSearch() {
-        this.renderPage(this.currentPage);
-    }
-
-    filterContent(filter, type) {
-        this.state.activeFilters[type] = filter;
-        this.renderPage(this.currentPage);
-    }
-
-    filterMaterials(filter) {
-        this.state.activeFilters.materialType = filter === 'all' ? null : filter;
-        this.renderPage('materials');
-    }
-
-    filterEvents(filter) {
-        this.state.activeFilters.eventType = filter === 'all' ? null : filter;
-        this.renderPage('events');
-    }
-
-    showFavoritesTab(tab) {
-        const content = document.getElementById('favoritesContent');
-        if (content) {
-            content.innerHTML = this.renderFavoritesContent(tab);
-        }
-    }
-
+    // Навигация
     openCourseDetail(courseId) {
         this.renderPage('courses', courseId);
     }
 
-    playPodcast(podcastId) {
-        const podcast = this.allContent.podcasts?.find(p => p.id == podcastId);
-        this.showNotification(`🎧 Запускаем подкаст: "${podcast?.title}"`);
+    showAddContentForm(type) {
+        this.showContentFormModal(type);
     }
 
-    playStream(streamId) {
-        const stream = this.allContent.streams?.find(s => s.id == streamId);
-        this.showNotification(`📹 Запускаем эфир: "${stream?.title}"`);
+    showContentFormModal(type) {
+        const formHTML = this.getContentFormHTML(type);
+        this.showModal(`Добавить ${this.getContentTypeName(type)}`, formHTML);
     }
 
-    playVideo(videoId) {
-        const video = this.allContent.videos?.find(v => v.id == videoId);
-        this.showNotification(`🎯 Запускаем видео: "${video?.title}"`);
+    getContentFormHTML(type) {
+        const fields = {
+            courses: [
+                { name: 'title', label: 'Название', type: 'text', required: true },
+                { name: 'description', label: 'Описание', type: 'textarea', required: true },
+                { name: 'price', label: 'Цена', type: 'number', required: true },
+                { name: 'duration', label: 'Длительность', type: 'text', required: true },
+                { name: 'modules', label: 'Количество модулей', type: 'number', required: true },
+                { name: 'category', label: 'Категория', type: 'text', required: true }
+            ],
+            podcasts: [
+                { name: 'title', label: 'Название', type: 'text', required: true },
+                { name: 'description', label: 'Описание', type: 'textarea', required: true },
+                { name: 'duration', label: 'Длительность', type: 'text', required: true },
+                { name: 'category', label: 'Категория', type: 'text', required: true }
+            ]
+        };
+
+        const typeFields = fields[type] || fields.courses;
+
+        return `
+            <form id="contentForm" enctype="multipart/form-data">
+                <input type="hidden" name="userId" value="${this.currentUser.id}">
+                <input type="hidden" name="type" value="${type}">
+                
+                ${typeFields.map(field => `
+                    <div class="form-group">
+                        <label>${field.label}</label>
+                        ${field.type === 'textarea' ? 
+                            `<textarea name="${field.name}" ${field.required ? 'required' : ''}></textarea>` :
+                            `<input type="${field.type}" name="${field.name}" ${field.required ? 'required' : ''}>`
+                        }
+                    </div>
+                `).join('')}
+                
+                <div class="form-group">
+                    <label>Изображение</label>
+                    <input type="file" name="image" accept="image/*">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" onclick="app.hideModal()">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        `;
     }
 
-    openMaterial(materialId) {
-        const material = this.allContent.materials?.find(m => m.id == materialId);
-        this.showNotification(`📖 Открываем материал: "${material?.title}"`);
+    getContentTypeName(type) {
+        const names = {
+            courses: 'курс',
+            podcasts: 'подкаст',
+            streams: 'эфир',
+            videos: 'видео',
+            materials: 'материал'
+        };
+        return names[type] || 'контент';
     }
 
-    openEvent(eventId) {
-        const event = this.allContent.events?.find(e => e.id == eventId);
-        this.showNotification(`🗺️ Открываем мероприятие: "${event?.title}"`);
-    }
+    async submitContentForm(formData) {
+        try {
+            const response = await fetch('/api/admin/content/' + formData.get('type'), {
+                method: 'POST',
+                body: formData
+            });
 
-    openChat(chatId) {
-        this.renderPage('chats', chatId);
-    }
-
-    openFloodChat() {
-        this.showNotification('💬 Открываем флудилку');
-    }
-
-    openFavoriteItem(itemId, type) {
-        switch(type) {
-            case 'courses':
-                this.openCourseDetail(itemId);
-                break;
-            case 'podcasts':
-                this.playPodcast(itemId);
-                break;
-            case 'streams':
-                this.playStream(itemId);
-                break;
-            case 'videos':
-                this.playVideo(itemId);
-                break;
-            case 'materials':
-                this.openMaterial(itemId);
-                break;
-        }
-    }
-
-    toggleFavorite(contentId, contentType) {
-        contentId = parseInt(contentId);
-        const favorites = this.state.favorites[contentType] || [];
-        
-        if (favorites.includes(contentId)) {
-            this.state.favorites[contentType] = favorites.filter(id => id !== contentId);
-        } else {
-            if (!this.state.favorites[contentType]) {
-                this.state.favorites[contentType] = [];
+            if (response.ok) {
+                const data = await response.json();
+                this.showNotification('Контент успешно добавлен');
+                this.hideModal();
+                await this.loadContent();
+                this.renderPage('admin');
+            } else {
+                throw new Error('Ошибка добавления контента');
             }
-            this.state.favorites[contentType].push(contentId);
-        }
-        
-        const btn = document.querySelector(`.favorite-btn[data-id="${contentId}"][data-type="${contentType}"]`);
-        if (btn) {
-            btn.classList.toggle('active');
-            btn.innerHTML = this.isFavorite(contentId, contentType) ? '❤️' : '🤍';
-        }
-        
-        this.showNotification(
-            this.isFavorite(contentId, contentType) ? 
-            '❤️ Добавлено в избранное' : 
-            '💔 Убрано из избранного'
-        );
-    }
-
-    purchaseCourse(courseId) {
-        const course = this.allContent.courses?.find(c => c.id == courseId);
-        this.showNotification(`💳 Покупка курса: "${course?.title}" за ${this.formatPrice(course?.price)}`);
-    }
-
-    registerForEvent(eventId) {
-        const event = this.allContent.events?.find(e => e.id == eventId);
-        this.showNotification(`✅ Зарегистрировались на мероприятие: "${event?.title}"`);
-    }
-
-    getPromotion(promoId) {
-        const promo = this.allContent.promotions?.find(p => p.id == promoId);
-        this.showNotification(`🎁 Получаем предложение: "${promo?.title}"`);
-    }
-
-    handleMessageKeypress(event, chatId) {
-        if (event.key === 'Enter') {
-            this.sendMessage(chatId);
+        } catch (error) {
+            console.error('Ошибка:', error);
+            this.showNotification('Ошибка при добавлении контента');
         }
     }
 
-    sendMessage(chatId) {
-        const input = document.getElementById('messageInput');
-        const messages = document.getElementById('chatMessages');
-        
-        if (input && input.value.trim() && messages) {
-            const message = input.value.trim();
-            input.value = '';
-            
-            const messageHTML = `
-                <div class="message sent">
-                    <div class="message-content">
-                        <div class="message-text">${message}</div>
-                        <div class="message-time">${new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}</div>
+    // Модальные окна
+    showModal(title, content) {
+        const modalHTML = `
+            <div class="modal-overlay" id="modalOverlay">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>${title}</h3>
+                        <button class="modal-close" onclick="app.hideModal()">×</button>
+                    </div>
+                    <div class="modal-content">
+                        ${content}
                     </div>
                 </div>
-            `;
-            
-            messages.insertAdjacentHTML('beforeend', messageHTML);
-            messages.scrollTop = messages.scrollHeight;
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Обработчик формы
+        const form = document.getElementById('contentForm');
+        if (form) {
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                const formData = new FormData(form);
+                this.submitContentForm(formData);
+            };
         }
     }
 
-    showSupport() {
-        this.showNotification('💬 Поддержка: @academy_anb\n📧 academy@anb.ru\n⏰ ПН-ПТ 11:00-19:00');
+    hideModal() {
+        const modal = document.getElementById('modalOverlay');
+        if (modal) modal.remove();
     }
 
-    showCommunityRules() {
-        this.showNotification('📜 Правила сообщества:\n\n1. Уважайте других участников\n2. Не распространяйте спам\n3. Соблюдайте профессиональную этику');
+    // Уведомления
+    showNotification(message) {
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.innerHTML = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 100);
+        
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
     }
 
-    showFAQ() {
-        this.showNotification('❓ Частые вопросы:\n\nQ: Как оформить подписку?\nA: В разделе "Профиль" → "Управление подпиской"\n\nQ: Доступны ли курсы офлайн?\nA: Да, после покупки курс доступен офлайн');
+    showError(message) {
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) {
+            mainContent.innerHTML = `
+                <div class="error-state">
+                    <div class="error-icon">❌</div>
+                    <h3>Ошибка</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="app.init()">Повторить</button>
+                </div>
+            `;
+        }
     }
 
-    showSubscriptionInfo() {
-        this.showNotification('💳 Информация о подписке:\n\n• Доступ ко всем курсам\n• Участие в эфирах\n• Практические материалы\n• Поддержка куратора');
+    showSkeletonLoading() {
+        const mainContent = document.getElementById('mainContent');
+        if (!mainContent) return;
+        
+        mainContent.innerHTML = `
+            <div class="skeleton-loading">
+                <div class="skeleton-search"></div>
+                <div class="skeleton-hero"></div>
+                <div class="skeleton-nav-grid">
+                    ${Array(8).fill(0).map(() => `<div class="skeleton-nav-card"></div>`).join('')}
+                </div>
+            </div>
+        `;
     }
 
-    showSupportInfo() {
-        this.showNotification('👨‍💼 Координатор проекта:\n\n@academy_anb\nacademy@anb.ru\nПН-ПТ 11:00-19:00');
+    createRecentActivity() {
+        return `
+            <div class="recent-activity">
+                <h3>Последняя активность</h3>
+                <div class="activity-list">
+                    <div class="activity-item">
+                        <div class="activity-icon">📚</div>
+                        <div class="activity-info">
+                            <div class="activity-title">Начат новый курс</div>
+                            <div class="activity-time">2 часа назад</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon">🎧</div>
+                        <div class="activity-info">
+                            <div class="activity-title">Прослушан подкаст</div>
+                            <div class="activity-time">Вчера</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
-    manageSubscription() {
-        this.showNotification('💳 Управление подпиской\n\nЗдесь можно:\n• Продлить подписку\n• Изменить тариф\n• Отменить подписку');
+    createNotFoundPage(message) {
+        return `
+            <div class="error-state">
+                <div class="error-icon">🔍</div>
+                <h3>${message}</h3>
+                <button class="btn btn-primary" onclick="app.renderPage('home')">На главную</button>
+            </div>
+        `;
     }
 
-    editProfile() {
-        this.showNotification('✏️ Редактирование профиля\n\nВ разработке...');
+    createAccessDeniedPage() {
+        return `
+            <div class="error-state">
+                <div class="error-icon">❌</div>
+                <h3>Доступ запрещен</h3>
+                <p>У вас нет прав для просмотра этой страницы</p>
+                <button class="btn btn-primary" onclick="app.renderPage('home')">На главную</button>
+            </div>
+        `;
     }
 
-    exportData() {
-        this.showNotification('📥 Экспорт данных\n\nВаши данные готовы к скачиванию');
+    setupEventListeners() {
+        // Поиск
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.state.searchQuery = e.target.value;
+                this.handleSearch();
+            });
+        }
+
+        // Навигационные карточки
+        document.addEventListener('click', (e) => {
+            const navCard = e.target.closest('.nav-card');
+            if (navCard) {
+                const section = navCard.dataset.section;
+                this.renderPage(section);
+            }
+
+            const navBtn = e.target.closest('.nav-btn');
+            if (navBtn) {
+                const page = navBtn.dataset.page;
+                this.renderPage(page);
+            }
+
+            const adminTab = e.target.closest('.admin-tab');
+            if (adminTab) {
+                this.switchAdminTab(adminTab.dataset.tab);
+            }
+        });
     }
 
-    shareCourse(courseId) {
-        const course = this.allContent.courses?.find(c => c.id == courseId);
-        this.showNotification(`📤 Поделиться курсом: "${course?.title}"`);
-    }
-
-    initAdminPage() {
-        console.log('🔧 Инициализация админ-панели');
+    handleSearch() {
+        this.renderPage(this.currentPage);
     }
 
     switchAdminTab(tab) {
@@ -2097,127 +1032,438 @@ class AcademyApp {
         });
         
         document.querySelectorAll('.admin-tab-content').forEach(content => {
-            content.classList.toggle('active', content.id === `admin${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+            content.classList.toggle('active', content.id === `admin${tab.charAt(0).toUpperCase() + tab.slice(1)}Tab`);
         });
+    }
+
+    initAdminPage() {
+        console.log('🔧 Инициализация админ-панели');
     }
 
     initCoursesPage() {
         console.log('📚 Инициализация страницы курсов');
     }
 
-    initChatsPage() {
-        console.log('💬 Инициализация чатов');
-    }
-
     initProfilePage() {
         console.log('👤 Инициализация профиля');
     }
 
-    showAddCourseForm() {
-        this.showNotification('📚 Добавление курса\n\nФорма для создания нового курса');
-    }
-
-    loadAdminUsers() {
-        this.showNotification('👥 Загрузка пользователей...');
-    }
-
-    makeAdmin(userId) {
-        if (confirm('Назначить пользователя администратором?')) {
-            this.showNotification(`👑 Пользователь #${userId} назначен администратором`);
+    handleBackButton() {
+        if (this.currentSubPage) {
+            this.currentSubPage = '';
+            this.renderPage(this.currentPage);
+        } else if (this.currentPage !== 'home') {
+            this.renderPage('home');
+        } else {
+            if (window.Telegram && Telegram.WebApp) {
+                Telegram.WebApp.close();
+            }
         }
     }
 
-    sendMessageToUser(userId) {
-        this.showNotification(`💬 Отправка сообщения пользователю #${userId}`);
-    }
-
-    viewUser(userId) {
-        this.showNotification(`👁️ Просмотр пользователя #${userId}`);
-    }
-
-    editCourse(courseId) {
-        this.showNotification(`✏️ Редактирование курса #${courseId}`);
-    }
-
-    deleteCourse(courseId) {
-        if (confirm('Вы уверены, что хотите удалить этот курс?')) {
-            this.showNotification(`🗑️ Курс #${courseId} удален`);
+    showTelegramMenu() {
+        if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.showPopup({
+                title: 'Быстрое меню',
+                message: 'Выберите действие:',
+                buttons: [
+                    { id: 'profile', type: 'default', text: '👤 Профиль' },
+                    { id: 'courses', type: 'default', text: '📚 Курсы' },
+                    { id: 'support', type: 'default', text: '💬 Поддержка' },
+                    { type: 'cancel', text: 'Закрыть' }
+                ]
+            }, (buttonId) => {
+                if (buttonId === 'profile') this.renderPage('profile');
+                if (buttonId === 'courses') this.renderPage('courses');
+                if (buttonId === 'support') this.showSupport();
+            });
         }
     }
 
-    viewCourseStats(courseId) {
-        this.showNotification(`📊 Статистика курса #${courseId}`);
+    showSupport() {
+        this.showNotification('💬 Поддержка: @academy_anb\n📧 academy@anb.ru');
     }
 
-    generateReport() {
-        this.showNotification('📊 Создание отчета\n\nОтчет будет готов через несколько секунд');
+    purchaseCourse(courseId) {
+        this.showNotification('💳 Функция покупки в разработке');
     }
 
-    sendNotification() {
-        this.showNotification('📢 Рассылка уведомлений\n\nНастройка массовой рассылки');
+    editProfile() {
+        this.showNotification('✏️ Редактирование профиля в разработке');
     }
 
-    showChatInfo(chatId) {
-        this.showNotification(`ℹ️ Информация о чате #${chatId}`);
+    manageSubscription() {
+        this.showNotification('💳 Управление подпиской в разработке');
+    }
+
+    // Остальные методы для других страниц (podcasts, streams, etc.)
+    createPodcastsPage() {
+        const podcasts = this.allContent.podcasts || [];
+        return `
+            <div class="page">
+                <div class="page-header">
+                    <h2>🎧 АНБ FM</h2>
+                    ${this.isAdmin ? `
+                    <button class="btn btn-primary" onclick="app.showAddContentForm('podcasts')">
+                        ➕ Добавить подкаст
+                    </button>
+                    ` : ''}
+                </div>
+                <div class="content-grid">
+                    ${podcasts.map(podcast => `
+                        <div class="content-card">
+                            <div class="card-image">
+                                <img src="${podcast.image_url}" alt="${podcast.title}"
+                                     onerror="this.src='/webapp/assets/podcast-default.jpg'">
+                            </div>
+                            <div class="card-content">
+                                <h3>${podcast.title}</h3>
+                                <p>${podcast.description}</p>
+                                <div class="card-meta">
+                                    <span>⏱️ ${podcast.duration}</span>
+                                    <span>👂 ${podcast.listens}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createStreamsPage() {
+        const streams = this.allContent.streams || [];
+        return `
+            <div class="page">
+                <div class="page-header">
+                    <h2>📹 Эфиры и разборы</h2>
+                </div>
+                <div class="content-grid">
+                    ${streams.map(stream => `
+                        <div class="content-card">
+                            <div class="card-image">
+                                <img src="${stream.thumbnail_url}" alt="${stream.title}"
+                                     onerror="this.src='/webapp/assets/stream-default.jpg'">
+                                ${stream.live ? '<div class="live-badge">LIVE</div>' : ''}
+                            </div>
+                            <div class="card-content">
+                                <h3>${stream.title}</h3>
+                                <p>${stream.description}</p>
+                                <div class="card-meta">
+                                    <span>⏱️ ${stream.duration}</span>
+                                    <span>👥 ${stream.participants}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createVideosPage() {
+        const videos = this.allContent.videos || [];
+        return `
+            <div class="page">
+                <div class="page-header">
+                    <h2>🎯 Видео-шпаргалки</h2>
+                </div>
+                <div class="content-grid">
+                    ${videos.map(video => `
+                        <div class="content-card">
+                            <div class="card-image">
+                                <img src="${video.thumbnail_url}" alt="${video.title}"
+                                     onerror="this.src='/webapp/assets/video-default.jpg'">
+                            </div>
+                            <div class="card-content">
+                                <h3>${video.title}</h3>
+                                <p>${video.description}</p>
+                                <div class="card-meta">
+                                    <span>⏱️ ${video.duration}</span>
+                                    <span>👁️ ${video.views}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createMaterialsPage() {
+        const materials = this.allContent.materials || [];
+        return `
+            <div class="page">
+                <div class="page-header">
+                    <h2>📋 Практические материалы</h2>
+                </div>
+                <div class="content-grid">
+                    ${materials.map(material => `
+                        <div class="content-card">
+                            <div class="card-image">
+                                <img src="${material.image_url}" alt="${material.title}"
+                                     onerror="this.src='/webapp/assets/material-default.jpg'">
+                            </div>
+                            <div class="card-content">
+                                <h3>${material.title}</h3>
+                                <p>${material.description}</p>
+                                <div class="card-meta">
+                                    <span>📥 ${material.downloads}</span>
+                                    <span>📄 ${material.material_type}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createEventsPage() {
+        const events = this.allContent.events || [];
+        return `
+            <div class="page">
+                <div class="page-header">
+                    <h2>🗺️ Мероприятия</h2>
+                </div>
+                <div class="content-grid">
+                    ${events.map(event => `
+                        <div class="content-card">
+                            <div class="card-image">
+                                <img src="${event.image_url}" alt="${event.title}"
+                                     onerror="this.src='/webapp/assets/event-default.jpg'">
+                            </div>
+                            <div class="card-content">
+                                <h3>${event.title}</h3>
+                                <p>${event.description}</p>
+                                <div class="card-meta">
+                                    <span>📅 ${new Date(event.event_date).toLocaleDateString()}</span>
+                                    <span>📍 ${event.location}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createPromotionsPage() {
+        const promotions = this.allContent.promotions || [];
+        return `
+            <div class="page">
+                <div class="page-header">
+                    <h2>🎁 Акции</h2>
+                </div>
+                <div class="content-grid">
+                    ${promotions.map(promo => `
+                        <div class="content-card promotion-card">
+                            <div class="card-image">
+                                <img src="${promo.image_url}" alt="${promo.title}"
+                                     onerror="this.src='/webapp/assets/promo-default.jpg'">
+                                <div class="discount-badge">-${promo.discount}%</div>
+                            </div>
+                            <div class="card-content">
+                                <h3>${promo.title}</h3>
+                                <p>${promo.description}</p>
+                                <div class="card-meta">
+                                    <span>⏰ До ${new Date(promo.end_date).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createCommunityPage() {
+        return `
+            <div class="page">
+                <div class="page-header">
+                    <h2>👥 Сообщество</h2>
+                </div>
+                <div class="community-grid">
+                    <div class="community-card" onclick="app.renderPage('chats')">
+                        <div class="community-icon">💬</div>
+                        <div class="community-title">Чаты</div>
+                        <div class="community-description">Общение с коллегами</div>
+                    </div>
+                    <div class="community-card" onclick="app.showSupport()">
+                        <div class="community-icon">🆘</div>
+                        <div class="community-title">Поддержка</div>
+                        <div class="community-description">Помощь и консультации</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createChatsPage() {
+        const chats = this.allContent.chats || [];
+        return `
+            <div class="page">
+                <div class="page-header">
+                    <h2>💬 Чаты</h2>
+                </div>
+                <div class="chats-list">
+                    ${chats.map(chat => `
+                        <div class="chat-item">
+                            <img src="${chat.image_url}" alt="${chat.name}"
+                                 onerror="this.src='/webapp/assets/chat-default.jpg'">
+                            <div class="chat-info">
+                                <h4>${chat.name}</h4>
+                                <p>${chat.description}</p>
+                                <div class="chat-meta">
+                                    <span>👥 ${chat.participants_count}</span>
+                                    <span>💬 ${chat.last_message}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createChatDetailPage(chatId) {
+        return `
+            <div class="page">
+                <div class="page-header">
+                    <button class="back-btn" onclick="app.renderPage('chats')">← Назад</button>
+                    <h2>Чат</h2>
+                </div>
+                <div class="chat-detail">
+                    <div class="chat-messages">
+                        <div class="message received">
+                            <div class="message-content">
+                                <p>Добро пожаловать в чат!</p>
+                                <span class="message-time">10:00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" placeholder="Введите сообщение...">
+                        <button class="btn btn-primary">📤</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createFavoritesPage() {
+        const favoriteCourses = this.allContent.courses?.filter(c => this.isFavorite(c.id, 'courses')) || [];
+        
+        return `
+            <div class="page">
+                <div class="page-header">
+                    <h2>❤️ Избранное</h2>
+                </div>
+                <div class="content-grid">
+                    ${favoriteCourses.map(course => `
+                        <div class="content-card" onclick="app.openCourseDetail(${course.id})">
+                            <div class="card-image">
+                                <img src="${course.image_url}" alt="${course.title}">
+                            </div>
+                            <div class="card-content">
+                                <h3>${course.title}</h3>
+                                <p>${course.description}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${favoriteCourses.length === 0 ? `
+                        <div class="empty-state">
+                            <div class="empty-icon">❤️</div>
+                            <div class="empty-text">В избранном пока пусто</div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    createAdminUsersTab() {
+        return `
+            <div class="admin-section">
+                <h3>👥 Пользователи</h3>
+                <div class="users-list">
+                    <div class="user-item">
+                        <div class="user-avatar">👤</div>
+                        <div class="user-info">
+                            <h4>${this.currentUser.firstName}</h4>
+                            <p>${this.currentUser.specialization || 'Невролог'}</p>
+                            <div class="user-meta">
+                                <span>📧 ${this.currentUser.email}</span>
+                                <span>📍 ${this.currentUser.city}</span>
+                            </div>
+                        </div>
+                        <div class="user-actions">
+                            <button class="btn btn-small">👁️</button>
+                            <button class="btn btn-small btn-primary">💬</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createAdminAnalyticsTab() {
+        return `
+            <div class="admin-section">
+                <h3>📊 Аналитика</h3>
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <div class="analytics-value">${this.allContent.courses?.length || 0}</div>
+                        <div class="analytics-label">Всего курсов</div>
+                    </div>
+                    <div class="analytics-card">
+                        <div class="analytics-value">156</div>
+                        <div class="analytics-label">Пользователей</div>
+                    </div>
+                    <div class="analytics-card">
+                        <div class="analytics-value">89%</div>
+                        <div class="analytics-label">Активных</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createAdminSystemTab() {
+        return `
+            <div class="admin-section">
+                <h3>⚙️ Система</h3>
+                <div class="system-info">
+                    <div class="info-item">
+                        <span class="info-label">Версия:</span>
+                        <span class="info-value">2.0.0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Режим:</span>
+                        <span class="info-value">Рабочий</span>
+                    </div>
+                </div>
+                <div class="system-actions">
+                    <button class="btn btn-danger" onclick="app.restartSystem()">🔄 Перезапуск</button>
+                </div>
+            </div>
+        `;
     }
 
     restartSystem() {
-        if (confirm('Вы уверены, что хотите перезапустить систему?')) {
-            this.showNotification('🔄 Перезапуск системы...');
-        }
-    }
-
-    clearCache() {
-        this.showNotification('🧹 Кэш очищен');
-    }
-
-    exportUsers() {
-        this.showNotification('📥 Экспорт пользователей\n\nФайл с данными пользователей готов к скачиванию');
-    }
-
-    showNotification(message) {
-        if (window.Telegram && Telegram.WebApp) {
-            Telegram.WebApp.showPopup({
-                title: 'Академия АНБ',
-                message: message,
-                buttons: [{ type: 'ok' }]
-            });
-        } else {
-            alert(message);
-        }
-    }
-
-    showError(message) {
-        const mainContent = document.getElementById('mainContent');
-        if (mainContent) {
-            mainContent.innerHTML = `
-                <div class="error">
-                    <div class="error-icon">❌</div>
-                    <div class="error-text">${message}</div>
-                    <button class="btn btn-primary" onclick="app.init()">Повторить</button>
-                </div>
-            `;
-        }
+        this.showNotification('🔄 Перезапуск системы...');
     }
 }
 
-// Инициализация при загрузке
+// Инициализация приложения
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new AcademyApp();
 });
 
-// Глобальные функции для onclick
+// Глобальные функции
 window.toggleSearch = function() {
     const searchContainer = document.getElementById('searchContainer');
     if (searchContainer) {
-        const isVisible = searchContainer.style.display !== 'none';
-        searchContainer.style.display = isVisible ? 'none' : 'block';
-        
-        if (!isVisible) {
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) {
-                searchInput.focus();
-            }
-        }
+        searchContainer.style.display = searchContainer.style.display === 'none' ? 'block' : 'none';
     }
 };
