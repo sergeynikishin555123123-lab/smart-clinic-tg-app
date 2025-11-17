@@ -43,29 +43,6 @@ class ProcessManager {
         };
     }
 
-    async performSystemCheck() {
-        console.log('🔍 Проверка системы...');
-        try {
-            this.healthStatus.system = 'healthy';
-            console.log('✅ Проверка системы завершена');
-            return true;
-        } catch (error) {
-            console.error('❌ Ошибка проверки системы:', error);
-            this.healthStatus.system = 'unhealthy';
-            return false;
-        }
-    }
-
-    getHealthStatus() {
-        return {
-            ...this.healthStatus,
-            timestamp: new Date().toISOString(),
-            port: config.PORT,
-            portAvailable: this.isPortAvailable
-        };
-    }
-}
-
     async checkPortAvailability(port) {
         return new Promise((resolve) => {
             const server = net.createServer();
