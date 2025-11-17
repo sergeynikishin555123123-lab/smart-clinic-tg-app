@@ -51,5 +51,26 @@
     </div>
 
     <script src="app.js"></script>
+    <script>
+        function toggleSearch() {
+            const searchContainer = document.getElementById('searchContainer');
+            if (searchContainer) {
+                const isVisible = searchContainer.style.display !== 'none';
+                searchContainer.style.display = isVisible ? 'none' : 'block';
+                
+                if (!isVisible) {
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.focus();
+                    }
+                }
+            }
+        }
+
+        // Показываем что приложение загружается
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Академия АНБ загружается...');
+        });
+    </script>
 </body>
 </html>
