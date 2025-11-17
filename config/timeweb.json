@@ -1,0 +1,45 @@
+{
+  "deployment": {
+    "platform": "timeweb",
+    "region": "ru-1",
+    "auto_scaling": true,
+    "min_instances": 1,
+    "max_instances": 3,
+    "cpu_threshold": 80,
+    "memory_threshold": 85
+  },
+  "storage": {
+    "type": "network",
+    "backup_enabled": true,
+    "snapshot_schedule": "0 3 * * *",
+    "retention_days": 7
+  },
+  "monitoring": {
+    "enabled": true,
+    "metrics": ["cpu", "memory", "disk", "network", "requests"],
+    "alerts": {
+      "cpu_threshold": 80,
+      "memory_threshold": 85,
+      "disk_threshold": 90,
+      "response_time_threshold": 5000
+    },
+    "log_retention": 30
+  },
+  "cdn": {
+    "enabled": true,
+    "domains": ["anb-academy.timeweb.ru"],
+    "cache_ttl": 3600,
+    "gzip_compression": true
+  },
+  "database": {
+    "auto_backup": true,
+    "backup_schedule": "0 2 * * *",
+    "performance_optimization": true,
+    "connection_pooling": true
+  },
+  "ssl": {
+    "enabled": true,
+    "auto_renew": true,
+    "provider": "timeweb"
+  }
+}
