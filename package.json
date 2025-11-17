@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "build": "node setup.js --non-interactive",
     "setup": "node setup.js --non-interactive"
   },
   "dependencies": {
