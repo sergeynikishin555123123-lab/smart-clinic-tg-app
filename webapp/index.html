@@ -5,13 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Академия АНБ</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="app">
         <header class="header">
             <h1>Академия АНБ</h1>
             <div class="header-actions">
-                <div class="admin-badge" id="adminBadge" style="display: none;">🔧 Админ</div>
+                <div class="admin-badge" id="adminBadge">
+                    👑 Админ
+                </div>
                 <button class="icon-btn" onclick="toggleSearch()">🔍</button>
             </div>
         </header>
@@ -21,18 +24,44 @@
         </div>
 
         <main class="main" id="mainContent">
-            <!-- Контент будет генерироваться JavaScript -->
+            <!-- Контент будет загружен здесь -->
         </main>
 
         <nav class="nav">
-            <button class="nav-btn active" data-page="home">🏠</button>
-            <button class="nav-btn" data-page="catalog">📚</button>
-            <button class="nav-btn" data-page="community">👥</button>
-            <button class="nav-btn" data-page="favorites">⭐</button>
-            <button class="nav-btn" data-page="profile">👤</button>
+            <button class="nav-btn active" data-page="home">
+                🏠
+                <span class="nav-label">Главная</span>
+            </button>
+            <button class="nav-btn" data-page="community">
+                👥
+                <span class="nav-label">Сообщество</span>
+            </button>
+            <button class="nav-btn" data-page="chats">
+                💬
+                <span class="nav-label">Чаты</span>
+            </button>
+            <button class="nav-btn" data-page="favorites">
+                ❤️
+                <span class="nav-label">Материалы</span>
+            </button>
+            <button class="nav-btn" data-page="profile">
+                👤
+                <span class="nav-label">Профиль</span>
+            </button>
         </nav>
     </div>
 
     <script src="app.js"></script>
+    <script>
+        function toggleSearch() {
+            const searchContainer = document.getElementById('searchContainer');
+            const isVisible = searchContainer.style.display !== 'none';
+            searchContainer.style.display = isVisible ? 'none' : 'block';
+            
+            if (!isVisible) {
+                document.getElementById('searchInput').focus();
+            }
+        }
+    </script>
 </body>
 </html>
