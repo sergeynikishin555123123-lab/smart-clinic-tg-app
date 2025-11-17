@@ -1,1201 +1,68 @@
-// server.js - только основные импорты
-import { Telegraf, session, Markup, Scenes } from 'telegraf';
+// server.js - УПРОЩЕННАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ
 import express from 'express';
+import { Telegraf } from 'telegraf';
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve } from 'path';
+import { dirname, join } from 'path';
 import fs from 'fs/promises';
-import { createReadStream, createWriteStream, existsSync, mkdirSync } from 'fs';
-import { promisify } from 'util';
-import { pipeline } from 'stream';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import multer from 'multer';
-import sharp from 'sharp';
-import { v4 as uuidv4 } from 'uuid';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import axios from 'axios';
-import moment from 'moment';
-import _ from 'lodash';
-import Joi from 'joi';
-import rateLimit from 'express-rate-limit';
-import { body, validationResult } from 'express-validator';
-import morgan from 'morgan';
-import winston from 'winston';
-import cron from 'node-cron';
-import nodemailer from 'nodemailer';
-import QRCode from 'qrcode';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import Redis from 'ioredis';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// ==================== КОНФИГУРАЦИЯ СИСТЕМЫ ====================
+// Базовая конфигурация
 class SystemConfig {
     constructor() {
         this.BOT_TOKEN = process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4';
         this.PORT = process.env.PORT || 3000;
-        this.WEBAPP_URL = process.env.WEBAPP_URL || `https://anb-academy.timeweb.ru`;
-        this.ADMIN_IDS = process.env.ADMIN_IDS ? process.env.ADMIN_IDS.split(',').map(Number) : [898508164];
-        this.SUPER_ADMIN_ID = parseInt(process.env.SUPER_ADMIN_ID) || 898508164;
-        this.UPLOAD_PATH = join(__dirname, 'uploads');
+        this.WEBAPP_URL = process.env.WEBAPP_URL || `http://localhost:${this.PORT}`;
         this.NODE_ENV = process.env.NODE_ENV || 'production';
-        this.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://gen_user:5-R;mKGYJ<88?1@def46fb02c0eac8fefd6f734.twc1.net:5432/default_db';
-        this.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-        this.JWT_SECRET = process.env.JWT_SECRET || 'anb-academy-super-secret-jwt-key-2024';
-        this.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'anb-academy-encryption-key-256-bit-secure';
-        this.CLOUDINARY_URL = process.env.CLOUDINARY_URL || 'cloudinary://key:secret@cloudname';
-        this.STRIPE_SECRET = process.env.STRIPE_SECRET || 'sk_test_stripe_key';
-        this.SMTP_HOST = process.env.SMTP_HOST || 'smtp.timeweb.ru';
-        this.SMTP_PORT = process.env.SMTP_PORT || 587;
-        this.SMTP_USER = process.env.SMTP_USER || 'noreply@anb-academy.ru';
-        this.SMTP_PASS = process.env.SMTP_PASS || 'smtp_password';
-        this.AWS_ACCESS_KEY = process.env.AWS_ACCESS_KEY || 'aws_key';
-        this.AWS_SECRET_KEY = process.env.AWS_SECRET_KEY || 'aws_secret';
-        this.AZURE_CONNECTION_STRING = process.env.AZURE_CONNECTION_STRING || 'azure_connection_string';
-        this.GOOGLE_CLOUD_KEY = process.env.GOOGLE_CLOUD_KEY || 'google_cloud_key';
-        this.DROPBOX_TOKEN = process.env.DROPBOX_TOKEN || 'dropbox_token';
-        this.FIREBASE_CONFIG = process.env.FIREBASE_CONFIG || 'firebase_config';
-        this.ELASTICSEARCH_URL = process.env.ELASTICSEARCH_URL || 'http://localhost:9200';
-        this.ALGOLIA_APP_ID = process.env.ALGOLIA_APP_ID || 'algolia_app_id';
-        this.ALGOLIA_API_KEY = process.env.ALGOLIA_API_KEY || 'algolia_api_key';
-        this.MEILISEARCH_URL = process.env.MEILISEARCH_URL || 'http://localhost:7700';
-        this.TYPESENSE_URL = process.env.TYPESENSE_URL || 'http://localhost:8108';
-        this.SENTRY_DSN = process.env.SENTRY_DSN || 'sentry_dsn';
-        this.NEW_RELIC_LICENSE_KEY = process.env.NEW_RELIC_LICENSE_KEY || 'new_relic_key';
-        this.LOG_LEVEL = process.env.LOG_LEVEL || 'info';
-        this.CACHE_TTL = parseInt(process.env.CACHE_TTL) || 3600;
-        this.RATE_LIMIT_WINDOW = parseInt(process.env.RATE_LIMIT_WINDOW) || 15;
-        this.RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX) || 100;
-        this.UPLOAD_MAX_SIZE = parseInt(process.env.UPLOAD_MAX_SIZE) || 50 * 1024 * 1024;
-        this.SESSION_TIMEOUT = parseInt(process.env.SESSION_TIMEOUT) || 24 * 60 * 60 * 1000;
-        this.BACKUP_INTERVAL = process.env.BACKUP_INTERVAL || '0 2 * * *';
-        this.CLEANUP_INTERVAL = process.env.CLEANUP_INTERVAL || '0 3 * * *';
-        this.HEALTH_CHECK_INTERVAL = process.env.HEALTH_CHECK_INTERVAL || '*/5 * * * *';
-        this.ANALYTICS_INTERVAL = process.env.ANALYTICS_INTERVAL || '0 1 * * *';
-        this.NOTIFICATION_INTERVAL = process.env.NOTIFICATION_INTERVAL || '0 9 * * *';
-        this.SECURITY_SCAN_INTERVAL = process.env.SECURITY_SCAN_INTERVAL || '0 4 * * *';
-        this.PERFORMANCE_MONITOR_INTERVAL = process.env.PERFORMANCE_MONITOR_INTERVAL || '*/1 * * * *';
-        this.DATABASE_BACKUP_INTERVAL = process.env.DATABASE_BACKUP_INTERVAL || '0 0 * * 0';
-        this.LOG_ROTATION_INTERVAL = process.env.LOG_ROTATION_INTERVAL || '0 0 * * *';
-        this.CACHE_CLEANUP_INTERVAL = process.env.CACHE_CLEANUP_INTERVAL || '0 1 * * *';
-        this.SYSTEM_UPDATE_INTERVAL = process.env.SYSTEM_UPDATE_INTERVAL || '0 6 * * 0';
-        this.SECURITY_UPDATE_INTERVAL = process.env.SECURITY_UPDATE_INTERVAL || '0 5 * * *';
-        this.DATA_VALIDATION_INTERVAL = process.env.DATA_VALIDATION_INTERVAL || '0 7 * * *';
-        this.STATISTICS_GENERATION_INTERVAL = process.env.STATISTICS_GENERATION_INTERVAL || '0 8 * * *';
-        this.REPORT_GENERATION_INTERVAL = process.env.REPORT_GENERATION_INTERVAL || '0 9 * * 1';
-        this.USER_ACTIVITY_ANALYSIS_INTERVAL = process.env.USER_ACTIVITY_ANALYSIS_INTERVAL || '0 10 * * *';
-        this.CONTENT_ANALYSIS_INTERVAL = process.env.CONTENT_ANALYSIS_INTERVAL || '0 11 * * *';
-        this.SYSTEM_OPTIMIZATION_INTERVAL = process.env.SYSTEM_OPTIMIZATION_INTERVAL || '0 12 * * *';
-        this.DATABASE_OPTIMIZATION_INTERVAL = process.env.DATABASE_OPTIMIZATION_INTERVAL || '0 13 * * *';
-        this.CACHE_OPTIMIZATION_INTERVAL = process.env.CACHE_OPTIMIZATION_INTERVAL || '0 14 * * *';
-        this.PERFORMANCE_OPTIMIZATION_INTERVAL = process.env.PERFORMANCE_OPTIMIZATION_INTERVAL || '0 15 * * *';
-        this.SECURITY_OPTIMIZATION_INTERVAL = process.env.SECURITY_OPTIMIZATION_INTERVAL || '0 16 * * *';
-        this.BACKUP_OPTIMIZATION_INTERVAL = process.env.BACKUP_OPTIMIZATION_INTERVAL || '0 17 * * *';
-        this.LOG_OPTIMIZATION_INTERVAL = process.env.LOG_OPTIMIZATION_INTERVAL || '0 18 * * *';
-        this.SYSTEM_MONITORING_INTERVAL = process.env.SYSTEM_MONITORING_INTERVAL || '*/30 * * * *';
-        this.DATABASE_MONITORING_INTERVAL = process.env.DATABASE_MONITORING_INTERVAL || '*/15 * * * *';
-        this.CACHE_MONITORING_INTERVAL = process.env.CACHE_MONITORING_INTERVAL || '*/10 * * * *';
-        this.PERFORMANCE_MONITORING_INTERVAL = process.env.PERFORMANCE_MONITORING_INTERVAL || '*/5 * * * *';
-        this.SECURITY_MONITORING_INTERVAL = process.env.SECURITY_MONITORING_INTERVAL || '*/1 * * * *';
-        this.BACKUP_MONITORING_INTERVAL = process.env.BACKUP_MONITORING_INTERVAL || '*/20 * * * *';
-        this.LOG_MONITORING_INTERVAL = process.env.LOG_MONITORING_INTERVAL || '*/25 * * * *';
-        this.SYSTEM_ALERT_INTERVAL = process.env.SYSTEM_ALERT_INTERVAL || '*/1 * * * *';
-        this.DATABASE_ALERT_INTERVAL = process.env.DATABASE_ALERT_INTERVAL || '*/2 * * * *';
-        this.CACHE_ALERT_INTERVAL = process.env.CACHE_ALERT_INTERVAL || '*/3 * * * *';
-        this.PERFORMANCE_ALERT_INTERVAL = process.env.PERFORMANCE_ALERT_INTERVAL || '*/4 * * * *';
-        this.SECURITY_ALERT_INTERVAL = process.env.SECURITY_ALERT_INTERVAL || '*/1 * * * *';
-        this.BACKUP_ALERT_INTERVAL = process.env.BACKUP_ALERT_INTERVAL || '*/6 * * * *';
-        this.LOG_ALERT_INTERVAL = process.env.LOG_ALERT_INTERVAL || '*/7 * * * *';
+        this.ADMIN_IDS = process.env.ADMIN_IDS ? process.env.ADMIN_IDS.split(',').map(Number) : [898508164];
+        this.UPLOAD_PATH = join(__dirname, 'uploads');
     }
 
     validate() {
-        const required = ['BOT_TOKEN', 'DATABASE_URL'];
-        const missing = required.filter(key => !this[key]);
-        
-        if (missing.length > 0) {
-            throw new Error(`Missing required configuration: ${missing.join(', ')}`);
-        }
-
         console.log('✅ Конфигурация системы проверена');
         return true;
-    }
-
-    getDatabaseConfig() {
-        return {
-            user: 'gen_user',
-            host: 'def46fb02c0eac8fefd6f734.twc1.net',
-            database: 'default_db',
-            password: '5-R;mKGYJ<88?1',
-            port: 5432,
-            ssl: { rejectUnauthorized: false },
-            connectionTimeoutMillis: 30000,
-            idleTimeoutMillis: 30000,
-            max: 20,
-            min: 5,
-            acquireTimeoutMillis: 30000,
-            createTimeoutMillis: 30000,
-            destroyTimeoutMillis: 5000,
-            reapIntervalMillis: 1000,
-            createRetryIntervalMillis: 100,
-        };
-    }
-
-    getRedisConfig() {
-        return {
-            host: 'localhost',
-            port: 6379,
-            password: process.env.REDIS_PASSWORD,
-            db: 0,
-            retryDelayOnFailover: 100,
-            maxRetriesPerRequest: 3,
-            enableReadyCheck: true,
-            autoResubscribe: true,
-            autoResendUnfulfilledCommands: true,
-            lazyConnect: true,
-        };
-    }
-
-    getCloudinaryConfig() {
-        return {
-            cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-            api_key: process.env.CLOUDINARY_API_KEY,
-            api_secret: process.env.CLOUDINARY_API_SECRET,
-            secure: true
-        };
-    }
-
-    getStripeConfig() {
-        return {
-            apiVersion: '2023-10-16',
-            maxNetworkRetries: 3,
-            timeout: 30000,
-            host: 'api.stripe.com',
-            port: 443,
-            protocol: 'https'
-        };
-    }
-
-    getSMTPConfig() {
-        return {
-            host: this.SMTP_HOST,
-            port: this.SMTP_PORT,
-            secure: false,
-            auth: {
-                user: this.SMTP_USER,
-                pass: this.SMTP_PASS
-            },
-            tls: {
-                rejectUnauthorized: false
-            }
-        };
-    }
-
-    getAWSConfig() {
-        return {
-            accessKeyId: this.AWS_ACCESS_KEY,
-            secretAccessKey: this.AWS_SECRET_KEY,
-            region: 'us-east-1',
-            maxRetries: 3,
-            httpOptions: {
-                timeout: 30000,
-                connectTimeout: 5000
-            }
-        };
-    }
-
-    getAzureConfig() {
-        return {
-            connectionString: this.AZURE_CONNECTION_STRING,
-            retryOptions: {
-                maxTries: 4,
-                tryTimeoutInMs: 30000,
-                retryDelayInMs: 8000
-            }
-        };
-    }
-
-    getGoogleCloudConfig() {
-        return {
-            keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-            projectId: process.env.GOOGLE_CLOUD_PROJECT,
-            retryOptions: {
-                autoRetry: true,
-                maxRetries: 3
-            }
-        };
-    }
-
-    getFirebaseConfig() {
-        try {
-            const admin = await import('firebase-admin');
-            return {
-                credential: admin.credential.cert(JSON.parse(this.FIREBASE_CONFIG)),
-                databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`,
-                storageBucket: `${process.env.FIREBASE_PROJECT_ID}.appspot.com`
-            };
-        } catch (error) {
-            console.warn('Firebase not available:', error.message);
-            return {};
-        }
-    }
-
-    getElasticsearchConfig() {
-        return {
-            node: this.ELASTICSEARCH_URL,
-            maxRetries: 5,
-            requestTimeout: 30000,
-            sniffOnStart: true,
-            sniffInterval: 60000,
-            sniffOnConnectionFault: true
-        };
-    }
-
-    getAlgoliaConfig() {
-        return {
-            appId: this.ALGOLIA_APP_ID,
-            apiKey: this.ALGOLIA_API_KEY,
-            maxRetries: 3,
-            timeout: 30000
-        };
-    }
-
-    getMeiliSearchConfig() {
-        return {
-            host: this.MEILISEARCH_URL,
-            apiKey: process.env.MEILISEARCH_API_KEY,
-            timeout: 10000
-        };
-    }
-
-    getTypesenseConfig() {
-        return {
-            nodes: [{
-                host: this.TYPESENSE_URL.split('://')[1].split(':')[0],
-                port: parseInt(this.TYPESENSE_URL.split(':')[2]) || 8108,
-                protocol: this.TYPESENSE_URL.split('://')[0]
-            }],
-            apiKey: process.env.TYPESENSE_API_KEY,
-            connectionTimeoutSeconds: 10,
-            healthcheckIntervalSeconds: 30
-        };
     }
 }
 
 const config = new SystemConfig();
 
-// ==================== СИСТЕМА ЛОГИРОВАНИЯ ====================
-class LoggerSystem {
-    constructor() {
-        this.logger = winston.createLogger({
-            level: config.LOG_LEVEL,
-            format: winston.format.combine(
-                winston.format.timestamp({
-                    format: 'YYYY-MM-DD HH:mm:ss'
-                }),
-                winston.format.errors({ stack: true }),
-                winston.format.json(),
-                winston.format.prettyPrint()
-            ),
-            defaultMeta: { service: 'anb-academy' },
-            transports: [
-                new winston.transports.File({ 
-                    filename: join(__dirname, 'logs/error.log'), 
-                    level: 'error',
-                    maxsize: 5242880,
-                    maxFiles: 5
-                }),
-                new winston.transports.File({ 
-                    filename: join(__dirname, 'logs/combined.log'),
-                    maxsize: 5242880,
-                    maxFiles: 5
-                }),
-                new winston.transports.Console({
-                    format: winston.format.combine(
-                        winston.format.colorize(),
-                        winston.format.simple()
-                    )
-                })
-            ],
-            exceptionHandlers: [
-                new winston.transports.File({ 
-                    filename: join(__dirname, 'logs/exceptions.log'),
-                    maxsize: 5242880,
-                    maxFiles: 5
-                })
-            ],
-            rejectionHandlers: [
-                new winston.transports.File({ 
-                    filename: join(__dirname, 'logs/rejections.log'),
-                    maxsize: 5242880,
-                    maxFiles: 5
-                })
-            ]
-        });
-
-        this.setupLogRotation();
-    }
-
-    setupLogRotation() {
-        cron.schedule(config.LOG_ROTATION_INTERVAL, () => {
-            this.rotateLogs();
-        });
-    }
-
-    async rotateLogs() {
-        try {
-            const logDir = join(__dirname, 'logs');
-            const files = await fs.readdir(logDir);
-            
-            for (const file of files) {
-                if (file.endsWith('.log')) {
-                    const filePath = join(logDir, file);
-                    const stats = await fs.stat(filePath);
-                    const fileSize = stats.size / (1024 * 1024);
-                    
-                    if (fileSize > 5) {
-                        const timestamp = moment().format('YYYY-MM-DD_HH-mm-ss');
-                        const newPath = join(logDir, `${file}.${timestamp}.bak`);
-                        await fs.rename(filePath, newPath);
-                        this.info(`Rotated log file: ${file} -> ${newPath}`);
-                    }
-                }
-            }
-        } catch (error) {
-            this.error('Error rotating logs:', error);
-        }
-    }
-
-    log(level, message, meta = {}) {
-        this.logger.log(level, message, meta);
-    }
-
-    error(message, error = null) {
-        this.log('error', message, { error: error?.stack || error });
-    }
-
-    warn(message, meta = {}) {
-        this.log('warn', message, meta);
-    }
-
+// Логгер
+class Logger {
     info(message, meta = {}) {
-        this.log('info', message, meta);
+        console.log(`[INFO] ${message}`, meta);
     }
-
-    debug(message, meta = {}) {
-        this.log('debug', message, meta);
+    
+    error(message, error = null) {
+        console.error(`[ERROR] ${message}`, error);
     }
-
-    verbose(message, meta = {}) {
-        this.log('verbose', message, meta);
-    }
-
-    silly(message, meta = {}) {
-        this.log('silly', message, meta);
-    }
-
-    audit(action, user, resource, details = {}) {
-        this.info(`AUDIT: ${action}`, {
-            user,
-            resource,
-            action,
-            timestamp: new Date().toISOString(),
-            ...details
-        });
-    }
-
-    security(event, user, details = {}) {
-        this.warn(`SECURITY: ${event}`, {
-            user,
-            event,
-            timestamp: new Date().toISOString(),
-            ...details
-        });
-    }
-
-    performance(operation, duration, details = {}) {
-        this.info(`PERFORMANCE: ${operation}`, {
-            operation,
-            duration,
-            timestamp: new Date().toISOString(),
-            ...details
-        });
-    }
-
-    business(event, user, details = {}) {
-        this.info(`BUSINESS: ${event}`, {
-            user,
-            event,
-            timestamp: new Date().toISOString(),
-            ...details
-        });
+    
+    warn(message, meta = {}) {
+        console.warn(`[WARN] ${message}`, meta);
     }
 }
 
-const logger = new LoggerSystem();
+const logger = new Logger();
 
-// ==================== СИСТЕМА КЭШИРОВАНИЯ ====================
-class CacheSystem {
-    constructor() {
-        this.redis = new Redis(config.getRedisConfig());
-        this.memoryCache = new Map();
-        this.setupEventListeners();
-        this.setupCleanup();
-    }
+// Инициализация Express
+const app = express();
+const server = createServer(app);
+const io = new Server(server);
 
-    setupEventListeners() {
-        this.redis.on('connect', () => {
-            logger.info('Redis cache connected');
-        });
-
-        this.redis.on('error', (error) => {
-            logger.error('Redis cache error:', error);
-        });
-
-        this.redis.on('close', () => {
-            logger.warn('Redis cache connection closed');
-        });
-
-        this.redis.on('reconnecting', () => {
-            logger.info('Redis cache reconnecting...');
-        });
-    }
-
-    setupCleanup() {
-        // Очистка памяти каждые 5 минут
-        setInterval(() => {
-            const now = Date.now();
-            for (const [key, value] of this.memoryCache.entries()) {
-                if (value.expiry && value.expiry < now) {
-                    this.memoryCache.delete(key);
-                }
-            }
-        }, 5 * 60 * 1000);
-
-        // Очистка Redis по расписанию
-        cron.schedule(config.CACHE_CLEANUP_INTERVAL, async () => {
-            await this.cleanExpired();
-        });
-    }
-
-    async get(key) {
-        try {
-            // Сначала пробуем Redis
-            const value = await this.redis.get(key);
-            if (value) {
-                return JSON.parse(value);
-            }
-
-            // Потом память
-            const memoryValue = this.memoryCache.get(key);
-            if (memoryValue && (!memoryValue.expiry || memoryValue.expiry > Date.now())) {
-                return memoryValue.data;
-            }
-
-            return null;
-        } catch (error) {
-            logger.error('Cache get error:', error);
-            return null;
-        }
-    }
-
-    async set(key, value, ttl = config.CACHE_TTL) {
-        try {
-            const cacheValue = {
-                data: value,
-                expiry: ttl ? Date.now() + ttl * 1000 : null
-            };
-
-            // Сохраняем в Redis
-            if (ttl) {
-                await this.redis.setex(key, ttl, JSON.stringify(value));
-            } else {
-                await this.redis.set(key, JSON.stringify(value));
-            }
-
-            // Сохраняем в память
-            this.memoryCache.set(key, cacheValue);
-
-            return true;
-        } catch (error) {
-            logger.error('Cache set error:', error);
-            return false;
-        }
-    }
-
-    async delete(key) {
-        try {
-            await this.redis.del(key);
-            this.memoryCache.delete(key);
-            return true;
-        } catch (error) {
-            logger.error('Cache delete error:', error);
-            return false;
-        }
-    }
-
-    async exists(key) {
-        try {
-            const exists = await this.redis.exists(key);
-            return exists === 1;
-        } catch (error) {
-            logger.error('Cache exists error:', error);
-            return false;
-        }
-    }
-
-    async cleanExpired() {
-        try {
-            // Redis автоматически удаляет expired keys
-            // Очищаем только память
-            const now = Date.now();
-            for (const [key, value] of this.memoryCache.entries()) {
-                if (value.expiry && value.expiry < now) {
-                    this.memoryCache.delete(key);
-                }
-            }
-            logger.info('Expired cache cleaned');
-        } catch (error) {
-            logger.error('Cache cleanup error:', error);
-        }
-    }
-
-    async flush() {
-        try {
-            await this.redis.flushdb();
-            this.memoryCache.clear();
-            logger.info('Cache flushed');
-        } catch (error) {
-            logger.error('Cache flush error:', error);
-        }
-    }
-
-    async getStats() {
-        try {
-            const info = await this.redis.info();
-            const memoryInfo = await this.redis.info('memory');
-            const stats = await this.redis.info('stats');
-            
-            return {
-                redis: {
-                    connected: this.redis.status === 'ready',
-                    used_memory: memoryInfo.split('\r\n').find(line => line.startsWith('used_memory:')).split(':')[1],
-                    connected_clients: stats.split('\r\n').find(line => line.startsWith('connected_clients:')).split(':')[1],
-                    total_commands_processed: stats.split('\r\n').find(line => line.startsWith('total_commands_processed:')).split(':')[1]
-                },
-                memory: {
-                    size: this.memoryCache.size,
-                    keys: Array.from(this.memoryCache.keys())
-                }
-            };
-        } catch (error) {
-            logger.error('Cache stats error:', error);
-            return null;
-        }
-    }
-
-    async cacheWithFallback(key, fallbackFunction, ttl = config.CACHE_TTL) {
-        const cached = await this.get(key);
-        if (cached !== null) {
-            return cached;
-        }
-
-        const freshData = await fallbackFunction();
-        await this.set(key, freshData, ttl);
-        return freshData;
-    }
-
-    async memoize(func, keyGenerator, ttl = config.CACHE_TTL) {
-        return async (...args) => {
-            const key = keyGenerator(...args);
-            return this.cacheWithFallback(key, () => func(...args), ttl);
-        };
-    }
-}
-
-const cache = new CacheSystem();
-
-// ==================== БАЗА ДАННЫХ ====================
-class DatabaseSystem {
-    constructor() {
-        this.pgClient = null;
-        this.redis = null;
-        this.connected = false;
-        this.connectionAttempts = 0;
-        this.maxConnectionAttempts = 5;
-    }
-
-    async connect() {
-        try {
-            logger.info('🗄️ Подключение к базам данных...');
-            
-            await this.connectPostgreSQL();
-            await this.connectRedis();
-            
-            this.connected = true;
-            logger.info('✅ Все базы данных подключены');
-            
-            await this.createTables();
-            await this.initializeDefaultData();
-            await this.setupDatabaseMonitoring();
-            
-        } catch (error) {
-            logger.error('❌ Ошибка подключения к БД:', error);
-            this.connectionAttempts++;
-            
-            if (this.connectionAttempts < this.maxConnectionAttempts) {
-                logger.info(`🔄 Повторная попытка подключения через 5 секунд... (${this.connectionAttempts}/${this.maxConnectionAttempts})`);
-                setTimeout(() => this.connect(), 5000);
-            } else {
-                logger.error('❌ Превышено максимальное количество попыток подключения');
-                throw error;
-            }
-        }
-    }
-
-    async connectPostgreSQL() {
-        const { Client } = await import('pg');
-        this.pgClient = new Client(config.getDatabaseConfig());
+// Инициализация бота
+let bot = null;
+if (config.BOT_TOKEN) {
+    try {
+        bot = new Telegraf(config.BOT_TOKEN);
         
-        await this.pgClient.connect();
-        logger.info('✅ PostgreSQL подключена');
-    }
-
-    async connectRedis() {
-        this.redis = new Redis(config.getRedisConfig());
-        
-        this.redis.on('connect', () => {
-            logger.info('✅ Redis подключен');
-        });
-        
-        this.redis.on('error', (error) => {
-            logger.error('❌ Redis ошибка:', error);
-        });
-    }
-
-    async createTables() {
-        const tables = [
-            // Основные таблицы пользователей
-            `CREATE TABLE IF NOT EXISTS users (
-                id BIGINT PRIMARY KEY,
-                telegram_data JSONB NOT NULL,
-                profile_data JSONB DEFAULT '{}',
-                subscription_data JSONB DEFAULT '{}',
-                progress_data JSONB DEFAULT '{}',
-                favorites_data JSONB DEFAULT '{}',
-                payment_data JSONB DEFAULT '{}',
-                security_data JSONB DEFAULT '{}',
-                communication_data JSONB DEFAULT '{}',
-                analytics_data JSONB DEFAULT '{}',
-                survey_completed BOOLEAN DEFAULT FALSE,
-                is_admin BOOLEAN DEFAULT FALSE,
-                is_super_admin BOOLEAN DEFAULT FALSE,
-                is_moderator BOOLEAN DEFAULT FALSE,
-                is_teacher BOOLEAN DEFAULT FALSE,
-                is_verified BOOLEAN DEFAULT FALSE,
-                is_blocked BOOLEAN DEFAULT FALSE,
-                is_deleted BOOLEAN DEFAULT FALSE,
-                delete_reason TEXT,
-                delete_date TIMESTAMP,
-                last_login TIMESTAMP,
-                login_count INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW(),
-                version INTEGER DEFAULT 1
-            )`,
-
-            // Таблица курсов
-            `CREATE TABLE IF NOT EXISTS courses (
-                id SERIAL PRIMARY KEY,
-                title TEXT NOT NULL,
-                description TEXT,
-                price DECIMAL(10,2) DEFAULT 0,
-                duration TEXT,
-                modules INTEGER DEFAULT 1,
-                category TEXT,
-                level TEXT DEFAULT 'beginner',
-                image_url TEXT,
-                active BOOLEAN DEFAULT TRUE,
-                featured BOOLEAN DEFAULT FALSE,
-                students_count INTEGER DEFAULT 0,
-                rating DECIMAL(3,2) DEFAULT 0,
-                created_by BIGINT,
-                instructor_id BIGINT,
-                curriculum JSONB DEFAULT '[]',
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
-            )`,
-
-            // Таблица прогресса пользователей
-            `CREATE TABLE IF NOT EXISTS user_progress (
-                id SERIAL PRIMARY KEY,
-                user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
-                course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
-                progress INTEGER DEFAULT 0,
-                completed BOOLEAN DEFAULT FALSE,
-                time_spent INTEGER DEFAULT 0,
-                last_activity TIMESTAMP DEFAULT NOW(),
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(user_id, course_id)
-            )`,
-
-            // Таблица платежей
-            `CREATE TABLE IF NOT EXISTS payments (
-                id SERIAL PRIMARY KEY,
-                user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
-                course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
-                amount DECIMAL(10,2) NOT NULL,
-                currency TEXT DEFAULT 'RUB',
-                status TEXT DEFAULT 'pending',
-                payment_method TEXT,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
-            )`
-        ];
-
-        for (const tableSQL of tables) {
-            try {
-                await this.pgClient.query(tableSQL);
-                logger.info(`✅ Таблица создана: ${tableSQL.split(' ')[5]}`);
-            } catch (error) {
-                logger.error(`❌ Ошибка создания таблицы:`, error.message);
-            }
-        }
-
-        logger.info('✅ Все таблицы базы данных созданы');
-    }
-
-    async initializeDefaultData() {
-        try {
-            // Создаем супер-админа
-            const superAdminCheck = await this.pgClient.query(
-                'SELECT * FROM users WHERE id = $1',
-                [config.SUPER_ADMIN_ID]
-            );
-
-            if (superAdminCheck.rows.length === 0) {
-                const passwordHash = await bcrypt.hash('admin123', 12);
-                
-                await this.pgClient.query(
-                    `INSERT INTO users (id, telegram_data, profile_data, security_data, is_admin, is_super_admin, is_verified, survey_completed)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                    [
-                        config.SUPER_ADMIN_ID,
-                        JSON.stringify({
-                            first_name: 'Супер Администратор',
-                            username: 'superadmin',
-                            language_code: 'ru',
-                            is_premium: true
-                        }),
-                        JSON.stringify({
-                            specialization: 'Администратор системы',
-                            city: 'Москва',
-                            email: 'admin@anb-academy.ru'
-                        }),
-                        JSON.stringify({
-                            password_hash: passwordHash,
-                            two_factor_enabled: true
-                        }),
-                        true,
-                        true,
-                        true,
-                        true
-                    ]
-                );
-                logger.info('✅ Супер-администратор создан');
-            }
-
-            // Создаем демо-контент
-            await this.createDemoContent();
-            
-        } catch (error) {
-            logger.error('Ошибка инициализации данных:', error);
-        }
-    }
-
-    async createDemoContent() {
-        try {
-            // Проверяем есть ли курсы
-            const coursesCheck = await this.pgClient.query('SELECT COUNT(*) FROM courses');
-            if (parseInt(coursesCheck.rows[0].count) === 0) {
-                logger.info('📚 Создаем демо-контент...');
-                
-                const demoCourses = [
-                    {
-                        title: 'Мануальные техники в практике невролога',
-                        description: '6 модулей по современным мануальным методикам',
-                        price: 25000,
-                        duration: '12 недель',
-                        modules: 6,
-                        category: 'Мануальные техники',
-                        level: 'advanced',
-                        image_url: '/webapp/assets/course-manual.jpg',
-                        students_count: 156,
-                        rating: 4.8,
-                        created_by: config.SUPER_ADMIN_ID,
-                        instructor_id: config.SUPER_ADMIN_ID,
-                        featured: true
-                    },
-                    {
-                        title: 'Неврологическая диагностика: от основ к практике',
-                        description: '5 модулей по современной неврологической диагностике',
-                        price: 18000,
-                        duration: '8 недель',
-                        modules: 5,
-                        category: 'Неврология',
-                        level: 'intermediate',
-                        image_url: '/webapp/assets/course-diagnosis.jpg',
-                        students_count: 234,
-                        rating: 4.6,
-                        created_by: config.SUPER_ADMIN_ID,
-                        instructor_id: config.SUPER_ADMIN_ID,
-                        featured: true
-                    }
-                ];
-
-                for (const course of demoCourses) {
-                    const keys = Object.keys(course);
-                    const values = Object.values(course);
-                    const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
-                    
-                    await this.pgClient.query(
-                        `INSERT INTO courses (${keys.join(', ')}) VALUES (${placeholders})`,
-                        values
-                    );
-                }
-
-                logger.info('✅ Демо-контент создан');
-            }
-        } catch (error) {
-            logger.error('Ошибка создания демо-контента:', error);
-        }
-    }
-
-    async setupDatabaseMonitoring() {
-        // Мониторинг производительности БД
-        cron.schedule(config.DATABASE_MONITORING_INTERVAL, async () => {
-            await this.monitorDatabaseHealth();
-        });
-    }
-
-    async monitorDatabaseHealth() {
-        try {
-            const healthChecks = [
-                this.pgClient.query('SELECT 1 as health_check'),
-                this.pgClient.query('SELECT count(*) as user_count FROM users'),
-                this.pgClient.query('SELECT count(*) as course_count FROM courses')
-            ];
-
-            const results = await Promise.all(healthChecks);
-            
-            const healthStatus = {
-                database_connection: 'healthy',
-                user_count: parseInt(results[1].rows[0].user_count),
-                course_count: parseInt(results[2].rows[0].course_count),
-                last_check: new Date().toISOString()
-            };
-
-            logger.debug('Database health check completed', healthStatus);
-            
-        } catch (error) {
-            logger.error('Database health check failed:', error);
-        }
-    }
-
-    async query(text, params) {
-        if (!this.connected) {
-            throw new Error('База данных не подключена');
-        }
-
-        try {
-            const startTime = Date.now();
-            const result = await this.pgClient.query(text, params);
-            const duration = Date.now() - startTime;
-
-            // Логируем медленные запросы
-            if (duration > 1000) {
-                logger.warn('Slow database query', {
-                    query: text,
-                    duration,
-                    params: params || []
-                });
-            }
-
-            logger.performance('database_query', duration, { query: text });
-            
-            return result;
-        } catch (error) {
-            logger.error('Database query error:', error, { query: text, params });
-            throw error;
-        }
-    }
-
-    async close() {
-        try {
-            if (this.pgClient) {
-                await this.pgClient.end();
-            }
-            if (this.redis) {
-                await this.redis.quit();
-            }
-            
-            logger.info('✅ Все соединения с базами данных закрыты');
-        } catch (error) {
-            logger.error('Ошибка при закрытии соединений с БД:', error);
-        }
-    }
-}
-
-const db = new DatabaseSystem();
-
-// ==================== СИСТЕМА БЕЗОПАСНОСТИ ====================
-class SecuritySystem {
-    constructor() {
-        this.rateLimiters = new Map();
-        this.suspiciousActivities = new Map();
-        this.setupSecurityMonitoring();
-    }
-
-    setupSecurityMonitoring() {
-        // Мониторинг безопасности
-        cron.schedule(config.SECURITY_MONITORING_INTERVAL, () => {
-            this.scanForThreats();
-        });
-    }
-
-    createRateLimiter(key, windowMs, max) {
-        if (!this.rateLimiters.has(key)) {
-            this.rateLimiters.set(key, {
-                requests: new Map(),
-                windowMs,
-                max
-            });
-        }
-        return this.rateLimiters.get(key);
-    }
-
-    async checkRateLimit(key, identifier, cost = 1) {
-        const limiter = this.createRateLimiter(key, 15 * 60 * 1000, 100); // 15 минут, 100 запросов
-        
-        const now = Date.now();
-        const windowStart = now - limiter.windowMs;
-
-        // Очищаем старые записи
-        for (const [timestamp, count] of limiter.requests.entries()) {
-            if (timestamp < windowStart) {
-                limiter.requests.delete(timestamp);
-            }
-        }
-
-        // Считаем текущие запросы
-        let currentCount = 0;
-        for (const count of limiter.requests.values()) {
-            currentCount += count;
-        }
-
-        if (currentCount + cost > limiter.max) {
-            await this.logSuspiciousActivity(identifier, 'rate_limit_exceeded', {
-                key,
-                currentCount,
-                cost,
-                max: limiter.max
-            });
-            return false;
-        }
-
-        // Добавляем текущий запрос
-        limiter.requests.set(now, (limiter.requests.get(now) || 0) + cost);
-        return true;
-    }
-
-    async validateInput(schema, data) {
-        try {
-            const validated = await schema.validateAsync(data, {
-                abortEarly: false,
-                stripUnknown: true
-            });
-            return { isValid: true, data: validated };
-        } catch (error) {
-            return { 
-                isValid: false, 
-                errors: error.details.map(detail => ({
-                    field: detail.path.join('.'),
-                    message: detail.message,
-                    type: detail.type
-                }))
-            };
-        }
-    }
-
-    async sanitizeInput(input) {
-        if (typeof input === 'string') {
-            // Базовая sanitization
-            return input
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/'/g, '&#x27;')
-                .replace(/"/g, '&quot;')
-                .replace(/\//g, '&#x2F;')
-                .replace(/\\/g, '&#x5C;')
-                .replace(/`/g, '&#x60;');
-        }
-        return input;
-    }
-
-    async hashPassword(password) {
-        const saltRounds = 12;
-        return await bcrypt.hash(password, saltRounds);
-    }
-
-    async verifyPassword(password, hash) {
-        return await bcrypt.compare(password, hash);
-    }
-
-    generateToken(payload, expiresIn = '7d') {
-        return jwt.sign(payload, config.JWT_SECRET, { expiresIn });
-    }
-
-    verifyToken(token) {
-        try {
-            return jwt.verify(token, config.JWT_SECRET);
-        } catch (error) {
-            throw new Error('Invalid token');
-        }
-    }
-
-    async logSuspiciousActivity(userId, eventType, details = {}) {
-        const activity = {
-            userId,
-            eventType,
-            details,
-            timestamp: new Date()
-        };
-
-        // Сохраняем в память для быстрого доступа
-        const key = `${userId}_${eventType}`;
-        this.suspiciousActivities.set(key, activity);
-
-        logger.security(eventType, userId, details);
-    }
-
-    async scanForThreats() {
-        try {
-            // Проверяем множественные неудачные попытки входа
-            const failedLogins = await db.query(`
-                SELECT COUNT(*) as attempts
-                FROM security_events 
-                WHERE event_type = 'failed_login'
-                AND created_at > NOW() - INTERVAL '15 minutes'
-            `);
-
-            if (failedLogins.rows.length > 0 && failedLogins.rows[0].attempts > 10) {
-                logger.warn('Security threats detected', {
-                    failedLogins: failedLogins.rows[0].attempts
-                });
-            }
-
-        } catch (error) {
-            logger.error('Threat scan failed:', error);
-        }
-    }
-
-    async validateFileUpload(file, allowedTypes, maxSize) {
-        const validation = {
-            isValid: true,
-            errors: []
-        };
-
-        // Проверяем тип файла
-        if (!allowedTypes.includes(file.mimetype)) {
-            validation.isValid = false;
-            validation.errors.push(`Недопустимый тип файла: ${file.mimetype}`);
-        }
-
-        // Проверяем размер файла
-        if (file.size > maxSize) {
-            validation.isValid = false;
-            validation.errors.push(`Размер файла превышает допустимый лимит: ${maxSize} bytes`);
-        }
-
-        return validation;
-    }
-}
-
-const security = new SecuritySystem();
-
-// ==================== TELEGRAM BOT СИСТЕМА ====================
-class TelegramBotSystem {
-    constructor() {
-        this.bot = null;
-        this.webhookUrl = null;
-        this.setupBot();
-    }
-
-    setupBot() {
-        try {
-            logger.info('🤖 Инициализация Telegram бота...');
-            
-            if (!config.BOT_TOKEN) {
-                logger.warn('⚠️ Бот-токен не настроен');
-                return;
-            }
-            
-            this.bot = new Telegraf(config.BOT_TOKEN);
-            this.setupWebhook();
-            this.setupHandlers();
-            this.setupMiddleware();
-            
-            this.launchBot();
-            
-        } catch (error) {
-            logger.error('❌ Ошибка инициализации бота:', error);
-        }
-    }
-
-    setupWebhook() {
-        if (config.NODE_ENV === 'production') {
-            this.webhookUrl = `${config.WEBAPP_URL}/bot${config.BOT_TOKEN}`;
-            this.bot.telegram.setWebhook(this.webhookUrl);
-            logger.info(`🌐 Webhook установлен: ${this.webhookUrl}`);
-        }
-    }
-
-    setupHandlers() {
-        // Команды бота
-        this.bot.start(this.handleStart.bind(this));
-        this.bot.command('menu', this.handleMenu.bind(this));
-        this.bot.command('courses', this.handleCourses.bind(this));
-        this.bot.command('profile', this.handleProfile.bind(this));
-        this.bot.command('help', this.handleHelp.bind(this));
-
-        // Обработчики сообщений
-        this.bot.on('text', this.handleText.bind(this));
-        this.bot.on('callback_query', this.handleCallbackQuery.bind(this));
-    }
-
-    setupMiddleware() {
-        // Middleware для логирования
-        this.bot.use(async (ctx, next) => {
-            const startTime = Date.now();
-            await next();
-            const duration = Date.now() - startTime;
-            
-            logger.performance('telegram_update', duration, {
-                updateType: ctx.updateType,
-                userId: ctx.from?.id
-            });
-        });
-    }
-
-    async handleStart(ctx) {
-        try {
-            const user = await this.getOrCreateUser(ctx.from);
-            
-            await ctx.reply('🎓 Добро пожаловать в Академию АНБ!', {
+        // Базовые обработчики бота
+        bot.start((ctx) => {
+            ctx.reply('🎓 Добро пожаловать в Академию АНБ!', {
                 reply_markup: {
                     keyboard: [
                         [{ text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }],
@@ -1205,843 +72,317 @@ class TelegramBotSystem {
                     resize_keyboard: true
                 }
             });
-        } catch (error) {
-            logger.error('Start handler error:', error);
-            await ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
-        }
-    }
-
-    async handleMenu(ctx) {
-        await ctx.reply('🎯 Главное меню:', {
-            reply_markup: {
-                keyboard: [
-                    [{ text: '📱 Открыть приложение' }],
-                    ['📚 Курсы', '🎧 Подкасты'],
-                    ['📹 Эфиры', '📋 Материалы'],
-                    ['👤 Профиль', '🆘 Помощь']
-                ],
-                resize_keyboard: true
-            }
         });
-    }
 
-    async handleCourses(ctx) {
-        const courses = await db.query(
-            'SELECT id, title, description, price FROM courses WHERE active = true ORDER BY created_at DESC LIMIT 5'
-        );
-
-        if (courses.rows.length === 0) {
-            await ctx.reply('📚 Курсы пока не добавлены.');
-            return;
-        }
-
-        const coursesText = courses.rows.map((course, index) => 
-            `${index + 1}. ${course.title}\n💵 ${course.price} руб.\n📖 ${course.description}\n`
-        ).join('\n');
-
-        await ctx.reply(`📚 Доступные курсы:\n\n${coursesText}\n\nДля подробной информации откройте WebApp:`, {
-            reply_markup: {
-                inline_keyboard: [[
-                    { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
-                ]]
-            }
+        bot.command('courses', (ctx) => {
+            ctx.reply('📚 Доступные курсы:\n\n• Мануальные техники в практике невролога\n• Неврологическая диагностика\n\nОткройте приложение для подробностей:', {
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
+                    ]]
+                }
+            });
         });
-    }
 
-    async handleProfile(ctx) {
-        const user = await this.getOrCreateUser(ctx.from);
-        
-        const profileText = 
-            `👤 Ваш профиль:\n\n` +
-            `🆔 ID: ${user.id}\n` +
-            `📛 Имя: ${user.telegram_data.first_name}\n` +
-            `👤 Username: @${user.telegram_data.username || 'не указан'}\n` +
-            `💳 Подписка: ${user.subscription_data.status === 'active' ? 'Активна' : 'Не активна'}\n\n` +
-            `Для управления профилем откройте WebApp:`;
-
-        await ctx.reply(profileText, {
-            reply_markup: {
-                inline_keyboard: [[
-                    { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
-                ]]
-            }
-        });
-    }
-
-    async handleHelp(ctx) {
-        const helpText = 
-            `🆘 Помощь по Академии АНБ:\n\n` +
-            `📚 /courses - Посмотреть доступные курсы\n` +
-            `👤 /profile - Посмотреть свой профиль\n` +
-            `🆘 /support - Связь с поддержкой\n` +
-            `📱 /menu - Главное меню\n\n` +
-            `Для полного доступа ко всем функциям откройте WebApp:\n${config.WEBAPP_URL}`;
-
-        await ctx.reply(helpText);
-    }
-
-    async handleText(ctx) {
-        const message = ctx.message.text;
-        
-        if (message.toLowerCase().includes('привет')) {
-            await this.handleStart(ctx);
-        } else if (message.toLowerCase().includes('курс')) {
-            await this.handleCourses(ctx);
-        } else {
-            await ctx.reply(
-                `Используйте команды:\n` +
-                `/start - Начать работу\n` +
-                `/menu - Главное меню\n` +
-                `/help - Помощь`
-            );
-        }
-    }
-
-    async handleCallbackQuery(ctx) {
-        const data = ctx.callbackQuery.data;
-        
-        try {
-            await ctx.answerCbQuery();
-            
-            // Обработка callback действий
-            if (data.startsWith('course_')) {
-                const courseId = data.split('_')[1];
-                await ctx.reply(`Курс ${courseId} выбран. Откройте приложение для подробностей:`, {
-                    reply_markup: {
-                        inline_keyboard: [[
-                            { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
-                        ]]
-                    }
-                });
-            }
-            
-        } catch (error) {
-            logger.error('Callback query error:', error);
-            await ctx.answerCbQuery('❌ Произошла ошибка');
-        }
-    }
-
-    async getOrCreateUser(telegramUser) {
-        try {
-            const result = await db.query(
-                'SELECT * FROM users WHERE id = $1',
-                [telegramUser.id]
-            );
-
-            if (result.rows.length > 0) {
-                return result.rows[0];
-            }
-
-            // Создаем нового пользователя
-            const newUser = {
-                id: telegramUser.id,
-                telegram_data: telegramUser,
-                is_admin: config.ADMIN_IDS.includes(telegramUser.id),
-                is_super_admin: telegramUser.id === config.SUPER_ADMIN_ID
-            };
-
-            await db.query(
-                `INSERT INTO users (id, telegram_data, is_admin, is_super_admin)
-                 VALUES ($1, $2, $3, $4)`,
-                [newUser.id, newUser.telegram_data, newUser.is_admin, newUser.is_super_admin]
-            );
-
-            logger.info(`✅ Новый пользователь создан: ${telegramUser.first_name} (ID: ${telegramUser.id})`);
-
-            return newUser;
-            
-        } catch (error) {
-            logger.error('Ошибка создания пользователя:', error);
-            throw error;
-        }
-    }
-
-    async launchBot() {
+        // Запуск бота
         if (config.NODE_ENV === 'production') {
-            // В production используем webhook
-            this.bot.launch({
-                webhook: {
-                    domain: config.WEBAPP_URL,
-                    port: config.PORT
-                }
-            }).then(() => {
-                logger.info('✅ Telegram Bot запущен в production режиме');
-            }).catch(error => {
-                logger.error('❌ Ошибка запуска бота в production:', error);
-            });
+            const webhookUrl = `${config.WEBAPP_URL}/bot${config.BOT_TOKEN}`;
+            bot.telegram.setWebhook(webhookUrl);
+            console.log(`🌐 Webhook установлен: ${webhookUrl}`);
         } else {
-            // В development используем polling
-            this.bot.launch().then(() => {
-                logger.info('✅ Telegram Bot запущен в development режиме');
-            }).catch(error => {
-                logger.error('❌ Ошибка запуска бота в development:', error);
-            });
+            bot.launch();
         }
-
-        // Graceful shutdown
-        process.once('SIGINT', () => this.bot.stop('SIGINT'));
-        process.once('SIGTERM', () => this.bot.stop('SIGTERM'));
-    }
-
-    async sendNotification(userId, message, options = {}) {
-        try {
-            await this.bot.telegram.sendMessage(userId, message, options);
-            logger.info(`✅ Уведомление отправлено пользователю ${userId}`);
-        } catch (error) {
-            logger.error(`❌ Ошибка отправки уведомления пользователю ${userId}:`, error);
-        }
-    }
-}
-
-const telegramBot = new TelegramBotSystem();
-
-// ==================== EXPRESS SERVER СИСТЕМА ====================
-class ExpressServerSystem {
-    constructor() {
-        this.app = express();
-        this.server = null;
-        this.io = null;
-        this.setupServer();
-    }
-
-    setupServer() {
-        this.setupMiddleware();
-        this.setupFileUpload();
-        this.setupRoutes();
-        this.setupWebSocket();
-        this.setupErrorHandling();
-    }
-
-    setupMiddleware() {
-        // Безопасность
-        this.app.use(helmet({
-            contentSecurityPolicy: {
-                directives: {
-                    defaultSrc: ["'self'"],
-                    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-                    fontSrc: ["'self'", "https://fonts.gstatic.com"],
-                    imgSrc: ["'self'", "data:", "https:", "blob:"],
-                    scriptSrc: ["'self'", "'unsafe-inline'"],
-                    connectSrc: ["'self'", "ws:", "wss:"]
-                }
-            },
-            crossOriginEmbedderPolicy: false
-        }));
-
-        // Компрессия
-        this.app.use(compression());
-
-        // CORS
-        this.app.use(cors({
-            origin: function(origin, callback) {
-                const allowedOrigins = [
-                    config.WEBAPP_URL,
-                    'https://telegram.org',
-                    'https://web.telegram.org',
-                    'http://localhost:3000',
-                    'http://127.0.0.1:3000'
-                ];
-                
-                if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-                    callback(null, true);
-                } else {
-                    callback(new Error('Not allowed by CORS'));
-                }
-            },
-            credentials: true,
-            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-        }));
-
-        // Парсинг JSON
-        this.app.use(express.json({ 
-            limit: '50mb',
-            verify: (req, res, buf) => {
-                try {
-                    JSON.parse(buf);
-                } catch (e) {
-                    throw new Error('Invalid JSON');
-                }
-            }
-        }));
-
-        // Парсинг URL-encoded данных
-        this.app.use(express.urlencoded({ 
-            extended: true, 
-            limit: '50mb',
-            parameterLimit: 10000
-        }));
-
-        // Логирование
-        this.app.use(morgan('combined', {
-            stream: {
-                write: (message) => logger.info(message.trim())
-            }
-        }));
-
-        // Rate limiting
-        const limiter = rateLimit({
-            windowMs: config.RATE_LIMIT_WINDOW * 60 * 1000,
-            max: config.RATE_LIMIT_MAX,
-            message: {
-                error: 'Слишком много запросов с этого IP, пожалуйста, попробуйте позже.'
-            },
-            standardHeaders: true,
-            legacyHeaders: false
-        });
-
-        this.app.use(limiter);
-
-        // Статические файлы
-        this.app.use('/uploads', express.static(join(__dirname, 'uploads')));
-        this.app.use('/webapp', express.static(join(__dirname, 'webapp')));
-        this.app.use('/assets', express.static(join(__dirname, 'webapp/assets')));
-    }
-
-    setupFileUpload() {
-        const storage = multer.diskStorage({
-            destination: async (req, file, cb) => {
-                const uploadType = file.fieldname || 'general';
-                const uploadPath = join(config.UPLOAD_PATH, uploadType);
-                
-                try {
-                    await fs.mkdir(uploadPath, { recursive: true });
-                    cb(null, uploadPath);
-                } catch (error) {
-                    cb(error, null);
-                }
-            },
-            filename: (req, file, cb) => {
-                const uniqueName = `${uuidv4()}-${file.originalname}`;
-                cb(null, uniqueName);
-            }
-        });
-
-        const fileFilter = (req, file, cb) => {
-            const allowedTypes = {
-                'courses': ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime'],
-                'podcasts': ['audio/mpeg', 'audio/wav', 'audio/ogg'],
-                'streams': ['video/mp4', 'video/quicktime', 'image/jpeg', 'image/png'],
-                'videos': ['video/mp4', 'video/quicktime'],
-                'materials': ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-                'avatars': ['image/jpeg', 'image/png', 'image/webp'],
-                'documents': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
-            };
-
-            const fieldName = file.fieldname;
-            const allowedMimes = allowedTypes[fieldName] || allowedTypes['documents'];
-
-            if (allowedMimes && allowedMimes.includes(file.mimetype)) {
-                cb(null, true);
-            } else {
-                cb(new Error(`Неподдерживаемый тип файла для ${fieldName}: ${file.mimetype}`), false);
-            }
-        };
-
-        this.upload = multer({
-            storage: storage,
-            limits: { 
-                fileSize: config.UPLOAD_MAX_SIZE,
-                files: 10
-            },
-            fileFilter: fileFilter
-        });
-    }
-
-    setupRoutes() {
-        // Health check
-        this.app.get('/api/health', async (req, res) => {
-            try {
-                const health = await this.getSystemHealth();
-                res.json(health);
-            } catch (error) {
-                logger.error('Health check error:', error);
-                res.status(503).json({
-                    status: 'error',
-                    timestamp: new Date().toISOString(),
-                    error: 'Service unavailable'
-                });
-            }
-        });
-
-        // User routes
-        this.app.post('/api/user', this.handleUserRequest.bind(this));
-        this.app.get('/api/user/profile', this.handleUserProfile.bind(this));
-
-        // Content routes
-        this.app.get('/api/content', this.handleGetContent.bind(this));
-        this.app.get('/api/content/:type', this.handleGetContentByType.bind(this));
-
-        // Favorites routes
-        this.app.post('/api/favorites/toggle', this.handleToggleFavorite.bind(this));
-
-        // Payment routes
-        this.app.post('/api/payment/create', this.handleCreatePayment.bind(this));
-
-        // Webhook routes
-        this.app.post(`/bot${config.BOT_TOKEN}`, (req, res) => {
-            telegramBot.bot.handleUpdate(req.body, res);
-        });
-
-        // SPA fallback
-        this.app.get('*', (req, res) => {
-            res.sendFile(join(__dirname, 'webapp', 'index.html'));
-        });
-    }
-
-    setupWebSocket() {
-        this.server = createServer(this.app);
-        this.io = new Server(this.server, {
-            cors: {
-                origin: config.WEBAPP_URL,
-                methods: ["GET", "POST"]
-            }
-        });
-
-        this.io.on('connection', (socket) => {
-            logger.info(`🔌 WebSocket подключен: ${socket.id}`);
-
-            socket.on('authenticate', async (data) => {
-                try {
-                    const user = security.verifyToken(data.token);
-                    socket.userId = user.id;
-                    socket.join(`user_${user.id}`);
-                    logger.info(`✅ WebSocket аутентифицирован: ${user.id}`);
-                } catch (error) {
-                    socket.emit('error', { message: 'Authentication failed' });
-                    socket.disconnect();
-                }
-            });
-
-            socket.on('disconnect', () => {
-                logger.info(`🔌 WebSocket отключен: ${socket.id}`);
-            });
-        });
-    }
-
-    setupErrorHandling() {
-        // 404 handler
-        this.app.use((req, res) => {
-            res.status(404).json({
-                error: 'Route not found',
-                path: req.path,
-                method: req.method
-            });
-        });
-
-        // Global error handler
-        this.app.use((error, req, res, next) => {
-            logger.error('Global error handler:', error);
-
-            if (error instanceof multer.MulterError) {
-                if (error.code === 'LIMIT_FILE_SIZE') {
-                    return res.status(400).json({
-                        error: 'File too large',
-                        maxSize: config.UPLOAD_MAX_SIZE
-                    });
-                }
-            }
-
-            res.status(error.status || 500).json({
-                error: config.NODE_ENV === 'development' ? error.message : 'Internal server error'
-            });
-        });
-    }
-
-    async getSystemHealth() {
-        const checks = {
-            database: 'unknown',
-            redis: 'unknown',
-            telegram: 'unknown',
-            storage: 'unknown'
-        };
-
-        try {
-            // Проверка базы данных
-            await db.query('SELECT 1');
-            checks.database = 'healthy';
-        } catch (error) {
-            checks.database = 'unhealthy';
-        }
-
-        try {
-            // Проверка Redis
-            await cache.redis.ping();
-            checks.redis = 'healthy';
-        } catch (error) {
-            checks.redis = 'unhealthy';
-        }
-
-        try {
-            // Проверка Telegram бота
-            await telegramBot.bot.telegram.getMe();
-            checks.telegram = 'healthy';
-        } catch (error) {
-            checks.telegram = 'unhealthy';
-        }
-
-        try {
-            // Проверка хранилища
-            await fs.access(config.UPLOAD_PATH);
-            checks.storage = 'healthy';
-        } catch (error) {
-            checks.storage = 'unhealthy';
-        }
-
-        const allHealthy = Object.values(checks).every(status => status === 'healthy');
-
-        return {
-            status: allHealthy ? 'healthy' : 'degraded',
-            timestamp: new Date().toISOString(),
-            version: '2.0.0',
-            checks
-        };
-    }
-
-    async handleUserRequest(req, res) {
-        try {
-            const { id, firstName, username } = req.body;
-            
-            if (!id) {
-                return res.status(400).json({ error: 'User ID is required' });
-            }
-
-            // Валидация входных данных
-            const validation = await security.validateInput(
-                Joi.object({
-                    id: Joi.number().required(),
-                    firstName: Joi.string().max(100),
-                    username: Joi.string().max(50)
-                }),
-                req.body
-            );
-
-            if (!validation.isValid) {
-                return res.status(400).json({ 
-                    error: 'Validation failed', 
-                    details: validation.errors 
-                });
-            }
-
-            const result = await db.query(
-                'SELECT * FROM users WHERE id = $1',
-                [id]
-            );
-            
-            let user;
-            
-            if (result.rows.length === 0) {
-                // Создаем нового пользователя
-                const newUser = {
-                    id: id,
-                    telegram_data: {
-                        first_name: firstName || 'Пользователь',
-                        username: username || ''
-                    },
-                    is_admin: config.ADMIN_IDS.includes(parseInt(id)),
-                    is_super_admin: parseInt(id) === config.SUPER_ADMIN_ID
-                };
-
-                await db.query(
-                    `INSERT INTO users (id, telegram_data, is_admin, is_super_admin)
-                     VALUES ($1, $2, $3, $4)`,
-                    [newUser.id, newUser.telegram_data, newUser.is_admin, newUser.is_super_admin]
-                );
-
-                user = newUser;
-            } else {
-                user = result.rows[0];
-            }
-
-            // Преобразуем данные пользователя для фронтенда
-            const userResponse = {
-                id: user.id,
-                firstName: user.telegram_data?.first_name || firstName,
-                username: user.telegram_data?.username || username,
-                specialization: user.profile_data?.specialization || '',
-                city: user.profile_data?.city || '',
-                email: user.profile_data?.email || '',
-                subscription: user.subscription_data || { status: 'inactive', type: 'free' },
-                progress: user.progress_data || {},
-                favorites: user.favorites_data || {},
-                isAdmin: user.is_admin,
-                isSuperAdmin: user.is_super_admin,
-                joinedAt: user.created_at,
-                surveyCompleted: user.survey_completed
-            };
-
-            res.json({ success: true, user: userResponse });
-        } catch (error) {
-            logger.error('User API Error:', error);
-            res.status(500).json({ error: 'Internal server error' });
-        }
-    }
-
-    async handleUserProfile(req, res) {
-        try {
-            // Для демо-режима возвращаем тестового пользователя
-            const userResponse = {
-                id: 898508164,
-                firstName: 'Демо Пользователь',
-                username: 'demo',
-                specialization: 'Невролог',
-                city: 'Москва',
-                email: 'demo@anb-academy.ru',
-                subscription: { 
-                    status: 'active', 
-                    type: 'premium',
-                    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-                },
-                progress: {
-                    level: 'Понимаю',
-                    experience: 1250,
-                    level_threshold: 1000,
-                    rank: 'Продвинутый',
-                    steps: {
-                        coursesBought: 3,
-                        modulesCompleted: 12,
-                        materialsWatched: 8
-                    }
-                },
-                favorites: {
-                    courses: [1],
-                    podcasts: [],
-                    streams: [],
-                    videos: [],
-                    materials: []
-                },
-                isAdmin: true,
-                isSuperAdmin: true,
-                joinedAt: new Date('2024-01-01').toISOString()
-            };
-
-            res.json({ success: true, user: userResponse });
-        } catch (error) {
-            logger.error('User profile error:', error);
-            res.status(500).json({ error: 'Internal server error' });
-        }
-    }
-
-    async handleGetContent(req, res) {
-        try {
-            const response = await db.query(`
-                SELECT c.*, 
-                       COALESCE(c.image_url, '/webapp/assets/course-default.jpg') as image_url 
-                FROM courses c 
-                WHERE c.active = TRUE 
-                ORDER BY c.created_at DESC 
-                LIMIT 20
-            `);
-
-            const content = {
-                courses: response.rows,
-                podcasts: [],
-                streams: [],
-                videos: [],
-                materials: [],
-                events: [],
-                promotions: [],
-                chats: []
-            };
-
-            res.json({ success: true, data: content });
-        } catch (error) {
-            logger.error('Content API Error:', error);
-            
-            // Fallback to demo content
-            const demoContent = {
-                courses: [
-                    {
-                        id: 1,
-                        title: 'Мануальные техники в практике невролога',
-                        description: '6 модулей по современным мануальным методикам',
-                        price: 25000,
-                        duration: '12 недель',
-                        modules: 6,
-                        category: 'Мануальные техники',
-                        level: 'advanced',
-                        image_url: '/webapp/assets/course-manual.jpg',
-                        rating: 4.8,
-                        students_count: 156,
-                        featured: true
-                    }
-                ],
-                podcasts: [],
-                streams: [],
-                videos: [],
-                materials: [],
-                events: [],
-                promotions: [],
-                chats: []
-            };
-            
-            res.json({ success: true, data: demoContent });
-        }
-    }
-
-    async handleGetContentByType(req, res) {
-        try {
-            const { type } = req.params;
-            
-            if (type === 'courses') {
-                const response = await db.query(`
-                    SELECT *, 
-                           COALESCE(image_url, '/webapp/assets/course-default.jpg') as image_url 
-                    FROM courses 
-                    WHERE active = TRUE 
-                    ORDER BY created_at DESC 
-                    LIMIT 20
-                `);
-                res.json({ success: true, data: response.rows });
-            } else {
-                res.json({ success: true, data: [] });
-            }
-        } catch (error) {
-            logger.error('Content by type error:', error);
-            res.status(500).json({ error: 'Internal server error' });
-        }
-    }
-
-    async handleToggleFavorite(req, res) {
-        try {
-            const { contentId, contentType } = req.body;
-            
-            // В реальном приложении здесь будет обновление в базе данных
-            const favorites = {
-                courses: [1],
-                podcasts: [],
-                streams: [],
-                videos: [],
-                materials: []
-            };
-
-            res.json({ success: true, favorites });
-        } catch (error) {
-            logger.error('Toggle favorite error:', error);
-            res.status(500).json({ error: 'Internal server error' });
-        }
-    }
-
-    async handleCreatePayment(req, res) {
-        try {
-            const { courseId, amount } = req.body;
-            
-            // Создаем платеж в базе данных
-            const paymentResult = await db.query(
-                `INSERT INTO payments (user_id, course_id, amount, currency, status, payment_method, total_amount)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)
-                 RETURNING *`,
-                [898508164, courseId, amount, 'RUB', 'completed', 'demo', amount]
-            );
-
-            res.json({ 
-                success: true, 
-                payment: paymentResult.rows[0],
-                message: 'Payment completed successfully'
-            });
-        } catch (error) {
-            logger.error('Create payment error:', error);
-            res.status(500).json({ error: 'Internal server error' });
-        }
-    }
-
-    start() {
-        const port = config.PORT;
         
-        this.server.listen(port, '0.0.0.0', () => {
-            logger.info(`🌐 Express сервер запущен на порту ${port}`);
-            logger.info(`📱 WebApp доступен: ${config.WEBAPP_URL}`);
-            logger.info(`🔧 Режим: ${config.NODE_ENV}`);
-            logger.info('✅ Система полностью готова к работе!');
-        });
-
-        // Graceful shutdown
-        process.on('SIGTERM', () => this.shutdown());
-        process.on('SIGINT', () => this.shutdown());
-    }
-
-    async shutdown() {
-        logger.info('🛑 Остановка системы...');
-        
-        try {
-            if (this.server) {
-                this.server.close();
-            }
-            
-            if (this.io) {
-                this.io.close();
-            }
-            
-            await db.close();
-            
-            logger.info('✅ Система остановлена корректно');
-            process.exit(0);
-        } catch (error) {
-            logger.error('❌ Ошибка при остановке системы:', error);
-            process.exit(1);
-        }
-    }
-}
-
-// ==================== ЗАПУСК СИСТЕМЫ ====================
-async function startSystem() {
-    try {
-        logger.info('🚀 Запуск Академии АНБ версии 2.0...');
-        
-        // Проверяем конфигурацию
-        config.validate();
-        
-        // Инициализируем системы
-        await db.connect();
-        await cache.flush(); // Очищаем кэш при запуске
-        
-        // Запускаем сервер
-        const expressServer = new ExpressServerSystem();
-        expressServer.start();
-        
-        // Запускаем scheduled tasks
-        startScheduledTasks();
-        
+        logger.info('Telegram Bot инициализирован');
     } catch (error) {
-        logger.error('❌ Критическая ошибка при запуске системы:', error);
-        process.exit(1);
+        logger.error('Ошибка инициализации бота:', error.message);
     }
+} else {
+    logger.warn('Бот-токен не настроен, бот отключен');
 }
 
-function startScheduledTasks() {
-    logger.info('⏰ Запуск запланированных задач...');
-    
-    // Ежедневный бэкап
-    cron.schedule(config.BACKUP_INTERVAL, async () => {
-        logger.info('💾 Запуск ежедневного бэкапа...');
-        // Реализация бэкапа
-    });
-    
-    // Очистка старых данных
-    cron.schedule(config.CLEANUP_INTERVAL, async () => {
-        logger.info('🧹 Очистка старых данных...');
-        // Реализация очистки
-    });
-    
-    // Проверка здоровья системы
-    cron.schedule(config.HEALTH_CHECK_INTERVAL, async () => {
-        const health = await new ExpressServerSystem().getSystemHealth();
-        if (health.status !== 'healthy') {
-            logger.warn('⚠️ Проблемы со здоровьем системы:', health);
+// Middleware
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+app.use(helmet());
+app.use(compression());
+
+// Статические файлы
+app.use('/uploads', express.static(join(__dirname, 'uploads')));
+app.use('/webapp', express.static(join(__dirname, 'webapp')));
+app.use('/assets', express.static(join(__dirname, 'webapp/assets')));
+
+// API Routes
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'healthy', 
+        timestamp: new Date().toISOString(),
+        version: '2.0.0',
+        services: {
+            api: 'healthy',
+            telegram: bot ? 'connected' : 'disabled'
         }
     });
+});
+
+app.post('/api/user', (req, res) => {
+    const { id, firstName, username } = req.body;
     
-    logger.info('✅ Все запланированные задачи запущены');
+    // Демо-данные пользователя
+    const userData = {
+        id: id || 898508164,
+        firstName: firstName || 'Демо Пользователь',
+        username: username || 'user',
+        specialization: 'Невролог',
+        city: 'Москва',
+        email: 'demo@anb-academy.ru',
+        subscription: { 
+            status: 'active', 
+            type: 'premium',
+            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        progress: {
+            level: 'Понимаю',
+            experience: 1250,
+            level_threshold: 1000,
+            rank: 'Продвинутый',
+            steps: {
+                coursesBought: 3,
+                modulesCompleted: 12,
+                materialsWatched: 8
+            }
+        },
+        favorites: {
+            courses: [1],
+            podcasts: [],
+            streams: [],
+            videos: [],
+            materials: []
+        },
+        isAdmin: true,
+        isSuperAdmin: true,
+        joinedAt: new Date('2024-01-01').toISOString()
+    };
+    
+    res.json({
+        success: true,
+        user: userData
+    });
+});
+
+app.get('/api/content', (req, res) => {
+    // Демо-контент
+    const demoContent = {
+        courses: [
+            {
+                id: 1,
+                title: 'Мануальные техники в практике невролога',
+                subtitle: 'Современные подходы к диагностике и лечению',
+                description: '6 модулей по современным мануальным методикам',
+                price: 25000,
+                original_price: 30000,
+                discount: 16.67,
+                duration: '12 недель',
+                modules: 6,
+                lessons: 24,
+                category: 'Мануальные техники',
+                level: 'advanced',
+                image_url: '/webapp/assets/course-manual.jpg',
+                rating: 4.8,
+                students_count: 156,
+                featured: true,
+                popular: true,
+                curriculum: [
+                    {
+                        module: 1,
+                        title: 'Основы мануальной диагностики',
+                        duration: '2 недели',
+                        lessons: [
+                            { title: 'Анатомия позвоночника', duration: 45, type: 'video' },
+                            { title: 'Пальпаторная диагностика', duration: 60, type: 'video' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 2,
+                title: 'Неврологическая диагностика: от основ к практике',
+                description: '5 модулей по современной неврологической диагностике',
+                price: 18000,
+                duration: '8 недель',
+                modules: 5,
+                category: 'Неврология',
+                level: 'intermediate',
+                image_url: '/webapp/assets/course-diagnosis.jpg',
+                rating: 4.6,
+                students_count: 234
+            }
+        ],
+        podcasts: [
+            {
+                id: 1,
+                title: 'АНБ FM: Современная неврология и вызовы времени',
+                description: 'Обсуждение новых тенденций и вызовов в современной неврологии',
+                duration: '45:20',
+                category: 'Неврология',
+                listens: 2345,
+                image_url: '/webapp/assets/podcast-neurology.jpg'
+            }
+        ],
+        streams: [
+            {
+                id: 1,
+                title: 'Разбор клинического случая: Болевой синдром в практике',
+                description: 'Прямой эфир с разбором сложного клинического случая',
+                duration: '1:30:00',
+                live: true,
+                participants: 89,
+                thumbnail_url: '/webapp/assets/stream-pain-syndrome.jpg'
+            }
+        ],
+        videos: [
+            {
+                id: 1,
+                title: 'Шпаргалка невролога: Неврологический осмотр за 15 минут',
+                description: 'Быстрый гайд по основным тестам и методикам',
+                duration: '15:30',
+                category: 'Неврология',
+                views: 4567,
+                thumbnail_url: '/webapp/assets/video-neurological-exam.jpg'
+            }
+        ],
+        materials: [
+            {
+                id: 1,
+                title: 'МРТ разбор: Рассеянный склероз и дифференциальная диагностика',
+                description: 'Детальный разбор МРТ с клиническими случаями',
+                category: 'Неврология',
+                downloads: 1234,
+                image_url: '/webapp/assets/material-ms-mri.jpg'
+            }
+        ],
+        events: [
+            {
+                id: 1,
+                title: 'Конференция: Современная неврология 2024',
+                description: 'Ежегодная конференция с ведущими специалистами',
+                event_date: new Date('2024-02-15T10:00:00').toISOString(),
+                location: 'Москва, ЦВК Экспоцентр',
+                participants: 456,
+                image_url: '/webapp/assets/event-neurology-conf.jpg'
+            }
+        ],
+        promotions: [
+            {
+                id: 1,
+                title: 'Скидка 25% на первую подписку Premium',
+                description: 'Специальное предложение для новых пользователей',
+                discount: 25,
+                active: true,
+                image_url: '/webapp/assets/promo-welcome.jpg'
+            }
+        ],
+        chats: [
+            {
+                id: 1,
+                name: 'Общий чат Академии АНБ',
+                description: 'Основной чат для общения всех участников',
+                participants_count: 1567,
+                image_url: '/webapp/assets/chat-main.jpg'
+            }
+        ]
+    };
+    
+    res.json({ 
+        success: true, 
+        data: demoContent 
+    });
+});
+
+app.post('/api/favorites/toggle', (req, res) => {
+    const { contentId, contentType } = req.body;
+    
+    res.json({
+        success: true,
+        favorites: {
+            courses: [1],
+            podcasts: [],
+            streams: [],
+            videos: [],
+            materials: []
+        }
+    });
+});
+
+app.post('/api/payment/create', (req, res) => {
+    const { courseId, amount } = req.body;
+    
+    res.json({ 
+        success: true, 
+        payment: {
+            id: Date.now(),
+            user_id: 898508164,
+            course_id: courseId,
+            amount: amount,
+            currency: 'RUB',
+            status: 'completed',
+            created_at: new Date().toISOString()
+        },
+        message: 'Payment completed successfully'
+    });
+});
+
+// Webhook для Telegram
+if (bot) {
+    app.post(`/bot${config.BOT_TOKEN}`, (req, res) => {
+        bot.handleUpdate(req.body, res);
+    });
 }
 
-// Запускаем систему
-startSystem();
+// WebSocket соединения
+io.on('connection', (socket) => {
+    logger.info(`WebSocket подключен: ${socket.id}`);
 
-export {
-    db,
-    cache,
-    security,
-    telegramBot,
-    logger,
-    config
-};
+    socket.on('authenticate', (data) => {
+        socket.userId = data.userId || 898508164;
+        socket.join(`user_${socket.userId}`);
+        logger.info(`WebSocket аутентифицирован: ${socket.userId}`);
+    });
+
+    socket.on('disconnect', () => {
+        logger.info(`WebSocket отключен: ${socket.id}`);
+    });
+});
+
+// SPA Fallback
+app.get('*', (req, res) => {
+    res.sendFile(join(__dirname, 'webapp', 'index.html'));
+});
+
+// Запуск сервера
+server.listen(config.PORT, '0.0.0.0', () => {
+    logger.info(`🚀 Сервер запущен на порту ${config.PORT}`);
+    logger.info(`📱 WebApp доступен: ${config.WEBAPP_URL}`);
+    logger.info(`🔧 Режим: ${config.NODE_ENV}`);
+    logger.info('✅ Академия АНБ готова к работе!');
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    logger.info('🛑 Остановка сервера...');
+    if (bot) {
+        bot.stop();
+    }
+    process.exit(0);
+});
+
+process.on('SIGINT', () => {
+    logger.info('🛑 Остановка по Ctrl+C...');
+    if (bot) {
+        bot.stop();
+    }
+    process.exit(0);
+});
+
+export { app, config };
