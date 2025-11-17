@@ -1,6 +1,4 @@
 /* style.css - ПОЛНАЯ СТИЛИЗАЦИЯ АКАДЕМИИ АНБ */
-
-/* ==================== БАЗОВЫЕ СТИЛИ ==================== */
 * {
     margin: 0;
     padding: 0;
@@ -24,7 +22,7 @@ body {
     position: relative;
 }
 
-/* ==================== HEADER ==================== */
+/* HEADER */
 .header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -71,7 +69,7 @@ body {
     background: rgba(255,255,255,0.1);
 }
 
-/* ==================== SEARCH ==================== */
+/* SEARCH */
 .search-container {
     padding: 15px 20px;
     background: #f8f9fa;
@@ -92,14 +90,14 @@ body {
     border-color: #667eea;
 }
 
-/* ==================== MAIN CONTENT ==================== */
+/* MAIN CONTENT */
 .main {
     padding: 20px;
-    padding-bottom: 80px; /* Для навигации */
+    padding-bottom: 80px;
     min-height: calc(100vh - 140px);
 }
 
-/* ==================== NAVIGATION ==================== */
+/* NAVIGATION */
 .nav {
     position: fixed;
     bottom: 0;
@@ -137,7 +135,7 @@ body {
     font-size: 0.75em;
 }
 
-/* ==================== PAGES ==================== */
+/* PAGES */
 .page {
     animation: fadeIn 0.3s ease-in;
 }
@@ -147,7 +145,7 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* ==================== HOME PAGE ==================== */
+/* HOME PAGE */
 .home-page {
     display: flex;
     flex-direction: column;
@@ -290,7 +288,7 @@ body {
     color: #718096;
 }
 
-/* ==================== CONTENT LISTS ==================== */
+/* CONTENT LISTS */
 .page-header {
     margin-bottom: 20px;
 }
@@ -304,31 +302,6 @@ body {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-}
-
-.page-tabs {
-    display: flex;
-    gap: 5px;
-    background: #f8f9fa;
-    padding: 4px;
-    border-radius: 8px;
-}
-
-.tab-btn {
-    flex: 1;
-    padding: 8px 12px;
-    border: none;
-    background: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85em;
-    transition: all 0.2s;
-}
-
-.tab-btn.active {
-    background: white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    font-weight: 600;
 }
 
 .content-list {
@@ -438,140 +411,7 @@ body {
     color: #e53e3e;
 }
 
-/* ==================== COURSE DETAIL ==================== */
-.course-detail {
-    display: flex;
-    flex-direction: column;
-    gap: 25px;
-}
-
-.course-hero {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-}
-
-.course-image {
-    width: 120px;
-    height: 120px;
-    border-radius: 12px;
-    overflow: hidden;
-    flex-shrink: 0;
-    background: #f8f9fa;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.course-image-fallback {
-    font-size: 3em;
-    color: #6c757d;
-}
-
-.course-info {
-    flex: 1;
-}
-
-.course-title {
-    font-size: 1.4em;
-    font-weight: 700;
-    margin-bottom: 10px;
-    color: #2d3748;
-}
-
-.course-description {
-    color: #718096;
-    line-height: 1.5;
-    margin-bottom: 15px;
-}
-
-.course-stats {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-}
-
-.course-stat {
-    text-align: center;
-    padding: 10px;
-    background: #f8f9fa;
-    border-radius: 8px;
-}
-
-.stat-value {
-    font-size: 1.2em;
-    font-weight: 700;
-    color: #667eea;
-    margin-bottom: 4px;
-}
-
-.stat-label {
-    font-size: 0.8em;
-    color: #718096;
-}
-
-.course-content h3 {
-    margin-bottom: 15px;
-    color: #2d3748;
-}
-
-.modules-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.module-item {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border-left: 4px solid #667eea;
-}
-
-.module-number {
-    width: 30px;
-    height: 30px;
-    background: #667eea;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    flex-shrink: 0;
-}
-
-.module-info {
-    flex: 1;
-}
-
-.module-title {
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.module-description {
-    font-size: 0.85em;
-    color: #718096;
-}
-
-.module-status {
-    color: #6c757d;
-    font-size: 1.2em;
-}
-
-.course-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding-top: 20px;
-    border-top: 1px solid #e9ecef;
-}
-
-/* ==================== BUTTONS ==================== */
+/* BUTTONS */
 .btn {
     padding: 12px 20px;
     border: none;
@@ -598,15 +438,6 @@ body {
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-.btn-secondary {
-    background: #6c757d;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #5a6268;
-}
-
 .btn-outline {
     background: transparent;
     border: 2px solid #667eea;
@@ -616,25 +447,6 @@ body {
 .btn-outline:hover {
     background: #667eea;
     color: white;
-}
-
-.btn-danger {
-    background: #e53e3e;
-    color: white;
-}
-
-.btn-danger:hover {
-    background: #c53030;
-}
-
-.btn-small {
-    padding: 8px 12px;
-    font-size: 0.8em;
-}
-
-.btn-large {
-    padding: 16px 24px;
-    font-size: 1em;
 }
 
 .back-btn {
@@ -650,31 +462,54 @@ body {
     gap: 5px;
 }
 
-/* ==================== EMPTY STATES ==================== */
-.empty-state {
+/* LOADING STATES */
+.loading-state {
     text-align: center;
-    padding: 40px 20px;
+    padding: 60px 20px;
     color: #718096;
 }
 
-.empty-icon {
-    font-size: 3em;
-    margin-bottom: 15px;
-    opacity: 0.5;
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
 }
 
-.empty-text {
-    font-size: 1.1em;
-    margin-bottom: 8px;
-    color: #4a5568;
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-.empty-hint {
-    font-size: 0.9em;
+/* ERROR STATES */
+.error {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.error-icon {
+    font-size: 4em;
     margin-bottom: 20px;
+    opacity: 0.7;
 }
 
-/* ==================== PROFILE PAGE ==================== */
+.error-text {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #2d3748;
+}
+
+.error-hint {
+    color: #718096;
+    margin-bottom: 25px;
+    line-height: 1.4;
+}
+
+/* PROFILE PAGE */
 .profile-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -854,10 +689,6 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.stat-card.large {
-    grid-column: span 2;
-}
-
 .stat-value {
     font-size: 2em;
     font-weight: 700;
@@ -876,7 +707,7 @@ body {
     gap: 10px;
 }
 
-/* ==================== ADMIN PANEL ==================== */
+/* ADMIN PANEL */
 .admin-header {
     text-align: center;
     padding: 20px 0;
@@ -1086,133 +917,7 @@ body {
     color: #718096;
 }
 
-/* ==================== CHAT STYLES ==================== */
-.chat-detail-page {
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - 140px);
-}
-
-.chat-header {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 15px 20px;
-    background: white;
-    border-bottom: 1px solid #e9ecef;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
-.chat-info {
-    flex: 1;
-}
-
-.chat-name {
-    font-weight: 600;
-    margin-bottom: 2px;
-}
-
-.chat-status {
-    font-size: 0.8em;
-    color: #718096;
-}
-
-.chat-messages {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.message {
-    display: flex;
-    gap: 10px;
-    max-width: 85%;
-}
-
-.message.received {
-    align-self: flex-start;
-}
-
-.message.sent {
-    align-self: flex-end;
-    flex-direction: row-reverse;
-}
-
-.message-avatar {
-    width: 35px;
-    height: 35px;
-    background: #f8f9fa;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.9em;
-    flex-shrink: 0;
-}
-
-.message-content {
-    background: #f8f9fa;
-    padding: 12px 15px;
-    border-radius: 18px;
-    position: relative;
-}
-
-.message.sent .message-content {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-
-.message-sender {
-    font-weight: 600;
-    font-size: 0.8em;
-    margin-bottom: 4px;
-    color: #667eea;
-}
-
-.message.sent .message-sender {
-    display: none;
-}
-
-.message-text {
-    line-height: 1.4;
-}
-
-.message-time {
-    font-size: 0.7em;
-    opacity: 0.7;
-    margin-top: 4px;
-    text-align: right;
-}
-
-.chat-input {
-    display: flex;
-    gap: 10px;
-    padding: 15px 20px;
-    background: white;
-    border-top: 1px solid #e9ecef;
-    position: sticky;
-    bottom: 0;
-}
-
-.message-input {
-    flex: 1;
-    padding: 12px 15px;
-    border: 1px solid #e9ecef;
-    border-radius: 25px;
-    outline: none;
-    font-size: 14px;
-}
-
-.message-input:focus {
-    border-color: #667eea;
-}
-
-/* ==================== PROMOTIONS ==================== */
+/* PROMOTIONS */
 .promotions-grid {
     display: flex;
     flex-direction: column;
@@ -1290,7 +995,7 @@ body {
     font-weight: 600;
 }
 
-/* ==================== COMMUNITY ==================== */
+/* COMMUNITY */
 .community-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -1331,7 +1036,7 @@ body {
     line-height: 1.3;
 }
 
-/* ==================== CHATS LIST ==================== */
+/* CHATS */
 .chats-list {
     display: flex;
     flex-direction: column;
@@ -1416,153 +1121,62 @@ body {
     text-align: center;
 }
 
-/* ==================== LOADING STATES ==================== */
-.loading-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: #718096;
-}
-
-.loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #667eea;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 20px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.skeleton-loading {
+/* FAVORITES */
+.favorites-tabs {
     display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.skeleton-search {
-    height: 44px;
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: loading 1.5s infinite;
-    border-radius: 22px;
-}
-
-.skeleton-nav-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-}
-
-.skeleton-nav-card {
-    background: #f8f9fa;
-    border-radius: 16px;
-    padding: 20px 15px;
-    text-align: center;
-}
-
-.skeleton-icon {
-    width: 40px;
-    height: 40px;
-    background: #e9ecef;
-    border-radius: 50%;
-    margin: 0 auto 10px;
-}
-
-.skeleton-text {
-    height: 12px;
-    background: #e9ecef;
-    border-radius: 6px;
-    margin: 0 auto;
-}
-
-.skeleton-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.skeleton-action {
-    flex: 1;
-    height: 50px;
     background: #f8f9fa;
     border-radius: 12px;
-}
-
-@keyframes loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-/* ==================== ERROR STATES ==================== */
-.error {
-    text-align: center;
-    padding: 60px 20px;
-}
-
-.error-icon {
-    font-size: 4em;
+    padding: 4px;
     margin-bottom: 20px;
-    opacity: 0.7;
 }
 
-.error-text {
-    font-size: 1.2em;
+.tab-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.2s;
+}
+
+.tab-btn.active {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     font-weight: 600;
-    margin-bottom: 10px;
-    color: #2d3748;
 }
 
-.error-hint {
+.favorites-stats {
+    font-size: 0.9em;
     color: #718096;
-    margin-bottom: 25px;
-    line-height: 1.4;
+    margin-bottom: 15px;
 }
 
-/* ==================== LIVE BADGES ==================== */
-.live-badge {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    background: #e53e3e;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 8px;
-    font-size: 0.7em;
-    font-weight: 700;
-    animation: pulse 2s infinite;
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #718096;
 }
 
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.7; }
-    100% { opacity: 1; }
+.empty-icon {
+    font-size: 3em;
+    margin-bottom: 15px;
+    opacity: 0.5;
 }
 
-.event-type-badge {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    padding: 4px 8px;
-    border-radius: 8px;
-    font-size: 0.7em;
-    font-weight: 600;
+.empty-text {
+    font-size: 1.1em;
+    margin-bottom: 8px;
+    color: #4a5568;
 }
 
-.event-type-badge.online {
-    background: #c6f6d5;
-    color: #22543d;
+.empty-hint {
+    font-size: 0.9em;
+    margin-bottom: 20px;
 }
 
-.event-type-badge.offline {
-    background: #fed7d7;
-    color: #c53030;
-}
-
-/* ==================== RESPONSIVE ==================== */
+/* RESPONSIVE */
 @media (max-width: 480px) {
     .app {
         max-width: 100%;
@@ -1590,110 +1204,7 @@ body {
         grid-template-columns: 1fr;
     }
     
-    .course-hero {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .course-image {
-        width: 100px;
-        height: 100px;
-        margin: 0 auto;
-    }
-    
-    .course-stats {
-        grid-template-columns: repeat(4, 1fr);
-    }
-    
     .community-grid {
         grid-template-columns: 1fr;
-    }
-}
-
-/* ==================== UTILITY CLASSES ==================== */
-.text-center { text-align: center; }
-.text-left { text-align: left; }
-.text-right { text-align: right; }
-
-.mb-10 { margin-bottom: 10px; }
-.mb-20 { margin-bottom: 20px; }
-.mt-10 { margin-top: 10px; }
-.mt-20 { margin-top: 20px; }
-
-.hidden { display: none; }
-.visible { display: block; }
-
-.flex { display: flex; }
-.flex-column { flex-direction: column; }
-.flex-center { justify-content: center; align-items: center; }
-.flex-between { justify-content: space-between; }
-.flex-around { justify-content: space-around; }
-
-/* ==================== DARK MODE SUPPORT ==================== */
-@media (prefers-color-scheme: dark) {
-    body {
-        background: #1a202c;
-    }
-    
-    .app {
-        background: #2d3748;
-        color: #e2e8f0;
-    }
-    
-    .header {
-        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
-    }
-    
-    .search-container {
-        background: #4a5568;
-    }
-    
-    .search-input {
-        background: #2d3748;
-        border-color: #4a5568;
-        color: #e2e8f0;
-    }
-    
-    .nav {
-        background: #2d3748;
-        border-color: #4a5568;
-    }
-    
-    .nav-card, .content-item, .stat-card, .admin-user-item, 
-    .admin-content-item, .chat-item, .promotion-card,
-    .community-card, .activity-item, .module-item,
-    .journey-level, .message-content {
-        background: #4a5568;
-        border-color: #718096;
-        color: #e2e8f0;
-    }
-    
-    .content-title, .hero-section h2, .page-header h2,
-    .profile-name, .level-title, .admin-section h3,
-    .chat-name, .promotion-title, .community-title {
-        color: #e2e8f0;
-    }
-    
-    .content-description, .hero-section p, .level-description,
-    .chat-description, .promotion-description, .community-description,
-    .activity-time, .module-description, .progress-text,
-    .stat-label, .user-meta, .join-date, .info-value {
-        color: #a0aec0;
-    }
-    
-    .empty-state, .error {
-        color: #a0aec0;
-    }
-    
-    .empty-text, .error-text {
-        color: #e2e8f0;
-    }
-    
-    .skeleton-search, .skeleton-nav-card, .skeleton-action {
-        background: #4a5568;
-    }
-    
-    .skeleton-icon, .skeleton-text {
-        background: #718096;
     }
 }
