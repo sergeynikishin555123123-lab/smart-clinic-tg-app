@@ -1,4 +1,4 @@
-// server.js - РАСШИРЕННАЯ ВЕРСИЯ
+// server.js - ИСПРАВЛЕННАЯ ВЕРСИЯ С БЕЗОПАСНОСТЬЮ
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 3000;
 // Базовая конфигурация
 const config = {
     BOT_TOKEN: process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4',
-    WEBAPP_URL: process.env.WEBAPP_URL || `http://localhost:${PORT}`,
+    WEBAPP_URL: process.env.WEBAPP_URL || `https://sergeynikishin555123123-lab-smart-clinic-tg-app-f84f.twc1.net`,
     NODE_ENV: process.env.NODE_ENV || 'production',
     ADMIN_IDS: [898508164],
     SUPER_ADMIN_ID: 898508164
@@ -74,6 +74,7 @@ class TelegramBotSystem {
         this.bot.command('menu', this.handleMenu.bind(this));
         this.bot.command('courses', this.handleCourses.bind(this));
         this.bot.command('help', this.handleHelp.bind(this));
+        this.bot.command('admin', this.handleAdmin.bind(this));
     }
 
     async handleStart(ctx) {
@@ -113,6 +114,22 @@ class TelegramBotSystem {
         });
     }
 
+    async handleAdmin(ctx) {
+        const userId = ctx.from.id;
+        if (config.ADMIN_IDS.includes(userId)) {
+            await ctx.reply('🔧 Панель администратора', {
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '📊 Статистика', callback_data: 'admin_stats' },
+                        { text: '👥 Пользователи', callback_data: 'admin_users' }
+                    ]]
+                }
+            });
+        } else {
+            await ctx.reply('❌ У вас нет доступа к админ-панели');
+        }
+    }
+
     async handleHelp(ctx) {
         const helpText = `🆘 Помощь по Академии АНБ:\n\n📚 /courses - Посмотреть курсы\n👤 /profile - Посмотреть профиль\n🆘 /support - Связь с поддержкой\n📱 /menu - Главное меню`;
         await ctx.reply(helpText);
@@ -121,16 +138,20 @@ class TelegramBotSystem {
     async launchBot() {
         try {
             if (config.NODE_ENV === 'production') {
+                // В production используем webhook
+                this.bot.telegram.setWebhook(`${config.WEBAPP_URL}/bot${config.BOT_TOKEN}`);
                 this.bot.launch({
                     webhook: {
                         domain: config.WEBAPP_URL,
-                        port: config.PORT
+                        port: PORT
                     }
                 });
+                logger.info(`✅ Telegram Bot запущен в production режиме с webhook: ${config.WEBAPP_URL}/bot${config.BOT_TOKEN}`);
             } else {
+                // В development используем polling
                 this.bot.launch();
+                logger.info('✅ Telegram Bot запущен в development режиме');
             }
-            logger.info('✅ Telegram Bot запущен');
         } catch (error) {
             logger.error('❌ Ошибка запуска бота:', error);
         }
@@ -146,9 +167,34 @@ class ExpressServerSystem {
     }
 
     setupMiddleware() {
-        // Безопасность
-        this.app.use(helmet());
-        this.app.use(cors());
+        // Настройки CORS для Telegram Web App
+        this.app.use(cors({
+            origin: [
+                'https://web.telegram.org',
+                'https://telegram.org',
+                config.WEBAPP_URL,
+                'http://localhost:3000'
+            ],
+            credentials: true,
+            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+        }));
+
+        // Безопасность с настройками для Telegram
+        this.app.use(helmet({
+            contentSecurityPolicy: {
+                directives: {
+                    defaultSrc: ["'self'", "https://telegram.org", "https://web.telegram.org"],
+                    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+                    fontSrc: ["'self'", "https://fonts.gstatic.com"],
+                    imgSrc: ["'self'", "data:", "https:", "blob:"],
+                    scriptSrc: ["'self'", "'unsafe-inline'"],
+                    connectSrc: ["'self'", "https://telegram.org", "https://web.telegram.org", config.WEBAPP_URL]
+                }
+            },
+            crossOriginEmbedderPolicy: false,
+            crossOriginResourcePolicy: { policy: "cross-origin" }
+        }));
         
         // Компрессия
         this.app.use(compression());
@@ -159,7 +205,10 @@ class ExpressServerSystem {
         // Rate limiting
         const limiter = rateLimit({
             windowMs: 15 * 60 * 1000,
-            max: 100
+            max: 100,
+            message: { error: 'Слишком много запросов' },
+            standardHeaders: true,
+            legacyHeaders: false
         });
         this.app.use(limiter);
         
@@ -168,8 +217,21 @@ class ExpressServerSystem {
         this.app.use(express.urlencoded({ extended: true, limit: '50mb' }));
         
         // Статические файлы
-        this.app.use('/webapp', express.static(join(__dirname, 'webapp')));
-        this.app.use('/assets', express.static(join(__dirname, 'webapp/assets')));
+        this.app.use('/webapp', express.static(join(__dirname, 'webapp'), {
+            setHeaders: (res, path) => {
+                // Разрешаем кросс-доменные запросы для статических файлов
+                res.setHeader('Access-Control-Allow-Origin', '*');
+            }
+        }));
+        
+        this.app.use('/assets', express.static(join(__dirname, 'webapp/assets'), {
+            setHeaders: (res, path) => {
+                res.setHeader('Access-Control-Allow-Origin', '*');
+            }
+        }));
+
+        // Обработка OPTIONS запросов для CORS
+        this.app.options('*', cors());
     }
 
     setupRoutes() {
@@ -178,7 +240,8 @@ class ExpressServerSystem {
             res.json({
                 status: 'healthy',
                 timestamp: new Date().toISOString(),
-                version: '2.0.0'
+                version: '2.0.0',
+                webapp_url: config.WEBAPP_URL
             });
         });
 
@@ -196,11 +259,22 @@ class ExpressServerSystem {
 
         // Webhook для Telegram
         this.app.post(`/bot${config.BOT_TOKEN}`, (req, res) => {
+            logger.info('📨 Получен webhook от Telegram');
             if (telegramBot.bot) {
                 telegramBot.bot.handleUpdate(req.body, res);
             } else {
                 res.status(200).send();
             }
+        });
+
+        // Тестовый маршрут для проверки CORS
+        this.app.get('/api/test', (req, res) => {
+            res.json({ 
+                success: true, 
+                message: 'CORS работает!',
+                timestamp: new Date().toISOString(),
+                allowed_origins: ['https://web.telegram.org', 'https://telegram.org', config.WEBAPP_URL]
+            });
         });
 
         // SPA fallback
@@ -416,6 +490,7 @@ class ExpressServerSystem {
         this.app.listen(PORT, '0.0.0.0', () => {
             logger.info(`🌐 Express сервер запущен на порту ${PORT}`);
             logger.info(`📱 WebApp доступен: ${config.WEBAPP_URL}`);
+            logger.info(`🤖 Telegram Bot Webhook: ${config.WEBAPP_URL}/bot${config.BOT_TOKEN}`);
             logger.info('✅ Академия АНБ готова к работе!');
         });
     }
