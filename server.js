@@ -541,19 +541,32 @@ class TelegramBotSystem {
         }
     }
 
+    setupWebhook(webhookUrl) {
+        try {
+            // Настраиваем вебхук для бота
+            this.bot.telegram.setWebhook(webhookUrl);
+            logger.info(`✅ Webhook установлен: ${webhookUrl}`);
+        } catch (error) {
+            logger.error('❌ Ошибка настройки webhook:', error);
+        }
+    }
+
+    handleWebhook(req, res) {
+        this.bot.handleUpdate(req.body, res);
+    }
+
     launchBot() {
         try {
+            // В production используем только обработку через webhook
+            // Не запускаем отдельный сервер для бота
             if (config.NODE_ENV === 'production') {
-                this.bot.launch({
-                    webhook: {
-                        domain: config.WEBAPP_URL,
-                        port: config.PORT
-                    }
-                });
-                logger.info('✅ Telegram Bot запущен в production режиме');
+                const webhookUrl = `${config.WEBAPP_URL}/bot${config.BOT_TOKEN}`;
+                this.setupWebhook(webhookUrl);
+                logger.info('✅ Telegram Bot настроен для работы через webhook');
             } else {
+                // В development используем polling
                 this.bot.launch();
-                logger.info('✅ Telegram Bot запущен в development режиме');
+                logger.info('✅ Telegram Bot запущен в development режиме (polling)');
             }
 
             // Graceful shutdown
@@ -666,7 +679,7 @@ class ExpressServerSystem {
 
         // Webhook routes для Telegram
         this.app.post(`/bot${config.BOT_TOKEN}`, (req, res) => {
-            telegramBot.bot.handleUpdate(req.body, res);
+            telegramBot.handleWebhook(req, res);
         });
 
         // SPA fallback - должен быть последним
@@ -1079,7 +1092,7 @@ class ExpressServerSystem {
             logger.info(`📱 WebApp доступен: ${config.WEBAPP_URL}`);
             logger.info(`🔧 Режим: ${config.NODE_ENV}`);
             
-            // Запускаем бота после успешного старта сервера
+            // Настраиваем бота после успешного старта сервера
             telegramBot.launchBot();
             
             logger.info('✅ Система полностью готова к работе!');
