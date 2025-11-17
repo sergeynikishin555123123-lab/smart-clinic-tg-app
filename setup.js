@@ -1,9 +1,12 @@
-// setup.js - оптимизирован для Timeweb
+// setup.js - оптимизирован для Timeweb без package-lock.json
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
+const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -16,6 +19,7 @@ class TimewebSetup {
         console.log('🚀 Starting Timeweb deployment setup...');
         
         try {
+            await this.installDependencies();
             await this.createDirectories();
             await this.createConfigFiles();
             await this.verifyEnvironment();
@@ -25,6 +29,22 @@ class TimewebSetup {
         } catch (error) {
             console.error('❌ Setup failed:', error.message);
             // Не выходим с ошибкой, продолжаем работу
+        }
+    }
+
+    async installDependencies() {
+        console.log('📦 Installing dependencies...');
+        
+        try {
+            // Пробуем установить без package-lock.json
+            await execAsync('npm install --no-package-lock --legacy-peer-deps --no-audit', {
+                cwd: this.baseDir,
+                timeout: 300000
+            });
+            console.log('✅ Dependencies installed');
+        } catch (error) {
+            console.warn('⚠️ Could not install all dependencies:', error.message);
+            console.log('🔄 Continuing with available dependencies...');
         }
     }
 
@@ -82,23 +102,18 @@ MAX_FILE_SIZE=52428800`;
         return `RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /index.html [L]
-
-<Files ".env">
-    Deny from all
-</Files>`;
+RewriteRule . /index.html [L]`;
     }
 
     async verifyEnvironment() {
         console.log('🔍 Verifying environment...');
         
-        // Проверяем Node.js версию
         const nodeVersion = process.version;
         console.log(`✓ Node.js version: ${nodeVersion}`);
         
-        // Проверяем доступные модули
-        const modules = ['express', 'telegraf', 'pg', 'bcryptjs'];
-        for (const module of modules) {
+        // Проверяем только критические модули
+        const criticalModules = ['express', 'telegraf', 'pg', 'bcryptjs'];
+        for (const module of criticalModules) {
             try {
                 await import(module);
                 console.log(`✓ Module available: ${module}`);
@@ -109,6 +124,6 @@ RewriteRule . /index.html [L]
     }
 }
 
-// Автозапуск при импорте
+// Автозапуск
 const setup = new TimewebSetup();
 await setup.init();
