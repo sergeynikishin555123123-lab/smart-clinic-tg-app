@@ -5,8 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "build": "node setup.js --non-interactive"
+    "setup": "node setup.js --non-interactive",
+    "build": "npm run setup && echo 'Build complete'"
   },
   "dependencies": {
     "express": "^4.18.2",
