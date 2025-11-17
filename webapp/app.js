@@ -129,6 +129,22 @@ class AcademyApp {
                     <div class="skeleton-action"></div>
                 </div>
             </div>
+            
+            <style>
+                .skeleton-loading { padding: 20px; }
+                .skeleton-search { height: 44px; background: #f0f0f0; border-radius: 22px; margin-bottom: 20px; animation: pulse 1.5s infinite; }
+                .skeleton-nav-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+                .skeleton-nav-card { background: #f8f9fa; border-radius: 16px; padding: 20px 15px; text-align: center; }
+                .skeleton-icon { width: 40px; height: 40px; background: #e9ecef; border-radius: 50%; margin: 0 auto 10px; }
+                .skeleton-text { height: 12px; background: #e9ecef; border-radius: 6px; margin: 0 auto; }
+                .skeleton-actions { display: flex; gap: 10px; }
+                .skeleton-action { flex: 1; height: 50px; background: #f8f9fa; border-radius: 12px; }
+                @keyframes pulse { 
+                    0% { opacity: 1; }
+                    50% { opacity: 0.5; }
+                    100% { opacity: 1; }
+                }
+            </style>
         `;
     }
 
@@ -680,10 +696,7 @@ class AcademyApp {
                     ${filteredCourses.length > 0 ? filteredCourses.map(course => `
                         <div class="content-item course-item" onclick="app.openCourseDetail(${course.id})">
                             <div class="content-image">
-                                ${course.image_url ? 
-                                    `<img src="${course.image_url}" alt="${course.title}" onerror="this.style.display='none'">` :
-                                    '<div class="content-image-fallback">📚</div>'
-                                }
+                                <div class="content-image-fallback">📚</div>
                             </div>
                             <div class="content-info">
                                 <div class="content-title">${course.title}</div>
@@ -731,10 +744,7 @@ class AcademyApp {
                 <div class="course-detail">
                     <div class="course-hero">
                         <div class="course-image">
-                            ${course.image_url ? 
-                                `<img src="${course.image_url}" alt="${course.title}" onerror="this.style.display='none'">` :
-                                '<div class="course-image-fallback">📚</div>'
-                            }
+                            <div class="course-image-fallback">📚</div>
                         </div>
                         <div class="course-info">
                             <h1 class="course-title">${course.title}</h1>
@@ -811,10 +821,7 @@ class AcademyApp {
                     ${filteredPodcasts.length > 0 ? filteredPodcasts.map(podcast => `
                         <div class="content-item podcast-item" onclick="app.playPodcast(${podcast.id})">
                             <div class="content-image">
-                                ${podcast.image_url ? 
-                                    `<img src="${podcast.image_url}" alt="${podcast.title}" onerror="this.style.display='none'">` :
-                                    '<div class="content-image-fallback">🎧</div>'
-                                }
+                                <div class="content-image-fallback">🎧</div>
                             </div>
                             <div class="content-info">
                                 <div class="content-title">${podcast.title}</div>
@@ -862,10 +869,7 @@ class AcademyApp {
                     ${filteredStreams.length > 0 ? filteredStreams.map(stream => `
                         <div class="content-item stream-item" onclick="app.playStream(${stream.id})">
                             <div class="content-image">
-                                ${stream.thumbnail_url ? 
-                                    `<img src="${stream.thumbnail_url}" alt="${stream.title}" onerror="this.style.display='none'">` :
-                                    '<div class="content-image-fallback">📹</div>'
-                                }
+                                <div class="content-image-fallback">📹</div>
                                 ${stream.live ? '<div class="live-badge">LIVE</div>' : ''}
                             </div>
                             <div class="content-info">
@@ -914,10 +918,7 @@ class AcademyApp {
                     ${filteredVideos.length > 0 ? filteredVideos.map(video => `
                         <div class="content-item video-item" onclick="app.playVideo(${video.id})">
                             <div class="content-image">
-                                ${video.thumbnail_url ? 
-                                    `<img src="${video.thumbnail_url}" alt="${video.title}" onerror="this.style.display='none'">` :
-                                    '<div class="content-image-fallback">🎯</div>'
-                                }
+                                <div class="content-image-fallback">🎯</div>
                             </div>
                             <div class="content-info">
                                 <div class="content-title">${video.title}</div>
@@ -970,10 +971,7 @@ class AcademyApp {
                     ${filteredMaterials.length > 0 ? filteredMaterials.map(material => `
                         <div class="content-item material-item" onclick="app.openMaterial(${material.id})">
                             <div class="content-image">
-                                ${material.image_url ? 
-                                    `<img src="${material.image_url}" alt="${material.title}" onerror="this.style.display='none'">` :
-                                    `<div class="content-image-fallback">${this.getMaterialTypeIcon(material.material_type)}</div>`
-                                }
+                                <div class="content-image-fallback">${this.getMaterialTypeIcon(material.material_type)}</div>
                             </div>
                             <div class="content-info">
                                 <div class="content-title">${material.title}</div>
@@ -1024,10 +1022,7 @@ class AcademyApp {
                     ${filteredEvents.length > 0 ? filteredEvents.map(event => `
                         <div class="content-item event-item" onclick="app.openEvent(${event.id})">
                             <div class="content-image">
-                                ${event.image_url ? 
-                                    `<img src="${event.image_url}" alt="${event.title}" onerror="this.style.display='none'">` :
-                                    '<div class="content-image-fallback">🗺️</div>'
-                                }
+                                <div class="content-image-fallback">🗺️</div>
                                 <div class="event-type-badge ${event.event_type}">
                                     ${event.event_type === 'online' ? '💻 Онлайн' : '🏢 Офлайн'}
                                 </div>
@@ -1070,10 +1065,7 @@ class AcademyApp {
                     ${activePromotions.length > 0 ? activePromotions.map(promo => `
                         <div class="promotion-card" onclick="app.getPromotion(${promo.id})">
                             <div class="promotion-image">
-                                ${promo.image_url ? 
-                                    `<img src="${promo.image_url}" alt="${promo.title}" onerror="this.style.display='none'">` :
-                                    '<div class="promotion-image-fallback">🎁</div>'
-                                }
+                                <div class="promotion-image-fallback">🎁</div>
                                 ${promo.discount ? `<div class="promotion-discount">-${promo.discount}%</div>` : ''}
                             </div>
                             <div class="promotion-content">
@@ -1321,10 +1313,7 @@ class AcademyApp {
                 ${items.map(item => `
                     <div class="content-item" onclick="app.openFavoriteItem(${item.id}, '${this.getContentType(item)}')">
                         <div class="content-image">
-                            ${item.image_url || item.thumbnail_url ? 
-                                `<img src="${item.image_url || item.thumbnail_url}" alt="${item.title}" onerror="this.style.display='none'">` :
-                                `<div class="content-image-fallback">${this.getContentIcon(item)}</div>`
-                            }
+                            <div class="content-image-fallback">${this.getContentIcon(item)}</div>
                         </div>
                         <div class="content-info">
                             <div class="content-title">${item.title}</div>
