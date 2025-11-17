@@ -6,5 +6,9 @@ README.md
 .env
 .nyc_output
 coverage
-.log
 .DS_Store
+*.log
+logs
+backups
+uploads
+temp
