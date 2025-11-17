@@ -5,15 +5,14 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "node setup.js --non-interactive"
+    "setup": "node setup.js --non-interactive"
   },
   "dependencies": {
     "express": "^4.18.2",
     "telegraf": "^4.16.3",
-    "pg": "^8.11.3",
     "cors": "^2.8.5",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "dotenv": "^16.3.1"
+    "socket.io": "^4.7.2",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4"
   }
 }
