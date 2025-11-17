@@ -1134,28 +1134,27 @@ class TelegramBot {
         }
     }
 
-    async getOrCreateUser(telegramUser) {
-        try {
-            const result = await db.query(
-                'SELECT * FROM users WHERE id = $1',
-                [telegramUser.id]
-            );
+   // server.js - ЗАМЕНИТЬ НА ЭТОТ КОД:
+async getOrCreateUser(telegramUser) {
+    try {
+        const result = await db.query(
+            'SELECT * FROM users WHERE id = $1',
+            [telegramUser.id]
+        );
 
-            if (result.rows.length > 0) {
-                return result.rows[0];
-            }
-
-            // Проверяем является ли пользователь супер-админом
-            const isSuperAdmin = telegramUser.id === config.SUPER_ADMIN_ID;
-            const isAdmin = isSuperAdmin || config.ADMIN_IDS.includes(telegramUser.id);
-
+        let user;
+        
+        if (result.rows.length > 0) {
+            user = result.rows[0];
+        } else {
+            // ✅ ПРАВИЛЬНО: Создаем пользователя сначала
             const newUser = {
                 id: telegramUser.id,
                 telegram_data: {
                     first_name: telegramUser.first_name,
                     last_name: telegramUser.last_name || '',
-                    username: telegramUser.username,
-                    language_code: telegramUser.language_code
+                    username: telegramUser.username || '',
+                    language_code: telegramUser.language_code || 'ru'
                 },
                 profile_data: {
                     specialization: '',
@@ -1177,6 +1176,13 @@ class TelegramBot {
                         modulesCompleted: 0,
                         offlineEvents: 0,
                         publications: 0
+                    },
+                    progress: {
+                        understand: 0,
+                        connect: 0,
+                        apply: 0,
+                        systematize: 0,
+                        share: 0
                     }
                 },
                 favorites_data: {
@@ -1185,31 +1191,49 @@ class TelegramBot {
                     materials: []
                 },
                 survey_completed: false,
-                is_admin: isAdmin,
-                is_super_admin: isSuperAdmin
+                is_admin: false,
+                is_super_admin: false
             };
 
             await db.query(
-                `INSERT INTO users (id, telegram_data, profile_data, subscription_data, progress_data, favorites_data, is_admin, is_super_admin)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                `INSERT INTO users (id, telegram_data, profile_data, subscription_data, progress_data, favorites_data, survey_completed)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
                 [newUser.id, newUser.telegram_data, newUser.profile_data, 
                  newUser.subscription_data, newUser.progress_data, newUser.favorites_data, 
-                 newUser.is_admin, newUser.is_super_admin]
+                 newUser.survey_completed]
             );
 
+            user = newUser;
             console.log(`✅ Создан новый пользователь: ${telegramUser.first_name} (${telegramUser.id})`);
+        }
+
+        // ✅ ПРАВИЛЬНО: Проверяем админские права ПОСЛЕ получения/создания пользователя
+        const isSuperAdmin = user.id === config.SUPER_ADMIN_ID;
+        const isAdmin = isSuperAdmin || config.ADMIN_IDS.includes(user.id);
+        
+        // Обновляем права если нужно
+        if ((isAdmin && !user.is_admin) || (isSuperAdmin && !user.is_super_admin)) {
+            await db.query(
+                'UPDATE users SET is_admin = $1, is_super_admin = $2 WHERE id = $3',
+                [isAdmin, isSuperAdmin, user.id]
+            );
+            user.is_admin = isAdmin;
+            user.is_super_admin = isSuperAdmin;
+            
             if (isSuperAdmin) {
                 console.log(`🛠️ Пользователь назначен супер-администратором`);
             } else if (isAdmin) {
                 console.log(`🔧 Пользователь назначен администратором`);
             }
-
-            return newUser;
-        } catch (error) {
-            console.error('Ошибка создания пользователя:', error);
-            throw error;
         }
+
+        return user;
+        
+    } catch (error) {
+        console.error('❌ Ошибка создания пользователя:', error);
+        throw error;
     }
+}
 
     async launch() {
         try {
