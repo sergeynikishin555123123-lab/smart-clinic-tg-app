@@ -1,33 +1,17 @@
 import express from 'express';
-import { Telegraf, session, Scenes, Markup } from 'telegraf';
+import { Telegraf } from 'telegraf';
 import pkg from 'pg';
 const { Client } = pkg;
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import multer from 'multer';
-import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import axios from 'axios';
-import moment from 'moment';
-import _ from 'lodash';
-import Joi from 'joi';
 import rateLimit from 'express-rate-limit';
-import { body, validationResult } from 'express-validator';
 import morgan from 'morgan';
-import winston from 'winston';
-import cron from 'node-cron';
-import nodemailer from 'nodemailer';
-import QRCode from 'qrcode';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import Redis from 'ioredis';
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve } from 'path';
-import fs from 'fs/promises';
-import { createReadStream, existsSync, mkdirSync } from 'fs';
+import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -40,16 +24,9 @@ class SystemConfig {
         this.WEBAPP_URL = process.env.WEBAPP_URL || `http://localhost:${this.PORT}`;
         this.ADMIN_IDS = process.env.ADMIN_IDS ? process.env.ADMIN_IDS.split(',').map(Number) : [898508164];
         this.SUPER_ADMIN_ID = parseInt(process.env.SUPER_ADMIN_ID) || 898508164;
-        this.UPLOAD_PATH = join(__dirname, 'uploads');
         this.NODE_ENV = process.env.NODE_ENV || 'production';
         this.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://gen_user:5-R;mKGYJ<88?1@def46fb02c0eac8fefd6f734.twc1.net:5432/default_db';
         this.JWT_SECRET = process.env.JWT_SECRET || 'anb-academy-super-secret-jwt-key-2024';
-        this.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'anb-academy-encryption-key-256-bit-secure';
-        this.LOG_LEVEL = process.env.LOG_LEVEL || 'info';
-        this.CACHE_TTL = parseInt(process.env.CACHE_TTL) || 3600;
-        this.RATE_LIMIT_WINDOW = parseInt(process.env.RATE_LIMIT_WINDOW) || 15;
-        this.RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX) || 100;
-        this.UPLOAD_MAX_SIZE = parseInt(process.env.UPLOAD_MAX_SIZE) || 50 * 1024 * 1024;
     }
 
     validate() {
@@ -84,45 +61,23 @@ const config = new SystemConfig();
 // ==================== СИСТЕМА ЛОГИРОВАНИЯ ====================
 class LoggerSystem {
     constructor() {
-        this.logger = winston.createLogger({
-            level: config.LOG_LEVEL,
-            format: winston.format.combine(
-                winston.format.timestamp({
-                    format: 'YYYY-MM-DD HH:mm:ss'
-                }),
-                winston.format.errors({ stack: true }),
-                winston.format.json()
-            ),
-            defaultMeta: { service: 'anb-academy' },
-            transports: [
-                new winston.transports.Console({
-                    format: winston.format.combine(
-                        winston.format.colorize(),
-                        winston.format.simple()
-                    )
-                })
-            ]
-        });
-    }
-
-    log(level, message, meta = {}) {
-        this.logger.log(level, message, meta);
-    }
-
-    error(message, error = null) {
-        this.log('error', message, { error: error?.stack || error });
-    }
-
-    warn(message, meta = {}) {
-        this.log('warn', message, meta);
+        this.logger = {
+            info: (message, meta = {}) => console.log(`ℹ️ ${message}`, meta),
+            error: (message, error = null) => console.error(`❌ ${message}`, error),
+            warn: (message, meta = {}) => console.warn(`⚠️ ${message}`, meta)
+        };
     }
 
     info(message, meta = {}) {
-        this.log('info', message, meta);
+        this.logger.info(message, meta);
     }
 
-    debug(message, meta = {}) {
-        this.log('debug', message, meta);
+    error(message, error = null) {
+        this.logger.error(message, error);
+    }
+
+    warn(message, meta = {}) {
+        this.logger.warn(message, meta);
     }
 }
 
@@ -213,7 +168,7 @@ class DatabaseSystem {
         for (const tableSQL of tables) {
             try {
                 await this.pgClient.query(tableSQL);
-                logger.info(`✅ Таблица создана`);
+                logger.info(`✅ Таблица создана: ${tableSQL.split(' ')[5]}`);
             } catch (error) {
                 logger.error(`❌ Ошибка создания таблицы:`, error.message);
             }
@@ -290,6 +245,20 @@ class DatabaseSystem {
                         students_count: 234,
                         rating: 4.6,
                         created_by: config.SUPER_ADMIN_ID
+                    },
+                    {
+                        title: 'Реабилитация после инсульта',
+                        description: '4 модуля по современным протоколам реабилитации',
+                        price: 22000,
+                        duration: '10 недель',
+                        modules: 4,
+                        category: 'Реабилитация',
+                        level: 'advanced',
+                        image_url: '/webapp/assets/course-rehabilitation.svg',
+                        active: true,
+                        students_count: 89,
+                        rating: 4.7,
+                        created_by: config.SUPER_ADMIN_ID
                     }
                 ];
 
@@ -339,94 +308,6 @@ class DatabaseSystem {
 
 const db = new DatabaseSystem();
 
-// ==================== СИСТЕМА БЕЗОПАСНОСТИ ====================
-class SecuritySystem {
-    constructor() {
-        this.rateLimiters = new Map();
-    }
-
-    createRateLimiter(key, windowMs, max) {
-        if (!this.rateLimiters.has(key)) {
-            this.rateLimiters.set(key, {
-                requests: new Map(),
-                windowMs,
-                max
-            });
-        }
-        return this.rateLimiters.get(key);
-    }
-
-    async checkRateLimit(key, identifier, cost = 1) {
-        const limiter = this.createRateLimiter(key, 15 * 60 * 1000, 100);
-        
-        const now = Date.now();
-        const windowStart = now - limiter.windowMs;
-
-        // Очищаем старые записи
-        for (const [timestamp, count] of limiter.requests.entries()) {
-            if (timestamp < windowStart) {
-                limiter.requests.delete(timestamp);
-            }
-        }
-
-        // Считаем текущие запросы
-        let currentCount = 0;
-        for (const count of limiter.requests.values()) {
-            currentCount += count;
-        }
-
-        if (currentCount + cost > limiter.max) {
-            return false;
-        }
-
-        // Добавляем текущий запрос
-        limiter.requests.set(now, (limiter.requests.get(now) || 0) + cost);
-        return true;
-    }
-
-    async validateInput(schema, data) {
-        try {
-            const validated = await schema.validateAsync(data, {
-                abortEarly: false,
-                stripUnknown: true
-            });
-            return { isValid: true, data: validated };
-        } catch (error) {
-            return { 
-                isValid: false, 
-                errors: error.details.map(detail => ({
-                    field: detail.path.join('.'),
-                    message: detail.message,
-                    type: detail.type
-                }))
-            };
-        }
-    }
-
-    async hashPassword(password) {
-        const saltRounds = 12;
-        return await bcrypt.hash(password, saltRounds);
-    }
-
-    async verifyPassword(password, hash) {
-        return await bcrypt.compare(password, hash);
-    }
-
-    generateToken(payload, expiresIn = '7d') {
-        return jwt.sign(payload, config.JWT_SECRET, { expiresIn });
-    }
-
-    verifyToken(token) {
-        try {
-            return jwt.verify(token, config.JWT_SECRET);
-        } catch (error) {
-            throw new Error('Invalid token');
-        }
-    }
-}
-
-const security = new SecuritySystem();
-
 // ==================== TELEGRAM BOT СИСТЕМА ====================
 class TelegramBotSystem {
     constructor() {
@@ -445,7 +326,6 @@ class TelegramBotSystem {
             
             this.bot = new Telegraf(config.BOT_TOKEN);
             this.setupHandlers();
-            this.launchBot();
             
         } catch (error) {
             logger.error('❌ Ошибка инициализации бота:', error);
@@ -464,9 +344,6 @@ class TelegramBotSystem {
 
         // Обработчики сообщений
         this.bot.on('text', this.handleText.bind(this));
-
-        // Обработчики callback queries
-        this.bot.on('callback_query', this.handleCallbackQuery.bind(this));
     }
 
     async handleStart(ctx) {
@@ -496,7 +373,16 @@ class TelegramBotSystem {
     }
 
     async handleMenu(ctx) {
-        await this.showMainMenu(ctx);
+        await ctx.reply('🎯 Главное меню Академии АНБ', {
+            reply_markup: {
+                keyboard: [
+                    ['📱 Открыть приложение'],
+                    ['📚 Курсы', '👤 Профиль'],
+                    ['🆘 Помощь']
+                ],
+                resize_keyboard: true
+            }
+        });
     }
 
     async handleAdmin(ctx) {
@@ -514,8 +400,7 @@ class TelegramBotSystem {
                         { text: '👥 Пользователи', callback_data: 'admin_users' }
                     ],
                     [
-                        { text: '📚 Курсы', callback_data: 'admin_courses' },
-                        { text: '📈 Аналитика', callback_data: 'admin_analytics' }
+                        { text: '📚 Курсы', callback_data: 'admin_courses' }
                     ],
                     [
                         { text: '📱 Открыть WebApp', web_app: { url: config.WEBAPP_URL } }
@@ -526,47 +411,57 @@ class TelegramBotSystem {
     }
 
     async handleCourses(ctx) {
-        const courses = await db.query(
-            'SELECT id, title, description, price FROM courses WHERE active = true ORDER BY created_at DESC LIMIT 5'
-        );
+        try {
+            const courses = await db.query(
+                'SELECT id, title, description, price, duration FROM courses WHERE active = true ORDER BY created_at DESC LIMIT 5'
+            );
 
-        if (courses.rows.length === 0) {
-            await ctx.reply('📚 Курсы пока не добавлены.');
-            return;
-        }
-
-        const coursesText = courses.rows.map((course, index) => 
-            `${index + 1}. ${course.title}\n💵 ${course.price} руб.\n📖 ${course.description}\n`
-        ).join('\n');
-
-        await ctx.reply(`📚 Доступные курсы:\n\n${coursesText}\n\nДля подробной информации откройте WebApp:`, {
-            reply_markup: {
-                inline_keyboard: [[
-                    { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
-                ]]
+            if (courses.rows.length === 0) {
+                await ctx.reply('📚 Курсы пока не добавлены.');
+                return;
             }
-        });
+
+            const coursesText = courses.rows.map((course, index) => 
+                `${index + 1}. ${course.title}\n💵 ${course.price} руб.\n⏱️ ${course.duration}\n📖 ${course.description}\n`
+            ).join('\n');
+
+            await ctx.reply(`📚 Доступные курсы:\n\n${coursesText}\n\nДля подробной информации откройте WebApp:`, {
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
+                    ]]
+                }
+            });
+        } catch (error) {
+            logger.error('Courses handler error:', error);
+            await ctx.reply('❌ Ошибка загрузки курсов');
+        }
     }
 
     async handleProfile(ctx) {
-        const user = await this.getOrCreateUser(ctx.from);
-        
-        const profileText = 
-            `👤 Ваш профиль:\n\n` +
-            `🆔 ID: ${user.id}\n` +
-            `📛 Имя: ${user.telegram_data.first_name}\n` +
-            `👤 Username: @${user.telegram_data.username || 'не указан'}\n` +
-            `💳 Подписка: ${user.subscription_data?.status === 'active' ? 'Активна' : 'Не активна'}\n` +
-            `📊 Прогресс: Уровень ${user.progress_data?.level || 'Новичок'}\n\n` +
-            `Для управления профилем откройте WebApp:`;
+        try {
+            const user = await this.getOrCreateUser(ctx.from);
+            
+            const profileText = 
+                `👤 Ваш профиль:\n\n` +
+                `🆔 ID: ${user.id}\n` +
+                `📛 Имя: ${user.telegram_data.first_name}\n` +
+                `👤 Username: @${user.telegram_data.username || 'не указан'}\n` +
+                `💳 Подписка: ${user.subscription_data?.status === 'active' ? 'Активна' : 'Не активна'}\n` +
+                `📊 Прогресс: Уровень ${user.progress_data?.level || 'Новичок'}\n\n` +
+                `Для управления профилем откройте WebApp:`;
 
-        await ctx.reply(profileText, {
-            reply_markup: {
-                inline_keyboard: [[
-                    { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
-                ]]
-            }
-        });
+            await ctx.reply(profileText, {
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
+                    ]]
+                }
+            });
+        } catch (error) {
+            logger.error('Profile handler error:', error);
+            await ctx.reply('❌ Ошибка загрузки профиля');
+        }
     }
 
     async handleHelp(ctx) {
@@ -595,8 +490,12 @@ class TelegramBotSystem {
     async handleText(ctx) {
         const message = ctx.message.text;
         
-        if (message.toLowerCase().includes('привет')) {
+        if (message.toLowerCase().includes('привет') || message.toLowerCase().includes('start')) {
             await this.handleStart(ctx);
+        } else if (message.toLowerCase().includes('курс')) {
+            await this.handleCourses(ctx);
+        } else if (message.toLowerCase().includes('профиль')) {
+            await this.handleProfile(ctx);
         } else {
             await ctx.reply(
                 `Я вас не понял. Используйте команды:\n` +
@@ -604,50 +503,6 @@ class TelegramBotSystem {
                 `/menu - Главное меню\n` +
                 `/help - Помощь`
             );
-        }
-    }
-
-    async handleCallbackQuery(ctx) {
-        const data = ctx.callbackQuery.data;
-        
-        try {
-            await ctx.answerCbQuery();
-            
-            if (data.startsWith('admin_')) {
-                await this.handleAdminCallback(ctx, data);
-            }
-            
-        } catch (error) {
-            logger.error('Callback query error:', error);
-            await ctx.answerCbQuery('❌ Произошла ошибка');
-        }
-    }
-
-    async handleAdminCallback(ctx, data) {
-        const user = await this.getOrCreateUser(ctx.from);
-        if (!user.is_admin && !user.is_super_admin) {
-            await ctx.editMessageText('❌ У вас нет прав доступа');
-            return;
-        }
-
-        if (data === 'admin_stats') {
-            const stats = await this.getAdminStats();
-            await ctx.editMessageText(
-                `📊 Статистика системы:\n\n` +
-                `👥 Пользователей: ${stats.users.total}\n` +
-                `📚 Курсов: ${stats.courses.total}\n` +
-                `💳 Продаж: ${stats.payments.total}\n` +
-                `📈 Доход: ${stats.revenue.total} руб.`,
-                {
-                    reply_markup: {
-                        inline_keyboard: [
-                            [{ text: '◀️ Назад', callback_data: 'admin_back' }]
-                        ]
-                    }
-                }
-            );
-        } else if (data === 'admin_back') {
-            await this.handleAdmin(ctx);
         }
     }
 
@@ -686,85 +541,26 @@ class TelegramBotSystem {
         }
     }
 
-    async getAdminStats() {
-        try {
-            const [
-                usersCount,
-                coursesCount,
-                paymentsCount,
-                revenueResult
-            ] = await Promise.all([
-                db.query('SELECT COUNT(*) FROM users'),
-                db.query('SELECT COUNT(*) FROM courses WHERE active = true'),
-                db.query('SELECT COUNT(*) FROM payments WHERE status = $1', ['completed']),
-                db.query('SELECT SUM(amount) FROM payments WHERE status = $1', ['completed'])
-            ]);
-
-            return {
-                users: {
-                    total: parseInt(usersCount.rows[0].count)
-                },
-                courses: {
-                    total: parseInt(coursesCount.rows[0].count)
-                },
-                payments: {
-                    total: parseInt(paymentsCount.rows[0].count)
-                },
-                revenue: {
-                    total: parseFloat(revenueResult.rows[0].sum || 0)
-                }
-            };
-        } catch (error) {
-            logger.error('Error getting admin stats:', error);
-            return {
-                users: { total: 0 },
-                courses: { total: 0 },
-                payments: { total: 0 },
-                revenue: { total: 0 }
-            };
-        }
-    }
-
-    async showMainMenu(ctx) {
-        await ctx.reply('🎯 Главное меню Академии АНБ', {
-            reply_markup: {
-                keyboard: [
-                    ['📱 Открыть приложение'],
-                    ['📚 Курсы', '👤 Профиль'],
-                    ['🆘 Помощь']
-                ],
-                resize_keyboard: true
-            }
-        });
-    }
-
     launchBot() {
-        if (config.NODE_ENV === 'production') {
-            this.bot.launch({
-                webhook: {
-                    domain: config.WEBAPP_URL,
-                    port: config.PORT
-                }
-            }).then(() => {
-                logger.info('✅ Telegram Bot запущен в production режиме');
-            });
-        } else {
-            this.bot.launch().then(() => {
-                logger.info('✅ Telegram Bot запущен в development режиме');
-            });
-        }
-
-        // Graceful shutdown
-        process.once('SIGINT', () => this.bot.stop('SIGINT'));
-        process.once('SIGTERM', () => this.bot.stop('SIGTERM'));
-    }
-
-    async sendNotification(userId, message, options = {}) {
         try {
-            await this.bot.telegram.sendMessage(userId, message, options);
-            logger.info(`✅ Уведомление отправлено пользователю ${userId}`);
+            if (config.NODE_ENV === 'production') {
+                this.bot.launch({
+                    webhook: {
+                        domain: config.WEBAPP_URL,
+                        port: config.PORT
+                    }
+                });
+                logger.info('✅ Telegram Bot запущен в production режиме');
+            } else {
+                this.bot.launch();
+                logger.info('✅ Telegram Bot запущен в development режиме');
+            }
+
+            // Graceful shutdown
+            process.once('SIGINT', () => this.bot.stop('SIGINT'));
+            process.once('SIGTERM', () => this.bot.stop('SIGTERM'));
         } catch (error) {
-            logger.error(`❌ Ошибка отправки уведомления пользователю ${userId}:`, error);
+            logger.error('❌ Ошибка запуска бота:', error);
         }
     }
 }
@@ -781,7 +577,6 @@ class ExpressServerSystem {
 
     setupServer() {
         this.setupMiddleware();
-        this.setupFileUpload();
         this.setupRoutes();
         this.setupErrorHandling();
     }
@@ -797,48 +592,29 @@ class ExpressServerSystem {
 
         // CORS
         this.app.use(cors({
-            origin: function(origin, callback) {
-                const allowedOrigins = [
-                    config.WEBAPP_URL,
-                    'https://telegram.org',
-                    'https://web.telegram.org',
-                    'http://localhost:3000',
-                    'http://127.0.0.1:3000'
-                ];
-                
-                if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-                    callback(null, true);
-                } else {
-                    callback(new Error('Not allowed by CORS'));
-                }
-            },
+            origin: true, // Разрешаем все origins для упрощения
             credentials: true,
-            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
         }));
 
         // Парсинг JSON
         this.app.use(express.json({ 
-            limit: '50mb'
+            limit: '10mb'
         }));
 
         // Парсинг URL-encoded данных
         this.app.use(express.urlencoded({ 
             extended: true, 
-            limit: '50mb'
+            limit: '10mb'
         }));
 
         // Логирование
-        this.app.use(morgan('combined', {
-            stream: {
-                write: (message) => logger.info(message.trim())
-            }
-        }));
+        this.app.use(morgan('combined'));
 
         // Rate limiting
         const limiter = rateLimit({
-            windowMs: config.RATE_LIMIT_WINDOW * 60 * 1000,
-            max: config.RATE_LIMIT_MAX,
+            windowMs: 15 * 60 * 1000, // 15 минут
+            max: 100, // максимум 100 запросов за 15 минут
             message: {
                 error: 'Слишком много запросов. Пожалуйста, подождите немного.'
             }
@@ -847,48 +623,8 @@ class ExpressServerSystem {
         this.app.use(limiter);
 
         // Статические файлы
-        this.app.use('/uploads', express.static(join(__dirname, 'uploads')));
         this.app.use('/webapp', express.static(join(__dirname, 'webapp')));
         this.app.use('/assets', express.static(join(__dirname, 'webapp/assets')));
-    }
-
-    setupFileUpload() {
-        const storage = multer.diskStorage({
-            destination: async (req, file, cb) => {
-                const uploadPath = join(config.UPLOAD_PATH, 'general');
-                try {
-                    await fs.mkdir(uploadPath, { recursive: true });
-                    cb(null, uploadPath);
-                } catch (error) {
-                    cb(error, null);
-                }
-            },
-            filename: (req, file, cb) => {
-                const uniqueName = `${uuidv4()}-${file.originalname}`;
-                cb(null, uniqueName);
-            }
-        });
-
-        const fileFilter = (req, file, cb) => {
-            const allowedTypes = [
-                'image/jpeg', 'image/png', 'image/webp', 
-                'video/mp4', 'application/pdf'
-            ];
-
-            if (allowedTypes.includes(file.mimetype)) {
-                cb(null, true);
-            } else {
-                cb(new Error(`Неподдерживаемый тип файла: ${file.mimetype}`), false);
-            }
-        };
-
-        this.upload = multer({
-            storage: storage,
-            limits: { 
-                fileSize: config.UPLOAD_MAX_SIZE
-            },
-            fileFilter: fileFilter
-        });
     }
 
     setupRoutes() {
@@ -928,22 +664,25 @@ class ExpressServerSystem {
         // Admin routes
         this.app.get('/api/admin/stats', this.handleAdminStats.bind(this));
 
-        // Webhook routes
+        // Webhook routes для Telegram
         this.app.post(`/bot${config.BOT_TOKEN}`, (req, res) => {
             telegramBot.bot.handleUpdate(req.body, res);
         });
 
-        // SPA fallback
+        // SPA fallback - должен быть последним
         this.app.get('*', (req, res) => {
+            if (req.path.startsWith('/api/') || req.path.startsWith('/bot')) {
+                return res.status(404).json({ error: 'API route not found' });
+            }
             res.sendFile(join(__dirname, 'webapp', 'index.html'));
         });
     }
 
     setupErrorHandling() {
-        // 404 handler
-        this.app.use((req, res) => {
+        // 404 handler для API
+        this.app.use('/api/*', (req, res) => {
             res.status(404).json({
-                error: 'Route not found',
+                error: 'API route not found',
                 path: req.path,
                 method: req.method
             });
@@ -952,15 +691,6 @@ class ExpressServerSystem {
         // Global error handler
         this.app.use((error, req, res, next) => {
             logger.error('Global error handler:', error);
-
-            if (error instanceof multer.MulterError) {
-                if (error.code === 'LIMIT_FILE_SIZE') {
-                    return res.status(400).json({
-                        error: 'File too large',
-                        maxSize: config.UPLOAD_MAX_SIZE
-                    });
-                }
-            }
 
             res.status(error.status || 500).json({
                 error: config.NODE_ENV === 'development' ? error.message : 'Internal server error'
@@ -1045,8 +775,22 @@ class ExpressServerSystem {
                 city: user.profile_data?.city || '',
                 email: user.profile_data?.email || '',
                 subscription: user.subscription_data || { status: 'inactive', type: 'free' },
-                progress: user.progress_data || {},
-                favorites: user.favorites_data || {},
+                progress: user.progress_data || {
+                    level: 'Понимаю',
+                    experience: 1250,
+                    steps: {
+                        coursesBought: 3,
+                        modulesCompleted: 12
+                    }
+                },
+                favorites: user.favorites_data || {
+                    courses: [],
+                    podcasts: [],
+                    streams: [],
+                    videos: [],
+                    materials: [],
+                    events: []
+                },
                 isAdmin: user.is_admin,
                 isSuperAdmin: user.is_super_admin,
                 joinedAt: user.created_at,
@@ -1056,7 +800,11 @@ class ExpressServerSystem {
             res.json({ success: true, user: userResponse });
         } catch (error) {
             logger.error('User API Error:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            res.status(500).json({ 
+                success: false,
+                error: 'Internal server error',
+                demoData: true
+            });
         }
     }
 
@@ -1102,13 +850,13 @@ class ExpressServerSystem {
 
     async handleGetContent(req, res) {
         try {
-            const contentTypes = ['courses', 'podcasts', 'streams', 'videos', 'materials', 'events', 'promotions', 'chats'];
+            const contentTypes = ['courses'];
             const content = {};
 
             for (const type of contentTypes) {
                 try {
                     const result = await db.query(
-                        `SELECT * FROM ${type} WHERE active = TRUE ORDER BY created_at DESC LIMIT 10`
+                        `SELECT * FROM ${type} WHERE active = TRUE ORDER BY created_at DESC LIMIT 20`
                     );
                     content[type] = result.rows;
                 } catch (error) {
@@ -1116,6 +864,15 @@ class ExpressServerSystem {
                     content[type] = [];
                 }
             }
+
+            // Добавляем пустые массивы для остальных типов контента
+            content.podcasts = [];
+            content.streams = [];
+            content.videos = [];
+            content.materials = [];
+            content.events = [];
+            content.promotions = [];
+            content.chats = [];
 
             res.json({ success: true, data: content });
         } catch (error) {
@@ -1201,11 +958,11 @@ class ExpressServerSystem {
                 favorites[contentType] = [];
             }
 
-            const index = favorites[contentType].indexOf(contentId);
+            const index = favorites[contentType].indexOf(parseInt(contentId));
             if (index > -1) {
                 favorites[contentType].splice(index, 1);
             } else {
-                favorites[contentType].push(contentId);
+                favorites[contentType].push(parseInt(contentId));
             }
 
             await db.query(
@@ -1295,7 +1052,18 @@ class ExpressServerSystem {
                 return res.status(403).json({ error: 'Access denied' });
             }
 
-            const stats = await telegramBot.getAdminStats();
+            const usersCount = await db.query('SELECT COUNT(*) FROM users');
+            const coursesCount = await db.query('SELECT COUNT(*) FROM courses WHERE active = true');
+            const paymentsCount = await db.query('SELECT COUNT(*) FROM payments WHERE status = $1', ['completed']);
+            const revenueResult = await db.query('SELECT SUM(amount) FROM payments WHERE status = $1', ['completed']);
+
+            const stats = {
+                users: { total: parseInt(usersCount.rows[0].count) },
+                courses: { total: parseInt(coursesCount.rows[0].count) },
+                payments: { total: parseInt(paymentsCount.rows[0].count) },
+                revenue: { total: parseFloat(revenueResult.rows[0].sum || 0) }
+            };
+
             res.json({ success: true, stats });
         } catch (error) {
             logger.error('Admin stats error:', error);
@@ -1310,6 +1078,10 @@ class ExpressServerSystem {
             logger.info(`🌐 Express сервер запущен на порту ${port}`);
             logger.info(`📱 WebApp доступен: ${config.WEBAPP_URL}`);
             logger.info(`🔧 Режим: ${config.NODE_ENV}`);
+            
+            // Запускаем бота после успешного старта сервера
+            telegramBot.launchBot();
+            
             logger.info('✅ Система полностью готова к работе!');
         });
 
@@ -1345,10 +1117,6 @@ async function startSystem() {
         // Проверяем конфигурацию
         config.validate();
         
-        // Создаем необходимые директории
-        await fs.mkdir(config.UPLOAD_PATH, { recursive: true });
-        await fs.mkdir(join(__dirname, 'logs'), { recursive: true });
-        
         // Инициализируем системы
         await db.connect();
         
@@ -1367,7 +1135,6 @@ startSystem();
 
 export {
     db,
-    security,
     telegramBot,
     logger,
     config
