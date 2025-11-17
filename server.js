@@ -1,32 +1,31 @@
-// server.js - ПОЛНАЯ РАБОЧАЯ ВЕРСИЯ
+// server.js - ПРОДАКШЕН ВЕРСИЯ
 import { Telegraf, session, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
-import os from 'os';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import { spawn, exec } from 'child_process';
-import net from 'net';
-import https from 'https';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// ==================== КОНФИГУРАЦИЯ ====================
+// ==================== КОНФИГУРАЦИЯ ДЛЯ ПРОДАКШЕНА ====================
 const config = {
     BOT_TOKEN: process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4',
     PORT: process.env.PORT || 3000,
     WEBAPP_URL: process.env.WEBAPP_URL || `http://localhost:${process.env.PORT || 3000}`,
-    ADMIN_IDS: [898508164, 123456789],
-    SUPER_ADMIN_ID: 898508164,
+    ADMIN_IDS: process.env.ADMIN_IDS ? process.env.ADMIN_IDS.split(',').map(Number) : [898508164, 123456789],
+    SUPER_ADMIN_ID: parseInt(process.env.SUPER_ADMIN_ID) || 898508164,
     UPLOAD_PATH: join(__dirname, 'uploads'),
-    NODE_ENV: process.env.NODE_ENV || 'production',
-    DB_TIMEOUT: 10000,
-    REQUEST_TIMEOUT: 30000
+    NODE_ENV: process.env.NODE_ENV || 'production'
 };
+
+console.log('🚀 Запуск Академии АНБ в продакшен режиме...');
+console.log(`📍 Порт: ${config.PORT}`);
+console.log(`🌐 Окружение: ${config.NODE_ENV}`);
+console.log(`🤖 Бот: ${config.BOT_TOKEN ? 'активен' : 'не настроен'}`);
 
 // ==================== СИСТЕМА УПРАВЛЕНИЯ ПРОЦЕССАМИ ====================
 class ProcessManager {
