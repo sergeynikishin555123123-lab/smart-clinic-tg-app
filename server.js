@@ -3287,7 +3287,7 @@ class ExpressServerSystem {
         // Временное отключение кэширования
 console.log('⚠️ API caching temporarily disabled');
 
-  setupFileUpload() {
+setupFileUpload() {
     const storage = multer.diskStorage({
         destination: async (req, file, cb) => {
             const uploadType = file.fieldname || 'general';
