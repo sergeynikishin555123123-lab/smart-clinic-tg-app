@@ -2,20 +2,24 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Копируем package files
-COPY package*.json ./
+# Копируем только package.json сначала
+COPY package.json ./
 
-# Устанавливаем зависимости
-RUN npm install --production
+# Установка зависимостей с обходом проблем
+RUN echo "📦 Installing dependencies..." && \
+    npm config set registry https://registry.npmjs.org/ && \
+    npm config set legacy-peer-deps true && \
+    npm install --no-package-lock --legacy-peer-deps --no-audit --no-fund
 
-# Копируем исходный код
+# Копируем остальные файлы
 COPY . .
 
 # Создаем необходимые директории
-RUN mkdir -p uploads/courses uploads/podcasts uploads/streams uploads/videos uploads/materials uploads/events uploads/promotions webapp/assets logs temp
+RUN mkdir -p uploads/courses uploads/podcasts uploads/streams uploads/videos \
+    uploads/materials uploads/avatars uploads/documents logs backups temp webapp/assets
 
-# Запускаем настройку
-RUN npm run setup
+# Запускаем setup
+RUN node setup.js --non-interactive
 
 EXPOSE 3000
 
