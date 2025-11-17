@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Академия АНБ</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background: linear-gradient(135deg, #0f172a, #1e293b);
             color: white;
+            min-height: 100vh;
         }
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -21,9 +21,20 @@
             text-align: center;
             padding: 40px 0;
         }
-        .loading {
-            text-align: center;
-            padding: 50px;
+        .card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
         }
     </style>
 </head>
@@ -34,76 +45,61 @@
             <p>Современное образование для врачей</p>
         </div>
         
-        <div class="loading">
-            <h2>Загрузка приложения...</h2>
-            <p>Пожалуйста, подождите</p>
+        <div id="app">
+            <div class="card">
+                <h2>Загрузка...</h2>
+                <p>Пожалуйста, подождите</p>
+            </div>
         </div>
     </div>
 
     <script>
-        // Простой загрузчик приложения
-        async function initApp() {
+        async function loadApp() {
             try {
-                // Проверяем доступность API
-                const healthResponse = await fetch('/api/health');
-                const healthData = await healthResponse.json();
-                console.log('API доступен:', healthData);
-
-                // Загружаем пользователя
-                const userResponse = await fetch('/api/user', {
+                // Проверяем API
+                const health = await fetch('/api/health');
+                const user = await fetch('/api/user', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        id: 898508164,
-                        firstName: 'Пользователь',
-                        username: 'user'
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: 898508164 })
                 });
-                const userData = await userResponse.json();
-                console.log('Пользователь:', userData);
-
-                // Загружаем контент
-                const contentResponse = await fetch('/api/content');
-                const contentData = await contentResponse.json();
-                console.log('Контент:', contentData);
-
-                // Показываем успешную загрузку
-                document.querySelector('.loading').innerHTML = `
-                    <h2>✅ Приложение загружено!</h2>
-                    <p>Добро пожаловать, ${userData.user.firstName}!</p>
-                    <p>Доступно курсов: ${contentData.data.courses.length}</p>
-                    <button onclick="showCourses()">Посмотреть курсы</button>
+                const content = await fetch('/api/content');
+                
+                const userData = await user.json();
+                const contentData = await content.json();
+                
+                // Показываем интерфейс
+                document.getElementById('app').innerHTML = `
+                    <div class="card">
+                        <h2>👋 Добро пожаловать, ${userData.user.firstName}!</h2>
+                        <p>Специализация: ${userData.user.specialization}</p>
+                    </div>
+                    <div class="card">
+                        <h2>📚 Доступные курсы</h2>
+                        ${contentData.data.courses.map(course => `
+                            <div style="background: rgba(255,255,255,0.05); padding: 15px; margin: 10px 0; border-radius: 5px;">
+                                <h3>${course.title}</h3>
+                                <p>${course.description}</p>
+                                <p><strong>${course.price} ₽</strong></p>
+                                <button>Подробнее</button>
+                            </div>
+                        `).join('')}
+                    </div>
                 `;
-
+                
             } catch (error) {
-                console.error('Ошибка загрузки:', error);
-                document.querySelector('.loading').innerHTML = `
-                    <h2>❌ Ошибка загрузки</h2>
-                    <p>Попробуйте обновить страницу</p>
-                    <button onclick="location.reload()">Обновить</button>
+                document.getElementById('app').innerHTML = `
+                    <div class="card" style="background: #ef4444;">
+                        <h2>❌ Ошибка загрузки</h2>
+                        <p>${error.message}</p>
+                        <button onclick="location.reload()">Обновить страницу</button>
+                    </div>
                 `;
             }
         }
 
-        function showCourses() {
-            document.querySelector('.loading').innerHTML = `
-                <h2>📚 Доступные курсы</h2>
-                <div style="background: white; color: black; padding: 20px; border-radius: 10px; margin: 20px 0;">
-                    <h3>Мануальные техники в практике невролога</h3>
-                    <p>6 модулей по современным мануальным методикам</p>
-                    <p><strong>Цена: 25 000 ₽</strong></p>
-                    <button style="background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 5px;">
-                        Подробнее
-                    </button>
-                </div>
-                <button onclick="initApp()">← Назад</button>
-            `;
-        }
-
         // Запускаем приложение
-        document.addEventListener('DOMContentLoaded', initApp);
+        loadApp();
     </script>
 </body>
 </html>
