@@ -5,8 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "setup": "node setup.js --non-interactive"
+    "build": "node setup.js --non-interactive",
+    "setup": "node setup.js --non-interactive",
+    "dev": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
