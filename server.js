@@ -16,14 +16,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // ==================== КОНФИГУРАЦИЯ ====================
+// В server.js ДОБАВИТЬ В КОНФИГ:
 const config = {
     BOT_TOKEN: process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4',
     PORT: process.env.PORT || 3000,
-    WEBAPP_URL: process.env.WEBAPP_URL || 'https://your-domain.com',
+    WEBAPP_URL: process.env.WEBAPP_URL || `http://localhost:${process.env.PORT || 3000}`, // ✅ ИСПРАВЛЕНО
     ADMIN_IDS: [898508164, 123456789],
-    SUPER_ADMIN_ID: 898508164, // Супер-админ
+    SUPER_ADMIN_ID: 898508164,
     UPLOAD_PATH: join(__dirname, 'uploads'),
-    NODE_ENV: process.env.NODE_ENV || 'production'
+    NODE_ENV: process.env.NODE_ENV || 'production',
+    // ✅ ДОБАВИТЬ ТАЙМАУТЫ:
+    DB_TIMEOUT: 10000,
+    REQUEST_TIMEOUT: 30000
 };
 
 // ==================== СИСТЕМА УПРАВЛЕНИЯ ПРОЦЕССАМИ ====================
