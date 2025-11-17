@@ -1,4 +1,4 @@
-// server.js - ИСПРАВЛЕННАЯ ВЕРСИЯ БЕЗ ОШИБОК MARKDOWN
+// server.js - ВЕРСИЯ С ПРОВЕРКОЙ РАБОТОСПОСОБНОСТИ И УПРАВЛЕНИЕМ ПРОЦЕССАМИ
 import { Telegraf, session, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -8,6 +8,8 @@ import os from 'os';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import { spawn, exec } from 'child_process';
+import net from 'net';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,10 +21,219 @@ const config = {
     WEBAPP_URL: process.env.WEBAPP_URL || 'https://your-domain.com',
     ADMIN_IDS: [898508164, 123456789],
     UPLOAD_PATH: join(__dirname, 'uploads'),
-    NODE_ENV: process.env.NODE_ENV || 'production'
+    NODE_ENV: process.env.NODE_ENV || 'production',
+    HEALTH_CHECK_TIMEOUT: 10000,
+    PORT_CHECK_TIMEOUT: 5000
 };
 
-// ==================== БАЗА ДАННЫХ ====================
+// ==================== СИСТЕМА УПРАВЛЕНИЯ ПРОЦЕССАМИ ====================
+class ProcessManager {
+    constructor() {
+        this.isPortAvailable = false;
+        this.healthStatus = {
+            bot: 'unknown',
+            server: 'unknown',
+            database: 'unknown',
+            system: 'unknown'
+        };
+    }
+
+    // Проверка доступности порта
+    async checkPortAvailability(port) {
+        return new Promise((resolve) => {
+            const server = net.createServer();
+            
+            server.once('error', (err) => {
+                if (err.code === 'EADDRINUSE') {
+                    console.log(`❌ Порт ${port} занят другим процессом`);
+                    resolve(false);
+                } else {
+                    console.log(`⚠️ Ошибка проверки порта ${port}:`, err.message);
+                    resolve(false);
+                }
+            });
+            
+            server.once('listening', () => {
+                server.close();
+                console.log(`✅ Порт ${port} свободен`);
+                resolve(true);
+            });
+            
+            server.listen(port);
+        });
+    }
+
+    // Освобождение порта (убиваем процессы на порту)
+    async freePort(port) {
+        return new Promise((resolve) => {
+            if (process.platform === 'win32') {
+                // Windows
+                exec(`netstat -ano | findstr :${port}`, (error, stdout) => {
+                    if (stdout) {
+                        const lines = stdout.split('\n');
+                        lines.forEach(line => {
+                            const match = line.match(/(\d+)\s*$/);
+                            if (match) {
+                                const pid = match[1];
+                                console.log(`🛑 Завершаем процесс ${pid} на порту ${port}`);
+                                exec(`taskkill /PID ${pid} /F`, () => {});
+                            }
+                        });
+                    }
+                    setTimeout(resolve, 1000);
+                });
+            } else {
+                // Linux/MacOS
+                exec(`lsof -ti:${port}`, (error, stdout) => {
+                    if (stdout) {
+                        const pids = stdout.trim().split('\n');
+                        pids.forEach(pid => {
+                            if (pid) {
+                                console.log(`🛑 Завершаем процесс ${pid} на порту ${port}`);
+                                process.kill(parseInt(pid), 'SIGTERM');
+                            }
+                        });
+                    }
+                    setTimeout(resolve, 1000);
+                });
+            }
+        });
+    }
+
+    // Полная проверка системы
+    async performSystemCheck() {
+        console.log('🔍 Проверка работоспособности системы...');
+        
+        try {
+            // 1. Проверка порта
+            this.healthStatus.system = 'checking';
+            const portAvailable = await this.checkPortAvailability(config.PORT);
+            
+            if (!portAvailable) {
+                console.log('🔄 Пробуем освободить порт...');
+                await this.freePort(config.PORT);
+                
+                // Повторная проверка после освобождения
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                const portAvailableAfterFree = await this.checkPortAvailability(config.PORT);
+                
+                if (!portAvailableAfterFree) {
+                    console.log('❌ Не удалось освободить порт. Пробуем использовать другой порт...');
+                    config.PORT = parseInt(config.PORT) + 1;
+                    console.log(`🔄 Используем порт ${config.PORT}`);
+                }
+            }
+            
+            this.isPortAvailable = true;
+            this.healthStatus.system = 'healthy';
+            
+            // 2. Проверка доступности интернета
+            await this.checkInternetConnection();
+            
+            // 3. Проверка доступности базы данных
+            await this.checkDatabaseConnection();
+            
+            console.log('✅ Проверка системы завершена');
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Ошибка проверки системы:', error);
+            this.healthStatus.system = 'unhealthy';
+            return false;
+        }
+    }
+
+    async checkInternetConnection() {
+        return new Promise((resolve) => {
+            console.log('🌐 Проверка интернет-соединения...');
+            
+            // Пробуем несколько endpoints
+            const endpoints = [
+                'https://api.telegram.org',
+                'https://google.com',
+                'https://cloudflare.com'
+            ];
+            
+            let connected = false;
+            let checks = 0;
+            
+            const checkEndpoint = (url) => {
+                const https = require('https');
+                const req = https.get(url, (res) => {
+                    connected = true;
+                    console.log(`✅ Интернет соединение: ${url} доступен`);
+                    resolve(true);
+                });
+                
+                req.on('error', () => {
+                    checks++;
+                    if (checks >= endpoints.length && !connected) {
+                        console.log('⚠️ Некоторые endpoints недоступны, но продолжаем работу');
+                        resolve(true); // Продолжаем даже если интернет нестабилен
+                    }
+                });
+                
+                req.setTimeout(5000, () => {
+                    req.destroy();
+                    checks++;
+                    if (checks >= endpoints.length && !connected) {
+                        console.log('⚠️ Таймаут проверки интернета, продолжаем работу');
+                        resolve(true);
+                    }
+                });
+            };
+            
+            endpoints.forEach(checkEndpoint);
+        });
+    }
+
+    async checkDatabaseConnection() {
+        console.log('🗄️ Проверка подключения к базе данных...');
+        this.healthStatus.database = 'checking';
+        
+        // Проверка будет выполнена при подключении базы данных
+        this.healthStatus.database = 'pending';
+        return true;
+    }
+
+    // Мониторинг здоровья системы
+    startHealthMonitoring() {
+        setInterval(() => {
+            this.performQuickHealthCheck();
+        }, 30000); // Каждые 30 секунд
+    }
+
+    async performQuickHealthCheck() {
+        try {
+            // Быстрая проверка порта
+            const portOk = await this.checkPortAvailability(config.PORT);
+            if (!portOk) {
+                console.log('⚠️ Порт стал недоступен, перезапускаем систему...');
+                await this.restartSystem();
+            }
+        } catch (error) {
+            console.error('Ошибка быстрой проверки здоровья:', error);
+        }
+    }
+
+    async restartSystem() {
+        console.log('🔄 Перезапуск системы...');
+        process.exit(1); // Завершаем процесс, пусть менеджер процессов перезапустит
+    }
+
+    getHealthStatus() {
+        return {
+            ...this.healthStatus,
+            timestamp: new Date().toISOString(),
+            port: config.PORT,
+            portAvailable: this.isPortAvailable
+        };
+    }
+}
+
+const processManager = new ProcessManager();
+
+// ==================== БАЗА ДАННЫХ ===================
 class Database {
     constructor() {
         this.client = null;
