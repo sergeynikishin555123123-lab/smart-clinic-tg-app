@@ -12,6 +12,49 @@ const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Добавьте эту функцию для установки зависимостей
+async function installDependenciesWithRetry() {
+    console.log('📦 Установка зависимостей с флагом legacy-peer-deps...');
+    
+    try {
+        const { stdout, stderr } = await execAsync('npm install --legacy-peer-deps', {
+            cwd: process.cwd(),
+            timeout: 300000 // 5 минут
+        });
+        
+        if (stderr) {
+            console.warn('⚠️ Предупреждения при установке:', stderr);
+        }
+        
+        console.log('✅ Зависимости установлены с флагом legacy-peer-deps');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Ошибка установки зависимостей:', error.message);
+        
+        // Попробуем установить только основные зависимости
+        console.log('🔄 Попытка установки только критических зависимостей...');
+        try {
+            const criticalDeps = [
+                'express', 'telegraf', 'pg', 'bcryptjs', 'jsonwebtoken', 
+                'cors', 'helmet', 'compression', 'multer', 'sharp'
+            ].join(' ');
+            
+            await execAsync(`npm install ${criticalDeps} --no-save`, {
+                cwd: process.cwd(),
+                timeout: 300000
+            });
+            
+            console.log('✅ Критические зависимости установлены');
+            return true;
+            
+        } catch (secondError) {
+            console.error('❌ Критическая ошибка установки:', secondError.message);
+            return false;
+        }
+    }
+}
+
 class SystemSetup {
     constructor() {
         this.baseDir = __dirname;
@@ -415,69 +458,46 @@ Sitemap: ${this.config.WEBAPP_URL}/sitemap.xml`,
     }
 
     async checkDependencies() {
-        console.log('📦 Проверка зависимостей...');
-        
-        try {
-            // Проверка package.json
-            const packageJsonPath = join(this.baseDir, 'package.json');
-            if (!existsSync(packageJsonPath)) {
-                throw new Error('package.json не найден');
-            }
-            
-            const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
-            console.log(`• Приложение: ${packageJson.name} v${packageJson.version}`);
-            
-            // Проверка установленных зависимостей
-            try {
-                const { stdout } = await execAsync('npm list --depth=0 --json');
-                const dependencies = JSON.parse(stdout);
-                
-                if (dependencies.dependencies) {
-                    const depCount = Object.keys(dependencies.dependencies).length;
-                    console.log(`• Установлено зависимостей: ${depCount}`);
-                }
-                
-                if (dependencies.problems) {
-                    console.warn('⚠️ Обнаружены проблемы с зависимостями:');
-                    dependencies.problems.forEach(problem => {
-                        console.warn(`  - ${problem}`);
-                    });
-                }
-                
-            } catch (error) {
-                console.warn('⚠️ Не удалось проверить установленные зависимости:', error.message);
-            }
-            
-            // Проверка критических зависимостей
-            const criticalDeps = ['express', 'telegraf', 'pg', 'bcryptjs', 'jsonwebtoken'];
-            const missingDeps = [];
-            
-            for (const dep of criticalDeps) {
-                try {
-                    await import(dep);
-                } catch {
-                    missingDeps.push(dep);
-                }
-            }
-            
-            if (missingDeps.length > 0) {
-                console.warn(`⚠️ Отсутствуют критические зависимости: ${missingDeps.join(', ')}`);
-                console.log('💡 Запустите: npm install');
-                
-                if (process.argv.includes('--install-deps')) {
-                    console.log('🚀 Установка зависимостей...');
-                    await this.installDependencies();
-                } else {
-                    throw new Error('Критические зависимости отсутствуют');
-                }
-            }
-            
-            console.log('✅ Проверка зависимостей завершена');
-            
-        } catch (error) {
-            throw new Error(`Ошибка проверки зависимостей: ${error.message}`);
+    console.log('📦 Проверка зависимостей...');
+    
+    try {
+        // Проверка package.json
+        const packageJsonPath = join(this.baseDir, 'package.json');
+        if (!existsSync(packageJsonPath)) {
+            throw new Error('package.json не найден');
         }
+        
+        const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
+        console.log(`• Приложение: ${packageJson.name} v${packageJson.version}`);
+        
+        // Упрощенная проверка зависимостей
+        const criticalDeps = ['express', 'telegraf', 'pg', 'bcryptjs', 'jsonwebtoken'];
+        const missingDeps = [];
+        
+        for (const dep of criticalDeps) {
+            try {
+                await import(dep);
+            } catch {
+                missingDeps.push(dep);
+            }
+        }
+        
+        if (missingDeps.length > 0) {
+            console.warn(`⚠️ Отсутствуют критические зависимости: ${missingDeps.join(', ')}`);
+            console.log('🚀 Установка зависимостей...');
+            
+            const success = await installDependenciesWithRetry();
+            if (!success) {
+                throw new Error('Не удалось установить критические зависимости');
+            }
+        }
+        
+        console.log('✅ Проверка зависимостей завершена');
+        
+    } catch (error) {
+        throw new Error(`Ошибка проверки зависимостей: ${error.message}`);
     }
+}
 
     async installDependencies() {
         console.log('📦 Установка зависимостей...');
