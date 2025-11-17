@@ -1,3 +1,5 @@
+mkdir -p webapp
+cat > webapp/index.html << 'EOF'
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -6,105 +8,117 @@
     <title>Академия АНБ</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        body { font-family: Arial; background: linear-gradient(135deg, #667eea, #764ba2); }
         .app { max-width: 400px; margin: 0 auto; background: white; min-height: 100vh; }
-        .header { background: #667eea; color: white; padding: 15px; text-align: center; }
-        .main { padding: 20px; padding-bottom: 80px; }
-        .nav { position: fixed; bottom: 0; width: 100%; max-width: 400px; background: white; display: flex; border-top: 1px solid #ddd; }
-        .nav-btn { flex: 1; padding: 10px; border: none; background: none; cursor: pointer; }
-        .nav-btn.active { color: #667eea; }
-        .page { padding: 20px; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .loading { text-align: center; padding: 50px 20px; }
-        .btn { padding: 10px 15px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .header { background: #667eea; color: white; padding: 20px; text-align: center; }
+        .main { padding: 20px; }
+        .nav { display: flex; background: white; border-top: 1px solid #ddd; }
+        .nav-btn { flex: 1; padding: 15px; border: none; background: none; cursor: pointer; }
+        .nav-btn.active { color: #667eea; font-weight: bold; }
+        .page { padding: 20px; }
+        .card { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 10px; }
+        .btn { background: #667eea; color: white; padding: 10px 15px; border: none; border-radius: 5px; margin: 5px; }
     </style>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="app">
         <header class="header">
-            <h1>Академия АНБ</h1>
+            <h1>🎓 Академия АНБ</h1>
+            <p>Образование для врачей</p>
         </header>
         
         <main class="main" id="mainContent">
-            <div class="loading">
-                <h2>Загрузка...</h2>
-                <p>Академия АНБ запускается</p>
+            <div class="page">
+                <h2>Добро пожаловать!</h2>
+                <p>Платформа для обучения врачей</p>
+                
+                <div class="card">
+                    <h3>📚 Доступные курсы</h3>
+                    <p>Мануальные техники - 15 000 ₽</p>
+                    <p>Неврология - 12 000 ₽</p>
+                    <button class="btn">Смотреть все курсы</button>
+                </div>
+                
+                <div class="card">
+                    <h3>📹 Эфиры и разборы</h3>
+                    <p>Разбор клинических случаев</p>
+                    <p>Прямые эфиры с экспертами</p>
+                    <button class="btn">Смотреть расписание</button>
+                </div>
             </div>
         </main>
 
         <nav class="nav">
-            <button class="nav-btn active" onclick="showPage('home')">🏠 Главная</button>
-            <button class="nav-btn" onclick="showPage('courses')">📚 Курсы</button>
-            <button class="nav-btn" onclick="showPage('profile')">👤 Профиль</button>
+            <button class="nav-btn active" onclick="showTab('home')">🏠 Главная</button>
+            <button class="nav-btn" onclick="showTab('courses')">📚 Курсы</button>
+            <button class="nav-btn" onclick="showTab('profile')">👤 Профиль</button>
         </nav>
     </div>
 
     <script>
-        function showPage(page) {
+        function showTab(tab) {
             const main = document.getElementById('mainContent');
-            let content = '';
+            let html = '';
             
-            switch(page) {
-                case 'home':
-                    content = `
-                        <div class="page">
-                            <h2>Добро пожаловать в Академию АНБ!</h2>
-                            <p>Образовательная платформа для врачей</p>
-                            <div style="margin-top: 20px;">
-                                <button onclick="showPage('courses')" class="btn">📚 Курсы</button>
-                                <button onclick="showPage('profile')" class="btn">👤 Профиль</button>
-                            </div>
+            if (tab === 'home') {
+                html = `
+                    <div class="page">
+                        <h2>Главная страница</h2>
+                        <div class="card">
+                            <h3>📊 Ваша статистика</h3>
+                            <p>🎯 Пройдено курсов: 3</p>
+                            <p>⏱️ Часов обучения: 24</p>
+                            <p>📈 Уровень: Продвинутый</p>
                         </div>
-                    `;
-                    break;
-                case 'courses':
-                    content = `
-                        <div class="page">
-                            <h2>📚 Курсы</h2>
-                            <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                                <h3>Мануальные техники в практике</h3>
-                                <p>6 модулей по современным методикам</p>
-                                <button class="btn" style="margin-top: 10px;">Подробнее</button>
-                            </div>
+                        <button class="btn" onclick="showTab('courses')">Начать обучение</button>
+                    </div>
+                `;
+            } else if (tab === 'courses') {
+                html = `
+                    <div class="page">
+                        <h2>📚 Все курсы</h2>
+                        <div class="card">
+                            <h3>Мануальные техники</h3>
+                            <p>💰 15 000 ₽ | ⭐ 4.8 | 👥 45 студентов</p>
+                            <button class="btn">Купить курс</button>
                         </div>
-                    `;
-                    break;
-                case 'profile':
-                    content = `
-                        <div class="page">
-                            <h2>👤 Профиль</h2>
-                            <div style="margin-top: 15px;">
-                                <p><strong>Имя:</strong> Демо Пользователь</p>
-                                <p><strong>Специализация:</strong> Невролог</p>
-                                <p><strong>Статус:</strong> ✅ Активен</p>
-                            </div>
+                        <div class="card">
+                            <h3>Неврология для практиков</h3>
+                            <p>💰 12 000 ₽ | ⭐ 4.6 | 👥 67 студентов</p>
+                            <button class="btn">Купить курс</button>
                         </div>
-                    `;
-                    break;
+                    </div>
+                `;
+            } else if (tab === 'profile') {
+                html = `
+                    <div class="page">
+                        <h2>👤 Ваш профиль</h2>
+                        <div class="card">
+                            <p><strong>Имя:</strong> Демо Пользователь</p>
+                            <p><strong>Специализация:</strong> Невролог</p>
+                            <p><strong>Город:</strong> Москва</p>
+                            <p><strong>Статус:</strong> ✅ Активная подписка</p>
+                        </div>
+                        <button class="btn">Редактировать профиль</button>
+                    </div>
+                `;
             }
             
-            main.innerHTML = content;
+            main.innerHTML = html;
             
             // Обновляем активные кнопки
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
         }
-
-        // Показываем главную страницу при загрузке
-        document.addEventListener('DOMContentLoaded', function() {
-            showPage('home');
-            console.log('✅ Академия АНБ загружена!');
-        });
 
         // Инициализация Telegram WebApp
         if (window.Telegram && Telegram.WebApp) {
             Telegram.WebApp.expand();
             Telegram.WebApp.ready();
-            console.log('📱 Telegram WebApp инициализирован');
         }
+        
+        console.log('✅ Академия АНБ запущена!');
     </script>
 </body>
 </html>
+EOF
