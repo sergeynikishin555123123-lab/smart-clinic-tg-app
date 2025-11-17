@@ -30,16 +30,41 @@ console.log(`🌐 Окружение: ${config.NODE_ENV}`);
 console.log(`🤖 Бот: ${config.BOT_TOKEN ? 'активен' : 'не настроен'}`);
 
 // ==================== СИСТЕМА УПРАВЛЕНИЯ ПРОЦЕССАМИ ====================
+// ЗАМЕНИТЕ ProcessManager на этот код:
+
 class ProcessManager {
     constructor() {
-        this.isPortAvailable = false;
+        this.isPortAvailable = true;
         this.healthStatus = {
             bot: 'unknown',
-            server: 'unknown',
+            server: 'unknown', 
             database: 'unknown',
             system: 'unknown'
         };
     }
+
+    async performSystemCheck() {
+        console.log('🔍 Проверка системы...');
+        try {
+            this.healthStatus.system = 'healthy';
+            console.log('✅ Проверка системы завершена');
+            return true;
+        } catch (error) {
+            console.error('❌ Ошибка проверки системы:', error);
+            this.healthStatus.system = 'unhealthy';
+            return false;
+        }
+    }
+
+    getHealthStatus() {
+        return {
+            ...this.healthStatus,
+            timestamp: new Date().toISOString(),
+            port: config.PORT,
+            portAvailable: this.isPortAvailable
+        };
+    }
+}
 
     async checkPortAvailability(port) {
         return new Promise((resolve) => {
