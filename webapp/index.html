@@ -4,465 +4,142 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Академия АНБ - Современное образование для врачей</title>
+    <meta name="description" content="Академия АНБ - платформа для непрерывного медицинского образования. Курсы, подкасты, эфиры и материалы для врачей.">
+    <meta name="keywords" content="медицина, образование, врачи, курсы, неврология, АНБ">
     
-    <!-- Meta Tags -->
-    <meta name="description" content="Академия АНБ - современная образовательная платформа для врачей. Курсы, подкасты, эфиры и материалы для профессионального развития.">
-    <meta name="keywords" content="медицина, образование, врачи, курсы, неврология, АНБ академия">
-    <meta name="author" content="АНБ Академия">
+    <!-- Telegram WebApp -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
-    <!-- Open Graph -->
-    <meta property="og:title" content="Академия АНБ - Современное образование для врачей">
-    <meta property="og:description" content="Профессиональное развитие для врачей через курсы, подкасты и живые эфиры">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://anb-academy.timeweb.ru">
-    <meta property="og:image" content="/webapp/assets/og-image.jpg">
-    
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Академия АНБ">
-    <meta name="twitter:description" content="Современное образование для врачей">
+    <!-- Styles -->
+    <link rel="stylesheet" href="/webapp/style.css">
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/webapp/assets/favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="/webapp/assets/apple-touch-icon.png">
     
-    <!-- Preload Critical Resources -->
-    <link rel="preload" href="/webapp/style.css" as="style">
+    <!-- PWA -->
+    <link rel="manifest" href="/webapp/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    
+    <!-- Preload critical resources -->
     <link rel="preload" href="/webapp/app.js" as="script">
     
-    <!-- CSS -->
-    <link rel="stylesheet" href="/webapp/style.css">
-    
-    <!-- Telegram Web App Integration -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <!-- Socket.io -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    
-    <style>
-        /* Critical CSS for initial load */
-        .app-loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            color: white;
-        }
-        
-        .loading-logo {
-            font-size: 3em;
-            margin-bottom: 1rem;
-            animation: pulse 2s infinite;
-        }
-        
-        .loading-text {
-            font-size: 1.2em;
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-        
-        .loading-progress {
-            width: 200px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
-            overflow: hidden;
-        }
-        
-        .loading-progress-bar {
-            height: 100%;
-            background: #3b82f6;
-            border-radius: 2px;
-            animation: loading 2s ease-in-out infinite;
-        }
-        
-        @keyframes loading {
-            0% { transform: translateX(-100%); }
-            50% { transform: translateX(0); }
-            100% { transform: translateX(100%); }
-        }
-        
-        .hidden {
-            display: none !important;
-        }
-    </style>
+    <!-- Preconnect to important origins -->
+    <link rel="preconnect" href="https://telegram.org">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div id="loadingScreen" class="app-loading">
-        <div class="loading-logo">🎓</div>
-        <div class="loading-text">Академия АНБ<br><small>Загрузка приложения...</small></div>
-        <div class="loading-progress">
-            <div class="loading-progress-bar"></div>
-        </div>
-    </div>
-
-    <!-- Main App Container -->
-    <div id="app" class="app hidden">
-        <!-- Header -->
-        <header class="header">
-            <h1>Академия АНБ</h1>
-            <div class="header-actions">
-                <div id="adminBadge" class="admin-badge hidden">🔧 Админ</div>
-                <button class="icon-btn" onclick="app.showNotifications()" aria-label="Уведомления">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.93 6 11v5l-2 2v1h16v-1l-2-2z"/>
-                    </svg>
-                </button>
-                <button class="icon-btn" onclick="app.showSettings()" aria-label="Настройки">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-                    </svg>
-                </button>
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="main-nav">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <span class="brand-icon">🎓</span>
+                    <span class="brand-text">Академия АНБ</span>
+                    <sup class="version">v2.0</sup>
+                </div>
+                
+                <div class="nav-menu">
+                    <button class="nav-btn" data-page="home">🏠 Главная</button>
+                    <button class="nav-btn" data-page="courses">📚 Курсы</button>
+                    <button class="nav-btn" data-page="podcasts">🎧 АНБ FM</button>
+                    <button class="nav-btn" data-page="streams">📹 Эфиры</button>
+                    <button class="nav-btn" data-page="videos">🎯 Видео</button>
+                    <button class="nav-btn" data-page="materials">📋 Материалы</button>
+                    <button class="nav-btn" data-page="events">🗺️ Мероприятия</button>
+                </div>
+                
+                <div class="nav-actions">
+                    <button class="nav-action-btn" data-page="favorites" title="Избранное">
+                        <span class="action-icon">❤️</span>
+                        <span class="action-badge" id="favoritesCount">0</span>
+                    </button>
+                    <button class="nav-action-btn" data-page="profile" title="Профиль">
+                        <span class="action-icon">👤</span>
+                    </button>
+                    <div class="notification-badge" id="notificationBadge" style="display: none;">0</div>
+                    <div id="adminBadge" class="admin-badge" style="display: none;">🔧 Админ</div>
+                </div>
             </div>
-        </header>
-
-        <!-- Search Section -->
-        <section class="search-container">
-            <div class="search-wrapper">
-                <input type="text" 
-                       placeholder="Поиск по курсам, материалам, эфирам..." 
-                       class="search-input" 
-                       id="searchInput"
-                       aria-label="Поиск">
-                <button class="search-btn" onclick="app.handleSearch()" aria-label="Найти">
-                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                    </svg>
-                </button>
-            </div>
-        </section>
+        </nav>
 
         <!-- Main Content -->
-        <main class="main" id="mainContent">
-            <!-- Content will be dynamically rendered here -->
-            <div class="page home-page">
-                <div class="search-container">
-                    <div class="search-wrapper">
-                        <input type="text" 
-                               placeholder="Поиск по курсам, материалам, эфирам..." 
-                               class="search-input" 
-                               id="homeSearchInput"
-                               value="">
-                        <button class="search-btn" onclick="app.handleSearch()">
-                            <svg class="search-icon"><use xlink:href="#icon-search"></use></svg>
-                        </button>
+        <main id="mainContent" class="main-content">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Загрузка Академии АНБ...</p>
+                <div class="loading-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
                     </div>
-                </div>
-
-                <div class="hero-section">
-                    <div class="hero-background"></div>
-                    <div class="hero-content">
-                        <h2>Академия АНБ</h2>
-                        <p>Современное образование для врачей</p>
-                        <div class="hero-stats">
-                            <div class="hero-stat">
-                                <div class="stat-value">25+</div>
-                                <div class="stat-label">Курсов</div>
-                            </div>
-                            <div class="hero-stat">
-                                <div class="stat-value">1500+</div>
-                                <div class="stat-label">Студентов</div>
-                            </div>
-                            <div class="hero-stat">
-                                <div class="stat-value">25</div>
-                                <div class="stat-label">Экспертов</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="progress-section">
-                    <h3>Ваш прогресс</h3>
-                    <div class="progress-cards">
-                        <div class="progress-card">
-                            <div class="progress-icon">📚</div>
-                            <div class="progress-info">
-                                <div class="progress-value">3</div>
-                                <div class="progress-label">Курсов</div>
-                            </div>
-                        </div>
-                        <div class="progress-card">
-                            <div class="progress-icon">🎯</div>
-                            <div class="progress-info">
-                                <div class="progress-value">12</div>
-                                <div class="progress-label">Модулей</div>
-                            </div>
-                        </div>
-                        <div class="progress-card">
-                            <div class="progress-icon">⏱️</div>
-                            <div class="progress-info">
-                                <div class="progress-value">45</div>
-                                <div class="progress-label">Часов</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="level-progress">
-                        <div class="level-info">
-                            <span class="level-name">Понимаю</span>
-                            <span class="level-exp">1250/1000 XP</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 75%"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="navigation-grid">
-                    <div class="nav-card" data-section="courses">
-                        <div class="nav-icon">📚</div>
-                        <div class="nav-content">
-                            <div class="nav-title">Курсы</div>
-                            <div class="nav-description">Доступные обучающие программы</div>
-                        </div>
-                        <div class="nav-badge">25</div>
-                    </div>
-                    <div class="nav-card" data-section="podcasts">
-                        <div class="nav-icon">🎧</div>
-                        <div class="nav-content">
-                            <div class="nav-title">АНБ FM</div>
-                            <div class="nav-description">Аудио подкасты и интервью</div>
-                        </div>
-                        <div class="nav-badge">15</div>
-                    </div>
-                    <div class="nav-card" data-section="streams">
-                        <div class="nav-icon">📹</div>
-                        <div class="nav-content">
-                            <div class="nav-title">Эфиры</div>
-                            <div class="nav-description">Прямые трансляции и разборы</div>
-                        </div>
-                        <div class="nav-badge">8</div>
-                    </div>
-                    <div class="nav-card" data-section="videos">
-                        <div class="nav-icon">🎯</div>
-                        <div class="nav-content">
-                            <div class="nav-title">Видео-шпаргалки</div>
-                            <div class="nav-description">Короткие обучающие видео</div>
-                        </div>
-                        <div class="nav-badge">32</div>
-                    </div>
-                    <div class="nav-card" data-section="materials">
-                        <div class="nav-icon">📋</div>
-                        <div class="nav-content">
-                            <div class="nav-title">Материалы</div>
-                            <div class="nav-description">Практические руководства и схемы</div>
-                        </div>
-                        <div class="nav-badge">45</div>
-                    </div>
-                    <div class="nav-card" data-section="events">
-                        <div class="nav-icon">🗺️</div>
-                        <div class="nav-content">
-                            <div class="nav-title">Мероприятия</div>
-                            <div class="nav-description">Конференции и воркшопы</div>
-                        </div>
-                        <div class="nav-badge">6</div>
-                    </div>
-                    <div class="nav-card" data-section="promotions">
-                        <div class="nav-icon">🎁</div>
-                        <div class="nav-content">
-                            <div class="nav-title">Акции</div>
-                            <div class="nav-description">Специальные предложения</div>
-                        </div>
-                        <div class="nav-badge">3</div>
-                    </div>
-                    <div class="nav-card" data-section="community">
-                        <div class="nav-icon">👥</div>
-                        <div class="nav-content">
-                            <div class="nav-title">Сообщество</div>
-                            <div class="nav-description">Общение с коллегами</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="recommended-section">
-                    <div class="section-header">
-                        <h3>Рекомендуемые курсы</h3>
-                        <a href="javascript:void(0)" onclick="app.renderPage('courses')" class="see-all">Все курсы →</a>
-                    </div>
-                    <div class="recommended-grid">
-                        <div class="course-card featured" onclick="app.openCourseDetail(1)">
-                            <div class="card-badge">Рекомендуем</div>
-                            <div class="card-image">
-                                <img src="/webapp/assets/course-manual.jpg" alt="Мануальные техники в практике невролога" onerror="this.src='/webapp/assets/course-default.jpg'">
-                                <div class="card-overlay">
-                                    <button class="favorite-btn active" data-id="1" data-type="courses" onclick="event.stopPropagation(); app.toggleFavorite(1, 'courses')">
-                                        <svg class="heart-icon"><use xlink:href="#icon-heart"></use></svg>
-                                    </button>
-                                    <button class="preview-btn" onclick="event.stopPropagation(); app.previewCourse(1)">
-                                        👁️
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="card-content">
-                                <h3 class="card-title">Мануальные техники в практике невролога</h3>
-                                <p class="card-description">6 модулей по современным мануальным методикам</p>
-                                <div class="card-meta">
-                                    <span class="meta-item">⏱️ 12 недель</span>
-                                    <span class="meta-item">💰 25 000 ₽</span>
-                                    <span class="meta-item">⭐ 4.8</span>
-                                </div>
-                                <div class="card-actions">
-                                    <button class="btn btn-primary btn-small" onclick="event.stopPropagation(); app.purchaseCourse(1)">
-                                        Подробнее
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="course-card" onclick="app.openCourseDetail(2)">
-                            <div class="card-image">
-                                <img src="/webapp/assets/course-diagnosis.jpg" alt="Неврологическая диагностика" onerror="this.src='/webapp/assets/course-default.jpg'">
-                                <div class="card-overlay">
-                                    <button class="favorite-btn" data-id="2" data-type="courses" onclick="event.stopPropagation(); app.toggleFavorite(2, 'courses')">
-                                        <svg class="heart-icon"><use xlink:href="#icon-heart"></use></svg>
-                                    </button>
-                                    <button class="preview-btn" onclick="event.stopPropagation(); app.previewCourse(2)">
-                                        👁️
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="card-content">
-                                <h3 class="card-title">Неврологическая диагностика: от основ к практике</h3>
-                                <p class="card-description">5 модулей по современной неврологической диагностике</p>
-                                <div class="card-meta">
-                                    <span class="meta-item">⏱️ 8 недель</span>
-                                    <span class="meta-item">💰 18 000 ₽</span>
-                                    <span class="meta-item">⭐ 4.6</span>
-                                </div>
-                                <div class="card-actions">
-                                    <button class="btn btn-primary btn-small" onclick="event.stopPropagation(); app.purchaseCourse(2)">
-                                        Подробнее
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="recent-activity">
-                    <h3>Последняя активность</h3>
-                    <div class="activity-list">
-                        <div class="activity-item">
-                            <div class="activity-icon">📚</div>
-                            <div class="activity-info">
-                                <div class="activity-title">Начат курс "Мануальные техники"</div>
-                                <div class="activity-time">2 часа назад</div>
-                            </div>
-                        </div>
-                        <div class="activity-item">
-                            <div class="activity-icon">🎧</div>
-                            <div class="activity-info">
-                                <div class="activity-title">Прослушан подкаст "Современная неврология"</div>
-                                <div class="activity-time">Вчера</div>
-                            </div>
-                        </div>
-                        <div class="activity-item">
-                            <div class="activity-icon">📋</div>
-                            <div class="activity-info">
-                                <div class="activity-title">Скачан материал "МРТ разбор"</div>
-                                <div class="activity-time">2 дня назад</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="quick-actions">
-                    <h3>Быстрые действия</h3>
-                    <div class="actions-grid">
-                        <button class="action-btn" onclick="app.renderPage('favorites')">
-                            <div class="action-icon">❤️</div>
-                            <div class="action-text">Избранное</div>
-                        </button>
-                        <button class="action-btn" onclick="app.renderPage('profile')">
-                            <div class="action-icon">👤</div>
-                            <div class="action-text">Профиль</div>
-                        </button>
-                        <button class="action-btn" onclick="app.showSupport()">
-                            <div class="action-icon">🆘</div>
-                            <div class="action-text">Поддержка</div>
-                        </button>
-                        <button class="action-btn" onclick="app.renderPage('admin')">
-                            <div class="action-icon">🔧</div>
-                            <div class="action-text">Админ</div>
-                        </button>
-                    </div>
+                    <div class="progress-text">Инициализация системы</div>
                 </div>
             </div>
         </main>
 
-        <!-- Navigation -->
-        <nav class="nav">
-            <button class="nav-btn active" data-page="home">
-                <span class="nav-icon">🏠</span>
-                <span class="nav-label">Главная</span>
-            </button>
-            <button class="nav-btn" data-page="courses">
-                <span class="nav-icon">📚</span>
-                <span class="nav-label">Курсы</span>
-            </button>
-            <button class="nav-btn" data-page="streams">
-                <span class="nav-icon">📹</span>
-                <span class="nav-label">Эфиры</span>
-            </button>
-            <button class="nav-btn" data-page="profile">
-                <span class="nav-icon">👤</span>
-                <span class="nav-label">Профиль</span>
-            </button>
-        </nav>
+        <!-- System Status -->
+        <div class="system-status" id="systemStatus">
+            <div class="status-indicator online"></div>
+            <span class="status-text">Система онлайн</span>
+            <div class="status-actions">
+                <button class="status-btn" onclick="app.showSystemInfo()">ℹ️</button>
+                <button class="status-btn" onclick="app.reloadApp()">🔄</button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="main-footer">
+            <div class="footer-container">
+                <div class="footer-section">
+                    <h3>Академия АНБ</h3>
+                    <p>Современное образование для врачей</p>
+                    <div class="footer-links">
+                        <a href="https://anb-academy.ru" target="_blank">Официальный сайт</a>
+                        <a href="mailto:support@anb-academy.ru">Поддержка</a>
+                        <a href="https://t.me/anb_academy_support" target="_blank">Telegram</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Ресурсы</h3>
+                    <div class="footer-links">
+                        <a href="javascript:void(0)" onclick="app.renderPage('courses')">Все курсы</a>
+                        <a href="javascript:void(0)" onclick="app.renderPage('materials')">Материалы</a>
+                        <a href="javascript:void(0)" onclick="app.renderPage('events')">Мероприятия</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Помощь</h3>
+                    <div class="footer-links">
+                        <a href="javascript:void(0)" onclick="app.showHelp()">Частые вопросы</a>
+                        <a href="javascript:void(0)" onclick="app.showSupport()">Техподдержка</a>
+                        <a href="javascript:void(0)" onclick="app.showFeedback()">Обратная связь</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Академия АНБ. Все права защищены.</p>
+                <p class="version-info">Версия 2.0.0 | TimeWeb Cloud</p>
+            </div>
+        </footer>
     </div>
 
-    <!-- SVG Icons Sprite -->
-    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-        <symbol id="icon-search" viewBox="0 0 24 24">
-            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-        </symbol>
-        <symbol id="icon-user" viewBox="0 0 24 24">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-        </symbol>
-        <symbol id="icon-heart" viewBox="0 0 24 24">
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-        </symbol>
-        <symbol id="icon-settings" viewBox="0 0 24 24">
-            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-        </symbol>
-    </svg>
-
-    <!-- JavaScript -->
+    <!-- Scripts -->
     <script src="/webapp/app.js"></script>
+    
+    <!-- Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
     
     <!-- Analytics -->
     <script>
-        // Basic error tracking
-        window.addEventListener('error', function(e) {
-            console.error('Global error:', e.error);
-        });
-        
-        // Performance monitoring
+        // Базовая аналитика
         window.addEventListener('load', function() {
-            const perfData = performance.timing;
-            const loadTime = perfData.loadEventEnd - perfData.navigationStart;
-            console.log('Page load time:', loadTime + 'ms');
+            if (typeof app !== 'undefined') {
+                app.trackEvent('page_load', {
+                    load_time: performance.now(),
+                    user_agent: navigator.userAgent,
+                    viewport: window.innerWidth + 'x' + window.innerHeight
+                });
+            }
         });
-        
-        // Service Worker registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/webapp/sw.js')
-                    .then(function(registration) {
-                        console.log('SW registered: ', registration);
-                    })
-                    .catch(function(registrationError) {
-                        console.log('SW registration failed: ', registrationError);
-                    });
-            });
-        }
     </script>
 </body>
 </html>
