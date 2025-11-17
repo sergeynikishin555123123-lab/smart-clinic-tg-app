@@ -8,29 +8,18 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "build": "node setup.js",
-    "setup": "node setup.js --non-interactive --install-deps",
+    "setup": "node setup.js --non-interactive",
     "deploy": "npm run build && npm start",
-    "timeweb-build": "npm install --production --legacy-peer-deps && npm run setup",
-    "production": "NODE_ENV=production node server.js",
-    "test": "node test.js"
+    "production": "NODE_ENV=production node server.js"
   },
   "keywords": [
     "academy",
     "education",
     "medical",
     "telegram",
-    "bot",
-    "modern",
-    "medicine",
-    "doctors",
-    "learning",
-    "courses"
+    "bot"
   ],
-  "author": {
-    "name": "АНБ Академия",
-    "email": "admin@anb-academy.ru",
-    "url": "https://anb-academy.ru"
-  },
+  "author": "АНБ Академия",
   "license": "MIT",
   "dependencies": {
     "telegraf": "^4.16.3",
@@ -58,38 +47,9 @@
     "qrcode": "^1.5.3",
     "socket.io": "^4.7.4",
     "redis": "^4.6.10",
-    "ioredis": "^5.3.2",
-    "apicache": "^1.6.3",
-    "cloudinary": "^1.41.0",
-    "stripe": "^14.5.0",
-    "pdfkit": "^0.14.0",
-    "exceljs": "^4.4.0",
-    "archiver": "^6.0.1",
-    "node-fetch": "^3.3.2",
-    "ws": "^8.14.2",
-    "json2csv": "^6.1.0",
-    "csv-parser": "^3.0.0",
-    "xml2js": "^0.6.2",
-    "cheerio": "^1.0.0-rc.12",
-    "puppeteer": "^21.6.1",
-    "canvas": "^2.11.2",
-    "fluent-ffmpeg": "^2.1.2",
-    "music-metadata": "^7.14.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
+    "ioredis": "^5.3.2"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/anb-academy/smart-clinic.git"
-  },
-  "bugs": {
-    "url": "https://github.com/anb-academy/smart-clinic/issues"
-  },
-  "homepage": "https://anb-academy.ru",
-  "private": true
+    "node": ">=18.0.0"
+  }
 }
