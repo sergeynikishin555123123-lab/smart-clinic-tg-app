@@ -3287,24 +3287,26 @@ class ExpressServerSystem {
         // Временное отключение кэширования
 console.log('⚠️ API caching temporarily disabled');
 
-    setupFileUpload() {
-        const storage = multer.diskStorage({
-            destination: async (req, file, cb) => {
-                const uploadType = file.fieldname || 'general';
-                const uploadPath = join(config.UPLOAD_PATH, uploadType);
-                
-                try {
-                    await fs.mkdir(uploadPath, { recursive: true });
-                    cb(null, uploadPath);
-                } catch (error) {
-                    cb(error, null);
-                }
-            },
-            filename: (req, file, cb) => {
-                const uniqueName = `${uuidv4()}-${file.originalname}`;
-                cb(null, uniqueName);
+   setupFileUpload() {
+    const storage = multer.diskStorage({
+        destination: async (req, file, cb) => {
+            const uploadType = file.fieldname || 'general';
+            const uploadPath = join(config.UPLOAD_PATH, uploadType);
+            
+            try {
+                await fs.mkdir(uploadPath, { recursive: true });
+                cb(null, uploadPath);
+            } catch (error) {
+                cb(error, null);
             }
-        });
+        },
+        filename: (req, file, cb) => {
+            const uniqueName = `${uuidv4()}-${file.originalname}`;
+            cb(null, uniqueName);
+        }
+    }); // ← ДОБАВЬТЕ ЗДЕСЬ ЗАКРЫВАЮЩУЮ СКОБКУ И ТОЧКУ С ЗАПЯТОЙ
+
+    const fileFilter = (req, file, cb) => {
 
         const fileFilter = (req, file, cb) => {
             const allowedTypes = {
