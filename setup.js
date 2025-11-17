@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 async function setup() {
-    console.log('🚀 Setting up ANB Academy...');
+    console.log('🚀 ANB Academy - Build Process Starting...');
     
     try {
         // Создаем директории
@@ -24,7 +24,8 @@ async function setup() {
         }
         
         // Создаем .env если не существует
-        if (!existsSync(join(__dirname, '.env'))) {
+        const envPath = join(__dirname, '.env');
+        if (!existsSync(envPath)) {
             const envContent = `BOT_TOKEN=${process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4'}
 DATABASE_URL=${process.env.DATABASE_URL || 'postgresql://gen_user:5-R;mKGYJ<88?1@45.89.190.49:5432/default_db?sslmode=require'}
 WEBAPP_URL=${process.env.WEBAPP_URL || 'https://anb-academy.timeweb.ru'}
@@ -35,18 +36,31 @@ JWT_SECRET=anb-academy-super-secret-jwt-key-2024
 UPLOAD_PATH=./uploads
 MAX_FILE_SIZE=52428800`;
             
-            await fs.writeFile(join(__dirname, '.env'), envContent);
+            await fs.writeFile(envPath, envContent);
             console.log('✓ Created: .env');
         }
         
-        console.log('✅ Setup completed successfully!');
+        // Создаем базовые файлы для webapp
+        const webappFiles = {
+            'webapp/.htaccess': `RewriteEngine On\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-d\nRewriteRule . /index.html [L]`,
+            'webapp/robots.txt': 'User-agent: *\nAllow: /'
+        };
+        
+        for (const [file, content] of Object.entries(webappFiles)) {
+            const filePath = join(__dirname, file);
+            await fs.writeFile(filePath, content, 'utf8');
+            console.log(`✓ Created: ${file}`);
+        }
+        
+        console.log('✅ Build completed successfully!');
         
     } catch (error) {
-        console.error('❌ Setup error:', error.message);
+        console.error('❌ Build error:', error.message);
+        // Не выходим с ошибкой, чтобы сборка продолжалась
     }
 }
 
-// Запуск
+// Автозапуск при вызове скрипта
 const args = process.argv.slice(2);
 if (args.includes('--non-interactive')) {
     await setup();
