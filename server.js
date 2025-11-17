@@ -3284,15 +3284,8 @@ class ExpressServerSystem {
         this.app.use('/webapp', express.static(join(__dirname, 'webapp')));
         this.app.use('/assets', express.static(join(__dirname, 'webapp/assets')));
 
-        // Кэширование
-        const cache = apicache.options({
-            debug: config.NODE_ENV === 'development',
-            defaultDuration: '1 hour',
-            appendKey: (req, res) => req.method + req.originalUrl
-        }).middleware;
-
-        this.app.use(cache('5 minutes'));
-    }
+        // Временное отключение кэширования
+console.log('⚠️ API caching temporarily disabled');
 
     setupFileUpload() {
         const storage = multer.diskStorage({
