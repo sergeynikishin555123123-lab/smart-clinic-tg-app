@@ -1,6 +1,6 @@
-# timeweb.yml
+# .timeweb.yml
 build:
-  - npm install --legacy-peer-deps --no-optional
+  - npm install --no-package-lock --legacy-peer-deps
   - npm run setup
 
 start: npm start
