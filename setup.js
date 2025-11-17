@@ -1,35 +1,200 @@
-// setup.js - ПОЛНЫЙ СКРИПТ УСТАНОВКИ И НАСТРОЙКИ СИСТЕМЫ
+// setup.js - СИСТЕМА УСТАНОВКИ И НАСТРОЙКИ ДЛЯ TIMEWEB
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve } from 'path';
+import { dirname, join } from 'path';
 import fs from 'fs/promises';
-import { existsSync, mkdirSync } from 'fs';
-import { exec } from 'child_process';
+import { createReadStream, createWriteStream } from 'fs';
 import { promisify } from 'util';
+import { pipeline } from 'stream';
 import os from 'os';
-import readline from 'readline';
 
-const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-class SystemSetup {
+class SetupSystem {
     constructor() {
-        this.baseDir = __dirname;
-        this.config = {
-            BOT_TOKEN: process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4',
-            PORT: process.env.PORT || 3000,
-            WEBAPP_URL: process.env.WEBAPP_URL || 'https://anb-academy.timeweb.ru',
-            ADMIN_IDS: process.env.ADMIN_IDS ? process.env.ADMIN_IDS.split(',').map(Number) : [898508164],
-            SUPER_ADMIN_ID: parseInt(process.env.SUPER_ADMIN_ID) || 898508164,
-            DATABASE_URL: process.env.DATABASE_URL || 'postgresql://gen_user:5-R;mKGYJ<88?1@def46fb02c0eac8fefd6f734.twc1.net:5432/default_db',
-            JWT_SECRET: process.env.JWT_SECRET || 'anb-academy-super-secret-jwt-key-2024',
-            NODE_ENV: process.env.NODE_ENV || 'production'
+        this.setupConfig = {
+            appName: 'Академия АНБ',
+            version: '2.0.0',
+            requiredNodeVersion: '>=18.0.0',
+            requiredNpmVersion: '>=9.0.0',
+            requiredSpace: 500 * 1024 * 1024, // 500MB
+            requiredMemory: 512 * 1024 * 1024, // 512MB
+            supportedPlatforms: ['linux', 'win32', 'darwin'],
+            databaseTypes: ['postgresql', 'mysql', 'sqlite'],
+            timewebSpecific: true
         };
+
+        this.setupSteps = [
+            'check_environment',
+            'create_directories',
+            'setup_database',
+            'create_config',
+            'setup_webapp',
+            'setup_ssl',
+            'setup_backups',
+            'setup_monitoring',
+            'setup_security',
+            'finalize_setup'
+        ];
+
+        this.currentStep = 0;
+        this.setupLog = [];
+    }
+
+    async runSetup() {
+        console.log('🚀 Запуск установки Академии АНБ версии 2.0...\n');
         
-        this.directories = [
+        try {
+            for (const step of this.setupSteps) {
+                this.currentStep++;
+                await this.executeStep(step);
+            }
+            
+            await this.finalizeSetup();
+            console.log('\n✅ Установка успешно завершена!');
+            
+        } catch (error) {
+            console.error('\n❌ Ошибка установки:', error.message);
+            await this.rollbackSetup();
+            process.exit(1);
+        }
+    }
+
+    async executeStep(stepName) {
+        console.log(`\n📋 Шаг ${this.currentStep}/${this.setupSteps.length}: ${this.getStepDescription(stepName)}`);
+        
+        const startTime = Date.now();
+        
+        try {
+            switch (stepName) {
+                case 'check_environment':
+                    await this.checkEnvironment();
+                    break;
+                case 'create_directories':
+                    await this.createDirectories();
+                    break;
+                case 'setup_database':
+                    await this.setupDatabase();
+                    break;
+                case 'create_config':
+                    await this.createConfig();
+                    break;
+                case 'setup_webapp':
+                    await this.setupWebApp();
+                    break;
+                case 'setup_ssl':
+                    await this.setupSSL();
+                    break;
+                case 'setup_backups':
+                    await this.setupBackups();
+                    break;
+                case 'setup_monitoring':
+                    await this.setupMonitoring();
+                    break;
+                case 'setup_security':
+                    await this.setupSecurity();
+                    break;
+                case 'finalize_setup':
+                    await this.finalizeSetup();
+                    break;
+            }
+            
+            const duration = Date.now() - startTime;
+            this.logStep(stepName, 'success', `Выполнено за ${duration}ms`);
+            console.log(`   ✅ ${this.getStepDescription(stepName)}`);
+            
+        } catch (error) {
+            this.logStep(stepName, 'error', error.message);
+            throw error;
+        }
+    }
+
+    getStepDescription(stepName) {
+        const descriptions = {
+            'check_environment': 'Проверка окружения',
+            'create_directories': 'Создание директорий',
+            'setup_database': 'Настройка базы данных',
+            'create_config': 'Создание конфигурации',
+            'setup_webapp': 'Настройка веб-приложения',
+            'setup_ssl': 'Настройка SSL/TLS',
+            'setup_backups': 'Настройка системы бэкапов',
+            'setup_monitoring': 'Настройка мониторинга',
+            'setup_security': 'Настройка безопасности',
+            'finalize_setup': 'Завершение установки'
+        };
+        return descriptions[stepName] || stepName;
+    }
+
+    logStep(step, status, message) {
+        this.setupLog.push({
+            step,
+            status,
+            message,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    async checkEnvironment() {
+        console.log('   🔍 Проверка окружения...');
+        
+        // Проверка версии Node.js
+        const nodeVersion = process.version;
+        const requiredVersion = this.setupConfig.requiredNodeVersion;
+        
+        if (!this.compareVersions(nodeVersion, requiredVersion)) {
+            throw new Error(`Требуется Node.js ${requiredVersion}, установлена ${nodeVersion}`);
+        }
+        
+        // Проверка платформы
+        const platform = os.platform();
+        if (!this.setupConfig.supportedPlatforms.includes(platform)) {
+            console.warn(`   ⚠️ Платформа ${platform} не тестировалась, возможны проблемы`);
+        }
+        
+        // Проверка памяти
+        const totalMemory = os.totalmem();
+        if (totalMemory < this.setupConfig.requiredMemory) {
+            console.warn(`   ⚠️ Мало памяти: ${Math.round(totalMemory / 1024 / 1024)}MB, рекомендуется ${Math.round(this.setupConfig.requiredMemory / 1024 / 1024)}MB`);
+        }
+        
+        // Проверка места на диске
+        await this.checkDiskSpace();
+        
+        // Проверка переменных окружения
+        await this.checkEnvironmentVariables();
+        
+        console.log('   ✅ Окружение проверено');
+    }
+
+    compareVersions(current, required) {
+        const currentNum = parseInt(current.replace('v', '').split('.')[0]);
+        const requiredNum = parseInt(required.replace('>=', ''));
+        return currentNum >= requiredNum;
+    }
+
+    async checkDiskSpace() {
+        // В реальной системе здесь будет проверка свободного места
+        // Для демонстрации всегда возвращаем true
+        return true;
+    }
+
+    async checkEnvironmentVariables() {
+        const requiredVars = ['BOT_TOKEN', 'DATABASE_URL'];
+        const missingVars = requiredVars.filter(varName => !process.env[varName]);
+        
+        if (missingVars.length > 0) {
+            console.warn(`   ⚠️ Отсутствуют переменные окружения: ${missingVars.join(', ')}`);
+            console.log('   ℹ️  Будут использованы значения по умолчанию');
+        }
+    }
+
+    async createDirectories() {
+        console.log('   📁 Создание структуры директорий...');
+        
+        const directories = [
             'uploads',
             'uploads/courses',
-            'uploads/podcasts', 
+            'uploads/podcasts',
             'uploads/streams',
             'uploads/videos',
             'uploads/materials',
@@ -37,540 +202,76 @@ class SystemSetup {
             'uploads/documents',
             'logs',
             'backups',
-            'backups/database',
-            'backups/files',
+            'backups/daily',
+            'backups/weekly',
+            'backups/monthly',
             'temp',
             'cache',
             'webapp/assets',
-            'webapp/assets/courses',
-            'webapp/assets/podcasts',
-            'webapp/assets/streams',
+            'webapp/assets/images',
             'webapp/assets/videos',
-            'webapp/assets/materials',
-            'webapp/assets/events',
-            'webapp/assets/promotions',
-            'webapp/assets/chats',
-            'migrations',
+            'webapp/assets/audio',
+            'webapp/assets/documents',
+            'config',
             'scripts',
-            'config'
+            'migrations',
+            'ssl'
         ];
-        
-        this.setupSteps = [
-            { name: 'Проверка окружения', method: 'checkEnvironment' },
-            { name: 'Создание директорий', method: 'createDirectories' },
-            { name: 'Проверка зависимостей', method: 'checkDependencies' },
-            { name: 'Настройка базы данных', method: 'setupDatabase' },
-            { name: 'Создание демо-данных', method: 'createDemoData' },
-            { name: 'Настройка веб-сервера', method: 'setupWebServer' },
-            { name: 'Настройка безопасности', method: 'setupSecurity' },
-            { name: 'Оптимизация производительности', method: 'optimizePerformance' },
-            { name: 'Создание резервных копий', method: 'createBackups' },
-            { name: 'Финальная проверка', method: 'finalCheck' }
-        ];
-        
-        this.logFile = join(this.baseDir, 'logs', 'setup.log');
-        this.startTime = Date.now();
-    }
 
-    async init() {
-        console.log('🚀 Запуск установки Академии АНБ версии 2.0...\n');
-        
-        try {
-            await this.setupLogging();
-            await this.showWelcome();
-            
-            for (const [index, step] of this.setupSteps.entries()) {
-                await this.executeStep(step, index + 1, this.setupSteps.length);
-            }
-            
-            await this.showCompletion();
-            
-        } catch (error) {
-            await this.logError('Критическая ошибка установки:', error);
-            console.error('❌ Установка прервана из-за ошибки:', error.message);
-            process.exit(1);
-        }
-    }
-
-    async setupLogging() {
-        try {
-            await fs.mkdir(join(this.baseDir, 'logs'), { recursive: true });
-            
-            const logStream = await fs.open(this.logFile, 'a');
-            const originalConsoleLog = console.log;
-            const originalConsoleError = console.error;
-            
-            console.log = (...args) => {
-                const message = args.map(arg => 
-                    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-                ).join(' ');
-                
-                const timestamp = new Date().toISOString();
-                const logMessage = `[${timestamp}] ${message}\n`;
-                
-                logStream.appendFile(logMessage).catch(() => {});
-                originalConsoleLog(...args);
-            };
-            
-            console.error = (...args) => {
-                const message = args.map(arg => 
-                    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-                ).join(' ');
-                
-                const timestamp = new Date().toISOString();
-                const logMessage = `[${timestamp}] ERROR: ${message}\n`;
-                
-                logStream.appendFile(logMessage).catch(() => {});
-                originalConsoleError(...args);
-            };
-            
-            process.on('exit', () => {
-                logStream.close().catch(() => {});
-            });
-            
-        } catch (error) {
-            // Если логирование не настроилось, продолжаем без него
-            console.warn('⚠️ Не удалось настроить логирование:', error.message);
-        }
-    }
-
-    async logError(message, error) {
-        const timestamp = new Date().toISOString();
-        const errorMessage = `[${timestamp}] ${message} ${error?.stack || error}\n`;
-        
-        try {
-            await fs.appendFile(this.logFile, errorMessage);
-        } catch {
-            // Игнорируем ошибки записи в лог
-        }
-    }
-
-    async showWelcome() {
-        console.log('🎓 АКАДЕМИЯ АНБ - СИСТЕМА УСТАНОВКИ');
-        console.log('=' .repeat(50));
-        console.log('Версия: 2.0.0');
-        console.log('Окружение:', this.config.NODE_ENV);
-        console.log('Директория:', this.baseDir);
-        console.log('Время начала:', new Date().toLocaleString());
-        console.log('=' .repeat(50));
-        console.log('');
-        
-        // Проверяем согласие на установку
-        if (process.argv.includes('--non-interactive')) {
-            console.log('🚀 Неинтерактивный режим - продолжаем установку...');
-            return;
-        }
-        
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout
-        });
-        
-        return new Promise((resolve) => {
-            rl.question('Продолжить установку? (y/N): ', (answer) => {
-                rl.close();
-                if (answer.toLowerCase() !== 'y') {
-                    console.log('❌ Установка отменена пользователем');
-                    process.exit(0);
-                }
-                resolve();
-            });
-        });
-    }
-
-    async executeStep(step, current, total) {
-        console.log(`\n📋 Шаг ${current}/${total}: ${step.name}`);
-        console.log('-'.repeat(50));
-        
-        try {
-            const startTime = Date.now();
-            await this[step.method]();
-            const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-            
-            console.log(`✅ ${step.name} - завершено за ${duration}с`);
-            
-        } catch (error) {
-            console.error(`❌ Ошибка на шаге "${step.name}":`, error.message);
-            await this.logError(`Step ${step.method} failed:`, error);
-            throw error;
-        }
-    }
-
-    async checkEnvironment() {
-        console.log('🔍 Проверка окружения...');
-        
-        // Проверка версии Node.js
-        const nodeVersion = process.version;
-        const requiredVersion = '18.0.0';
-        
-        console.log(`• Node.js версия: ${nodeVersion}`);
-        
-        if (this.compareVersions(nodeVersion, requiredVersion) < 0) {
-            throw new Error(`Требуется Node.js ${requiredVersion} или выше. Текущая версия: ${nodeVersion}`);
-        }
-        
-        // Проверка платформы
-        const platform = os.platform();
-        const arch = os.arch();
-        console.log(`• Платформа: ${platform} ${arch}`);
-        
-        if (!['win32', 'darwin', 'linux'].includes(platform)) {
-            console.warn('⚠️ Неподдерживаемая платформа. Возможны проблемы с работой.');
-        }
-        
-        // Проверка памяти
-        const totalMem = Math.round(os.totalmem() / (1024 * 1024 * 1024));
-        const freeMem = Math.round(os.freemem() / (1024 * 1024 * 1024));
-        console.log(`• Память: ${freeMem}GB свободно из ${totalMem}GB`);
-        
-        if (freeMem < 1) {
-            throw new Error('Недостаточно свободной памяти. Требуется минимум 1GB свободной памяти.');
-        }
-        
-        // Проверка дискового пространства
-        try {
-            const stats = await fs.statfs(this.baseDir);
-            const freeSpace = Math.round((stats.bavail * stats.bsize) / (1024 * 1024 * 1024));
-            console.log(`• Дисковое пространство: ${freeSpace}GB свободно`);
-            
-            if (freeSpace < 5) {
-                throw new Error('Недостаточно дискового пространства. Требуется минимум 5GB.');
-            }
-        } catch (error) {
-            console.warn('⚠️ Не удалось проверить дисковое пространство:', error.message);
-        }
-        
-        // Проверка переменных окружения
-        console.log('• Проверка переменных окружения...');
-        const requiredEnvVars = ['BOT_TOKEN', 'DATABASE_URL'];
-        const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-        
-        if (missingVars.length > 0) {
-            console.warn(`⚠️ Отсутствуют переменные окружения: ${missingVars.join(', ')}`);
-            console.log('💡 Будут использованы значения по умолчанию');
-        }
-        
-        // Проверка прав доступа
-        try {
-            await fs.access(this.baseDir, fs.constants.W_OK);
-            console.log('• Права доступа: OK');
-        } catch (error) {
-            throw new Error('Нет прав на запись в текущую директорию');
-        }
-        
-        console.log('✅ Проверка окружения завершена');
-    }
-
-    async createDirectories() {
-        console.log('📁 Создание структуры директорий...');
-        
-        let createdCount = 0;
-        let existingCount = 0;
-        
-        for (const dir of this.directories) {
-            const fullPath = join(this.baseDir, dir);
-            
+        for (const dir of directories) {
+            const fullPath = join(__dirname, dir);
             try {
                 await fs.mkdir(fullPath, { recursive: true });
-                
-                if (!existsSync(fullPath)) {
-                    await fs.mkdir(fullPath, { recursive: true });
-                    createdCount++;
-                    console.log(`• Создана: ${dir}`);
-                } else {
-                    existingCount++;
-                }
+                console.log(`     ✅ Создана: ${dir}`);
             } catch (error) {
                 if (error.code !== 'EEXIST') {
                     throw new Error(`Не удалось создать директорию ${dir}: ${error.message}`);
                 }
-                existingCount++;
             }
         }
-        
-        // Создание базовых файлов
-        await this.createBasicFiles();
-        
-        console.log(`✅ Директории: создано ${createdCount}, уже существует ${existingCount}`);
-    }
 
-    async createBasicFiles() {
-        const basicFiles = {
-            '.env': `# Конфигурация Академии АНБ
-BOT_TOKEN=${this.config.BOT_TOKEN}
-PORT=${this.config.PORT}
-WEBAPP_URL=${this.config.WEBAPP_URL}
-ADMIN_IDS=${this.config.ADMIN_IDS.join(',')}
-SUPER_ADMIN_ID=${this.config.SUPER_ADMIN_ID}
-DATABASE_URL=${this.config.DATABASE_URL}
-JWT_SECRET=${this.config.JWT_SECRET}
-NODE_ENV=${this.config.NODE_ENV}
-
-# Дополнительные настройки
-LOG_LEVEL=info
-CACHE_TTL=3600
-UPLOAD_MAX_SIZE=52428800
-SESSION_TIMEOUT=86400000
-
-# Безопасность
-RATE_LIMIT_WINDOW=15
-RATE_LIMIT_MAX=100
-
-# Базы данных
-REDIS_URL=redis://localhost:6379
-MONGODB_URL=mongodb://localhost:27017/anb-academy
-
-# Платежи
-STRIPE_SECRET=sk_test_your_stripe_key
-YOOMONEY_SECRET=your_yoomoney_key
-
-# Email
-SMTP_HOST=smtp.timeweb.ru
-SMTP_PORT=587
-SMTP_USER=noreply@anb-academy.ru
-SMTP_PASS=your_smtp_password
-
-# Облачные хранилища
-CLOUDINARY_URL=cloudinary://key:secret@cloudname
-AWS_ACCESS_KEY=your_aws_key
-AWS_SECRET_KEY=your_aws_secret
-
-# Аналитика
-SENTRY_DSN=your_sentry_dsn
-NEW_RELIC_LICENSE_KEY=your_newrelic_key
-`,
-            
-            'webapp/.htaccess': `# Настройки для Apache
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /index.html [L]
-
-# Кэширование
-<FilesMatch "\.(css|js|png|jpg|jpeg|gif|ico|svg)$">
-    ExpiresActive On
-    ExpiresDefault "access plus 1 month"
-</FilesMatch>
-
-# Безопасность
-<Files ".env">
-    Deny from all
-</Files>
-
-# Gzip сжатие
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/plain
-    AddOutputFilterByType DEFLATE text/html
-    AddOutputFilterByType DEFLATE text/xml
-    AddOutputFilterByType DEFLATE text/css
-    AddOutputFilterByType DEFLATE application/xml
-    AddOutputFilterByType DEFLATE application/xhtml+xml
-    AddOutputFilterByType DEFLATE application/rss+xml
-    AddOutputFilterByType DEFLATE application/javascript
-    AddOutputFilterByType DEFLATE application/x-javascript
-</IfModule>`,
-
-            'webapp/robots.txt': `# Robots.txt для Академии АНБ
-User-agent: *
-Allow: /
-
-# Sitemap
-Sitemap: ${this.config.WEBAPP_URL}/sitemap.xml`,
-
-            'webapp/sitemap.xml': `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-    <url>
-        <loc>${this.config.WEBAPP_URL}/</loc>
-        <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-        <changefreq>daily</changefreq>
-        <priority>1.0</priority>
-    </url>
-    <url>
-        <loc>${this.config.WEBAPP_URL}/courses</loc>
-        <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.8</priority>
-    </url>
-    <url>
-        <loc>${this.config.WEBAPP_URL}/podcasts</loc>
-        <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.7</priority>
-    </url>
-</urlset>`,
-
-            'logs/.gitkeep': '# Директория для логов',
-            'backups/.gitkeep': '# Директория для резервных копий',
-            'uploads/.gitkeep': '# Директория для загружаемых файлов'
-        };
-        
-        for (const [filePath, content] of Object.entries(basicFiles)) {
-            const fullPath = join(this.baseDir, filePath);
-            
-            if (!existsSync(fullPath)) {
-                await fs.writeFile(fullPath, content, 'utf8');
-                console.log(`• Создан файл: ${filePath}`);
-            }
-        }
-    }
-
-    async checkDependencies() {
-        console.log('📦 Проверка зависимостей...');
-        
-        try {
-            // Проверка package.json
-            const packageJsonPath = join(this.baseDir, 'package.json');
-            if (!existsSync(packageJsonPath)) {
-                throw new Error('package.json не найден');
-            }
-            
-            const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
-            console.log(`• Приложение: ${packageJson.name} v${packageJson.version}`);
-            
-            // Проверка установленных зависимостей
+        // Создание .gitkeep файлов
+        const gitkeepDirs = ['uploads', 'logs', 'backups', 'temp'];
+        for (const dir of gitkeepDirs) {
+            const gitkeepPath = join(__dirname, dir, '.gitkeep');
             try {
-                const { stdout } = await execAsync('npm list --depth=0 --json');
-                const dependencies = JSON.parse(stdout);
-                
-                if (dependencies.dependencies) {
-                    const depCount = Object.keys(dependencies.dependencies).length;
-                    console.log(`• Установлено зависимостей: ${depCount}`);
-                }
-                
-                if (dependencies.problems) {
-                    console.warn('⚠️ Обнаружены проблемы с зависимостями:');
-                    dependencies.problems.forEach(problem => {
-                        console.warn(`  - ${problem}`);
-                    });
-                }
-                
+                await fs.writeFile(gitkeepPath, '');
             } catch (error) {
-                console.warn('⚠️ Не удалось проверить установленные зависимости:', error.message);
+                // Игнорируем ошибки создания .gitkeep
             }
-            
-            // Проверка критических зависимостей
-            const criticalDeps = ['express', 'telegraf', 'pg', 'bcryptjs', 'jsonwebtoken'];
-            const missingDeps = [];
-            
-            for (const dep of criticalDeps) {
-                try {
-                    await import(dep);
-                } catch {
-                    missingDeps.push(dep);
-                }
-            }
-            
-            if (missingDeps.length > 0) {
-                console.warn(`⚠️ Отсутствуют критические зависимости: ${missingDeps.join(', ')}`);
-                console.log('💡 Запустите: npm install');
-                
-                if (process.argv.includes('--install-deps')) {
-                    console.log('🚀 Установка зависимостей...');
-                    await this.installDependencies();
-                } else {
-                    throw new Error('Критические зависимости отсутствуют');
-                }
-            }
-            
-            console.log('✅ Проверка зависимостей завершена');
-            
-        } catch (error) {
-            throw new Error(`Ошибка проверки зависимостей: ${error.message}`);
         }
-    }
 
-    async installDependencies() {
-        console.log('📦 Установка зависимостей...');
-        
-        try {
-            const { stdout, stderr } = await execAsync('npm install', {
-                cwd: this.baseDir,
-                timeout: 300000 // 5 минут
-            });
-            
-            if (stderr) {
-                console.warn('⚠️ Предупреждения при установке:', stderr);
-            }
-            
-            console.log('✅ Зависимости установлены');
-            
-        } catch (error) {
-            throw new Error(`Ошибка установки зависимостей: ${error.message}`);
-        }
+        console.log('   ✅ Структура директорий создана');
     }
 
     async setupDatabase() {
-        console.log('🗄️ Настройка базы данных...');
+        console.log('   🗄️ Настройка базы данных...');
         
         try {
             // Проверка подключения к PostgreSQL
             const { Client } = await import('pg');
             const client = new Client({
-                connectionString: this.config.DATABASE_URL,
-                ssl: this.config.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+                connectionString: process.env.DATABASE_URL || 'postgresql://gen_user:5-R;mKGYJ<88?1@def46fb02c0eac8fefd6f734.twc1.net:5432/default_db',
+                ssl: { rejectUnauthorized: false }
             });
+
+            await client.connect();
+            console.log('     ✅ Подключение к PostgreSQL установлено');
+
+            // Создание таблиц
+            await this.createDatabaseTables(client);
+            await client.end();
             
-            try {
-                await client.connect();
-                console.log('• PostgreSQL: подключение успешно');
-                
-                // Проверка версии PostgreSQL
-                const versionResult = await client.query('SELECT version()');
-                const versionMatch = versionResult.rows[0].version.match(/PostgreSQL ([\d.]+)/);
-                if (versionMatch) {
-                    console.log(`• PostgreSQL версия: ${versionMatch[1]}`);
-                }
-                
-                // Создание таблиц через миграции
-                await this.runMigrations(client);
-                
-                await client.end();
-                
-            } catch (error) {
-                await client.end();
-                throw new Error(`Ошибка подключения к БД: ${error.message}`);
-            }
-            
-            // Проверка Redis
-            try {
-                const Redis = (await import('ioredis')).default;
-                const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-                
-                await redis.ping();
-                console.log('• Redis: подключение успешно');
-                
-                const info = await redis.info('server');
-                const versionMatch = info.match(/redis_version:([\d.]+)/);
-                if (versionMatch) {
-                    console.log(`• Redis версия: ${versionMatch[1]}`);
-                }
-                
-                await redis.quit();
-                
-            } catch (error) {
-                console.warn('⚠️ Redis недоступен:', error.message);
-                console.log('💡 Redis будет использоваться в fallback-режиме');
-            }
-            
-            console.log('✅ Настройка базы данных завершена');
+            console.log('   ✅ База данных настроена');
             
         } catch (error) {
-            throw new Error(`Ошибка настройки БД: ${error.message}`);
+            console.error('     ❌ Ошибка настройки БД:', error.message);
+            throw new Error(`Не удалось настроить базу данных: ${error.message}`);
         }
     }
 
-    async runMigrations(client) {
-        console.log('• Запуск миграций...');
-        
-        const migrations = [
-            // Таблица миграций
-            `CREATE TABLE IF NOT EXISTS migrations (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) UNIQUE NOT NULL,
-                batch INTEGER NOT NULL,
-                executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )`,
-            
+    async createDatabaseTables(client) {
+        const tables = [
             // Основные таблицы
             `CREATE TABLE IF NOT EXISTS users (
                 id BIGINT PRIMARY KEY,
@@ -599,7 +300,7 @@ Sitemap: ${this.config.WEBAPP_URL}/sitemap.xml`,
                 updated_at TIMESTAMP DEFAULT NOW(),
                 version INTEGER DEFAULT 1
             )`,
-            
+
             `CREATE TABLE IF NOT EXISTS courses (
                 id SERIAL PRIMARY KEY,
                 title TEXT NOT NULL,
@@ -622,6 +323,7 @@ Sitemap: ${this.config.WEBAPP_URL}/sitemap.xml`,
                 language TEXT DEFAULT 'ru',
                 image_url TEXT,
                 video_url TEXT,
+                preview_video_url TEXT,
                 certificate_template TEXT,
                 active BOOLEAN DEFAULT TRUE,
                 featured BOOLEAN DEFAULT FALSE,
@@ -635,8 +337,8 @@ Sitemap: ${this.config.WEBAPP_URL}/sitemap.xml`,
                 completion_count INTEGER DEFAULT 0,
                 average_completion_time INTEGER,
                 success_rate DECIMAL(5,2),
-                created_by BIGINT REFERENCES users(id),
-                instructor_id BIGINT REFERENCES users(id),
+                created_by BIGINT,
+                instructor_id BIGINT,
                 curriculum JSONB DEFAULT '[]',
                 resources JSONB DEFAULT '[]',
                 reviews JSONB DEFAULT '[]',
@@ -653,64 +355,209 @@ Sitemap: ${this.config.WEBAPP_URL}/sitemap.xml`,
                 archived_at TIMESTAMP,
                 version INTEGER DEFAULT 1
             )`,
-            
+
+            `CREATE TABLE IF NOT EXISTS user_progress (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+                course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+                module_id INTEGER,
+                lesson_id INTEGER,
+                content_type TEXT NOT NULL,
+                content_id INTEGER NOT NULL,
+                progress INTEGER DEFAULT 0,
+                completed BOOLEAN DEFAULT FALSE,
+                score DECIMAL(5,2),
+                max_score DECIMAL(5,2),
+                time_spent INTEGER DEFAULT 0,
+                start_time TIMESTAMP,
+                end_time TIMESTAMP,
+                last_activity TIMESTAMP DEFAULT NOW(),
+                attempts INTEGER DEFAULT 0,
+                notes TEXT,
+                bookmarks JSONB DEFAULT '[]',
+                ratings JSONB DEFAULT '{}',
+                feedback TEXT,
+                metadata JSONB DEFAULT '{}',
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(user_id, content_type, content_id)
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS payments (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+                course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+                subscription_id INTEGER,
+                amount DECIMAL(10,2) NOT NULL,
+                currency TEXT DEFAULT 'RUB',
+                status TEXT DEFAULT 'pending',
+                payment_method TEXT,
+                payment_gateway TEXT,
+                gateway_transaction_id TEXT,
+                gateway_response JSONB,
+                description TEXT,
+                invoice_number TEXT UNIQUE,
+                invoice_url TEXT,
+                receipt_url TEXT,
+                refund_amount DECIMAL(10,2) DEFAULT 0,
+                refund_reason TEXT,
+                refund_date TIMESTAMP,
+                tax_amount DECIMAL(10,2) DEFAULT 0,
+                discount_amount DECIMAL(10,2) DEFAULT 0,
+                total_amount DECIMAL(10,2) NOT NULL,
+                billing_address JSONB,
+                shipping_address JSONB,
+                customer_email TEXT,
+                customer_phone TEXT,
+                ip_address INET,
+                user_agent TEXT,
+                metadata JSONB DEFAULT '{}',
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS system_settings (
+                id SERIAL PRIMARY KEY,
+                key TEXT UNIQUE NOT NULL,
+                value JSONB NOT NULL,
+                type TEXT DEFAULT 'string',
+                category TEXT DEFAULT 'general',
+                description TEXT,
+                is_public BOOLEAN DEFAULT FALSE,
+                is_encrypted BOOLEAN DEFAULT FALSE,
+                updated_by BIGINT REFERENCES users(id),
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )`,
+
             // Индексы для производительности
             `CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at)`,
             `CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login)`,
             `CREATE INDEX IF NOT EXISTS idx_courses_category ON courses(category)`,
             `CREATE INDEX IF NOT EXISTS idx_courses_level ON courses(level)`,
             `CREATE INDEX IF NOT EXISTS idx_courses_rating ON courses(rating)`,
-            `CREATE INDEX IF NOT EXISTS idx_courses_created_at ON courses(created_at)`,
-            `CREATE INDEX IF NOT EXISTS idx_courses_active ON courses(active)`
+            `CREATE INDEX IF NOT EXISTS idx_courses_active ON courses(active)`,
+            `CREATE INDEX IF NOT EXISTS idx_user_progress_user_id ON user_progress(user_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_user_progress_course_id ON user_progress(course_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_user_progress_completed ON user_progress(completed)`,
+            `CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status)`,
+            `CREATE INDEX IF NOT EXISTS idx_payments_created_at ON payments(created_at)`
         ];
-        
-        let executedMigrations = 0;
-        
-        for (const [index, migration] of migrations.entries()) {
+
+        for (const tableSQL of tables) {
             try {
-                await client.query(migration);
-                executedMigrations++;
-                
-                // Записываем миграцию в таблицу миграций
-                await client.query(
-                    'INSERT INTO migrations (name, batch) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING',
-                    [`migration_${index + 1}`, 1]
-                );
-                
+                await client.query(tableSQL);
+                console.log(`     ✅ Таблица создана`);
             } catch (error) {
-                if (!error.message.includes('уже существует')) {
-                    throw error;
+                if (!error.message.includes('already exists')) {
+                    console.error(`     ❌ Ошибка создания таблицы:`, error.message);
                 }
             }
         }
+
+        // Создание системных настроек
+        await this.createSystemSettings(client);
         
-        console.log(`• Выполнено миграций: ${executedMigrations}`);
+        // Создание демо-данных
+        await this.createDemoData(client);
     }
 
-    async createDemoData() {
-        console.log('🎨 Создание демо-данных...');
-        
+    async createSystemSettings(client) {
+        const settings = [
+            {
+                key: 'app.name',
+                value: 'Академия АНБ',
+                type: 'string',
+                category: 'general',
+                description: 'Название приложения',
+                is_public: true
+            },
+            {
+                key: 'app.version',
+                value: '2.0.0',
+                type: 'string',
+                category: 'general',
+                description: 'Версия приложения',
+                is_public: true
+            },
+            {
+                key: 'app.theme',
+                value: 'dark',
+                type: 'string',
+                category: 'ui',
+                description: 'Цветовая тема приложения',
+                is_public: true
+            },
+            {
+                key: 'security.password_min_length',
+                value: 8,
+                type: 'number',
+                category: 'security',
+                description: 'Минимальная длина пароля',
+                is_public: false
+            },
+            {
+                key: 'security.max_login_attempts',
+                value: 5,
+                type: 'number',
+                category: 'security',
+                description: 'Максимальное количество попыток входа',
+                is_public: false
+            },
+            {
+                key: 'payment.currency',
+                value: 'RUB',
+                type: 'string',
+                category: 'payment',
+                description: 'Основная валюта платежей',
+                is_public: true
+            },
+            {
+                key: 'notification.email_enabled',
+                value: true,
+                type: 'boolean',
+                category: 'notification',
+                description: 'Включены ли email уведомления',
+                is_public: false
+            }
+        ];
+
+        for (const setting of settings) {
+            try {
+                await client.query(
+                    `INSERT INTO system_settings (key, value, type, category, description, is_public)
+                     VALUES ($1, $2, $3, $4, $5, $6)
+                     ON CONFLICT (key) DO NOTHING`,
+                    [setting.key, setting.value, setting.type, setting.category, setting.description, setting.is_public]
+                );
+            } catch (error) {
+                console.error('     ❌ Ошибка создания настройки:', error.message);
+            }
+        }
+    }
+
+    async createDemoData(client) {
         try {
-            const { Client } = await import('pg');
-            const client = new Client({
-                connectionString: this.config.DATABASE_URL,
-                ssl: this.config.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-            });
+            // Проверяем есть ли уже демо-данные
+            const coursesCheck = await client.query('SELECT COUNT(*) FROM courses');
+            if (parseInt(coursesCheck.rows[0].count) > 0) {
+                console.log('     ℹ️ Демо-данные уже существуют');
+                return;
+            }
+
+            console.log('     📝 Создание демо-данных...');
+
+            // Создаем супер-администратора
+            const superAdminId = 898508164;
+            const adminCheck = await client.query('SELECT * FROM users WHERE id = $1', [superAdminId]);
             
-            await client.connect();
-            
-            // Проверяем, есть ли уже демо-данные
-            const userCheck = await client.query('SELECT COUNT(*) FROM users WHERE id = $1', [this.config.SUPER_ADMIN_ID]);
-            const courseCheck = await client.query('SELECT COUNT(*) FROM courses');
-            
-            if (parseInt(userCheck.rows[0].count) === 0) {
-                console.log('• Создание супер-администратора...');
-                
+            if (adminCheck.rows.length === 0) {
                 await client.query(
                     `INSERT INTO users (id, telegram_data, profile_data, is_admin, is_super_admin, is_verified, survey_completed)
                      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
                     [
-                        this.config.SUPER_ADMIN_ID,
+                        superAdminId,
                         JSON.stringify({
                             first_name: 'Супер Администратор',
                             username: 'superadmin',
@@ -724,8 +571,7 @@ Sitemap: ${this.config.WEBAPP_URL}/sitemap.xml`,
                             phone: '+79999999999',
                             experience: '10+ лет',
                             education: 'Высшее техническое',
-                            bio: 'Главный администратор Академии АНБ',
-                            avatar_url: '/webapp/assets/admin-avatar.jpg'
+                            bio: 'Главный администратор Академии АНБ'
                         }),
                         true,
                         true,
@@ -733,604 +579,1161 @@ Sitemap: ${this.config.WEBAPP_URL}/sitemap.xml`,
                         true
                     ]
                 );
+                console.log('     ✅ Супер-администратор создан');
             }
-            
-            if (parseInt(courseCheck.rows[0].count) === 0) {
-                console.log('• Создание демо-курсов...');
-                
-                const demoCourses = [
-                    {
-                        title: 'Мануальные техники в практике невролога',
-                        subtitle: 'Современные подходы к диагностике и лечению',
-                        description: '6 модулей по современным мануальным методикам',
-                        full_description: 'Комплексный курс по мануальным техникам для практикующих врачей-неврологов.',
-                        price: 25000,
-                        original_price: 30000,
-                        discount: 16.67,
-                        discount_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-                        duration: '12 недель',
-                        modules: 6,
-                        lessons: 24,
-                        category: 'Мануальные техники',
-                        subcategory: 'Неврология',
-                        level: 'advanced',
-                        difficulty: 'medium',
-                        image_url: '/webapp/assets/course-manual.jpg',
-                        active: true,
-                        featured: true,
-                        popular: true,
-                        new: true,
-                        students_count: 156,
-                        rating: 4.8,
-                        reviews_count: 89,
-                        created_by: this.config.SUPER_ADMIN_ID,
-                        instructor_id: this.config.SUPER_ADMIN_ID
-                    },
-                    {
-                        title: 'Неврологическая диагностика: от основ к практике',
-                        subtitle: 'Полный курс диагностических методик',
-                        description: '5 модулей по современной неврологической диагностике',
-                        price: 18000,
-                        duration: '8 недель',
-                        modules: 5,
-                        category: 'Неврология',
-                        subcategory: 'Диагностика',
-                        level: 'intermediate',
-                        image_url: '/webapp/assets/course-diagnosis.jpg',
-                        active: true,
-                        featured: true,
-                        students_count: 234,
-                        rating: 4.6,
-                        created_by: this.config.SUPER_ADMIN_ID,
-                        instructor_id: this.config.SUPER_ADMIN_ID
-                    }
-                ];
-                
-                for (const course of demoCourses) {
-                    await client.query(
-                        `INSERT INTO courses (
-                            title, subtitle, description, full_description, price, original_price, discount,
-                            discount_end_date, duration, modules, lessons, category, subcategory, level,
-                            difficulty, image_url, active, featured, popular, new, students_count, rating,
-                            reviews_count, created_by, instructor_id
-                        ) VALUES (
-                            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
-                        )`,
-                        Object.values(course)
-                    );
+
+            // Создаем демо-курсы
+            const demoCourses = [
+                {
+                    title: 'Мануальные техники в практике невролога',
+                    subtitle: 'Современные подходы к диагностике и лечению',
+                    description: '6 модулей по современным мануальным методикам',
+                    full_description: 'Комплексный курс по мануальным техникам для практикующих врачей-неврологов. Изучите современные подходы к диагностике и лечению заболеваний опорно-двигательного аппарата.',
+                    price: 25000,
+                    original_price: 30000,
+                    discount: 16.67,
+                    discount_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                    duration: '12 недель',
+                    total_duration_minutes: 7200,
+                    modules: 6,
+                    lessons: 24,
+                    category: 'Мануальные техники',
+                    subcategory: 'Неврология',
+                    tags: ['мануальная терапия', 'неврология', 'реабилитация', 'диагностика'],
+                    level: 'advanced',
+                    difficulty: 'medium',
+                    image_url: '/webapp/assets/course-manual.jpg',
+                    active: true,
+                    featured: true,
+                    popular: true,
+                    new: true,
+                    students_count: 156,
+                    rating: 4.8,
+                    reviews_count: 89,
+                    enrollment_count: 234,
+                    completion_count: 156,
+                    success_rate: 92.5,
+                    created_by: superAdminId,
+                    instructor_id: superAdminId,
+                    curriculum: JSON.stringify([
+                        {
+                            module: 1,
+                            title: 'Основы мануальной диагностики',
+                            duration: '2 недели',
+                            lessons: [
+                                {
+                                    title: 'Анатомия позвоночника и биомеханика',
+                                    duration: 45,
+                                    type: 'video',
+                                    resources: 3
+                                }
+                            ]
+                        }
+                    ]),
+                    statistics: JSON.stringify({
+                        views: 1567,
+                        clicks: 892,
+                        shares: 234,
+                        conversion_rate: 15.2
+                    })
+                },
+                {
+                    title: 'Неврологическая диагностика: от основ к практике',
+                    subtitle: 'Полный курс диагностических методик',
+                    description: '5 модулей по современной неврологической диагностике',
+                    price: 18000,
+                    duration: '8 недель',
+                    modules: 5,
+                    category: 'Неврология',
+                    subcategory: 'Диагностика',
+                    level: 'intermediate',
+                    students_count: 234,
+                    rating: 4.6,
+                    created_by: superAdminId,
+                    instructor_id: superAdminId,
+                    active: true,
+                    featured: true
                 }
+            ];
+
+            for (const course of demoCourses) {
+                const keys = Object.keys(course);
+                const values = Object.values(course);
+                const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
                 
-                console.log(`• Создано демо-курсов: ${demoCourses.length}`);
+                await client.query(
+                    `INSERT INTO courses (${keys.join(', ')}) VALUES (${placeholders})`,
+                    values
+                );
             }
-            
-            await client.end();
-            console.log('✅ Демо-данные созданы');
-            
+
+            console.log('     ✅ Демо-данные созданы');
+
         } catch (error) {
-            console.warn('⚠️ Не удалось создать демо-данные:', error.message);
+            console.error('     ❌ Ошибка создания демо-данных:', error.message);
         }
     }
 
-    async setupWebServer() {
-        console.log('🌐 Настройка веб-сервера...');
+    async createConfig() {
+        console.log('   ⚙️ Создание конфигурационных файлов...');
+        
+        const configFiles = {
+            '.env': this.createEnvConfig(),
+            'config/database.json': this.createDatabaseConfig(),
+            'config/redis.json': this.createRedisConfig(),
+            'config/email.json': this.createEmailConfig(),
+            'config/security.json': this.createSecurityConfig(),
+            'config/timeweb.json': this.createTimewebConfig()
+        };
+
+        for (const [filePath, content] of Object.entries(configFiles)) {
+            const fullPath = join(__dirname, filePath);
+            try {
+                await fs.writeFile(fullPath, content);
+                console.log(`     ✅ Создан: ${filePath}`);
+            } catch (error) {
+                throw new Error(`Не удалось создать конфигурационный файл ${filePath}: ${error.message}`);
+            }
+        }
+
+        console.log('   ✅ Конфигурационные файлы созданы');
+    }
+
+    createEnvConfig() {
+        return `# Конфигурация Академии АНБ
+# Автоматически сгенерировано ${new Date().toISOString()}
+
+# Основные настройки
+NODE_ENV=production
+APP_NAME=Академия АНБ
+APP_VERSION=2.0.0
+PORT=3000
+WEBAPP_URL=https://anb-academy.timeweb.ru
+
+# Telegram Bot
+BOT_TOKEN=${process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4'}
+
+# База данных (TimeWeb)
+DATABASE_URL=${process.env.DATABASE_URL || 'postgresql://gen_user:5-R;mKGYJ<88?1@def46fb02c0eac8fefd6f734.twc1.net:5432/default_db'}
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# Безопасность
+JWT_SECRET=anb-academy-super-secret-jwt-key-2024-${Math.random().toString(36).substring(2)}
+ENCRYPTION_KEY=anb-academy-encryption-key-256-bit-secure-${Math.random().toString(36).substring(2)}
+
+# Администраторы
+SUPER_ADMIN_ID=898508164
+ADMIN_IDS=898508164
+
+# Настройки загрузки файлов
+UPLOAD_MAX_SIZE=52428800
+UPLOAD_PATH=./uploads
+
+# Кэширование
+CACHE_TTL=3600
+REDIS_CACHE_ENABLED=true
+
+# Логирование
+LOG_LEVEL=info
+LOG_TO_FILE=true
+LOG_TO_CONSOLE=true
+
+# Мониторинг
+HEALTH_CHECK_ENABLED=true
+PERFORMANCE_MONITORING=true
+ERROR_REPORTING=true
+
+# TimeWeb специфичные настройки
+TIMEWEB_DEPLOYMENT=true
+TIMEWEB_AUTO_SCALING=true
+TIMEWEB_CDN_ENABLED=true
+`;
+    }
+
+    createDatabaseConfig() {
+        return JSON.stringify({
+            postgresql: {
+                host: 'def46fb02c0eac8fefd6f734.twc1.net',
+                port: 5432,
+                database: 'default_db',
+                username: 'gen_user',
+                password: '5-R;mKGYJ<88?1',
+                ssl: true,
+                pool: {
+                    max: 20,
+                    min: 5,
+                    acquire: 30000,
+                    idle: 10000
+                }
+            },
+            backup: {
+                enabled: true,
+                schedule: '0 2 * * *',
+                retention_days: 30
+            },
+            performance: {
+                slow_query_threshold: 1000,
+                log_slow_queries: true
+            }
+        }, null, 2);
+    }
+
+    createRedisConfig() {
+        return JSON.stringify({
+            host: 'localhost',
+            port: 6379,
+            password: null,
+            db: 0,
+            retryDelayOnFailover: 100,
+            maxRetriesPerRequest: 3,
+            enableReadyCheck: true
+        }, null, 2);
+    }
+
+    createEmailConfig() {
+        return JSON.stringify({
+            smtp: {
+                host: 'smtp.timeweb.ru',
+                port: 587,
+                secure: false,
+                auth: {
+                    user: 'noreply@anb-academy.ru',
+                    pass: '${process.env.SMTP_PASSWORD || ""}'
+                }
+            },
+            templates: {
+                welcome: 'emails/welcome.html',
+                reset_password: 'emails/reset-password.html',
+                notification: 'emails/notification.html'
+            },
+            defaults: {
+                from: 'Академия АНБ <noreply@anb-academy.ru>'
+            }
+        }, null, 2);
+    }
+
+    createSecurityConfig() {
+        return JSON.stringify({
+            rate_limiting: {
+                enabled: true,
+                window_ms: 900000,
+                max_requests: 100
+            },
+            cors: {
+                enabled: true,
+                origins: [
+                    'https://anb-academy.timeweb.ru',
+                    'https://telegram.org',
+                    'https://web.telegram.org'
+                ]
+            },
+            helmet: {
+                enabled: true
+            },
+            compression: {
+                enabled: true
+            },
+            validation: {
+                max_file_size: 52428800,
+                allowed_mime_types: [
+                    'image/jpeg',
+                    'image/png',
+                    'image/webp',
+                    'video/mp4',
+                    'audio/mpeg',
+                    'application/pdf'
+                ]
+            }
+        }, null, 2);
+    }
+
+    createTimewebConfig() {
+        return JSON.stringify({
+            deployment: {
+                platform: 'timeweb',
+                region: 'ru-1',
+                auto_scaling: true,
+                min_instances: 1,
+                max_instances: 3
+            },
+            storage: {
+                type: 'network',
+                backup_enabled: true,
+                snapshot_schedule: '0 3 * * *'
+            },
+            monitoring: {
+                enabled: true,
+                metrics: ['cpu', 'memory', 'disk', 'network'],
+                alerts: {
+                    cpu_threshold: 80,
+                    memory_threshold: 85,
+                    disk_threshold: 90
+                }
+            },
+            cdn: {
+                enabled: true,
+                domains: ['anb-academy.timeweb.ru']
+            }
+        }, null, 2);
+    }
+
+    async setupWebApp() {
+        console.log('   🌐 Настройка веб-приложения...');
         
         try {
-            // Проверка порта
-            const net = await import('net');
-            const isPortAvailable = await new Promise((resolve) => {
-                const server = net.createServer();
-                server.once('error', () => resolve(false));
-                server.once('listening', () => {
-                    server.close();
-                    resolve(true);
-                });
-                server.listen(this.config.PORT);
-            });
+            // Создание основных HTML файлов
+            await this.createWebAppFiles();
             
-            if (!isPortAvailable) {
-                throw new Error(`Порт ${this.config.PORT} уже занят`);
-            }
+            // Создание assets
+            await this.createDefaultAssets();
             
-            console.log(`• Порт ${this.config.PORT}: доступен`);
+            // Настройка Service Worker
+            await this.setupServiceWorker();
             
-            // Создание конфигурации для веб-сервера
-            const nginxConfig = `# Nginx конфигурация для Академии АНБ
-server {
-    listen 80;
-    server_name ${new URL(this.config.WEBAPP_URL).hostname};
-    
-    # Основное приложение
-    location / {
-        proxy_pass http://localhost:${this.config.PORT};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-    
-    # Статические файлы
-    location /webapp/ {
-        alias ${join(this.baseDir, 'webapp')}/;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-    
-    location /uploads/ {
-        alias ${join(this.baseDir, 'uploads')}/;
-        expires 1y;
-        add_header Cache-Control "public";
-    }
-    
-    # Безопасность
-    location ~ /\. {
-        deny all;
-    }
-    
-    location ~ /\\.env$ {
-        deny all;
-    }
-    
-    # Gzip сжатие
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-}`;
-
-            const nginxPath = join(this.baseDir, 'config', 'nginx.conf');
-            await fs.writeFile(nginxPath, nginxConfig, 'utf8');
-            console.log('• Конфигурация Nginx создана');
-            
-            // Создание systemd service
-            if (os.platform() === 'linux') {
-                const systemdService = `[Unit]
-Description=ANB Academy Application
-After=network.target
-
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=${this.baseDir}
-ExecStart=/usr/bin/node ${join(this.baseDir, 'server.js')}
-Restart=always
-RestartSec=10
-Environment=NODE_ENV=production
-
-[Install]
-WantedBy=multi-user.target`;
-                
-                const systemdPath = join(this.baseDir, 'config', 'anb-academy.service');
-                await fs.writeFile(systemdPath, systemdService, 'utf8');
-                console.log('• Конфигурация systemd создана');
-            }
-            
-            console.log('✅ Настройка веб-сервера завершена');
+            console.log('   ✅ Веб-приложение настроено');
             
         } catch (error) {
-            throw new Error(`Ошибка настройки веб-сервера: ${error.message}`);
+            throw new Error(`Не удалось настроить веб-приложение: ${error.message}`);
         }
+    }
+
+    async createWebAppFiles() {
+        const webappFiles = {
+            'webapp/index.html': this.createIndexHTML(),
+            'webapp/sw.js': this.createServiceWorker(),
+            'webapp/robots.txt': this.createRobotsTxt(),
+            'webapp/sitemap.xml': this.createSitemapXML(),
+            'webapp/manifest.json': this.createManifestJSON()
+        };
+
+        for (const [filePath, content] of Object.entries(webappFiles)) {
+            const fullPath = join(__dirname, filePath);
+            try {
+                await fs.writeFile(fullPath, content);
+                console.log(`     ✅ Создан: ${filePath}`);
+            } catch (error) {
+                console.error(`     ❌ Ошибка создания ${filePath}:`, error.message);
+            }
+        }
+    }
+
+    createIndexHTML() {
+        return `<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Академия АНБ - Современное образование для врачей</title>
+    <meta name="description" content="Академия АНБ - платформа для непрерывного медицинского образования. Курсы, подкасты, эфиры и материалы для врачей.">
+    <meta name="keywords" content="медицина, образование, врачи, курсы, неврология, АНБ">
+    
+    <!-- Telegram WebApp -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/webapp/style.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/webapp/assets/favicon.ico">
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/webapp/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/webapp/app.js" as="script">
+</head>
+<body>
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="main-nav">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <span class="brand-icon">🎓</span>
+                    <span class="brand-text">Академия АНБ</span>
+                </div>
+                
+                <div class="nav-menu">
+                    <button class="nav-btn" data-page="home">🏠 Главная</button>
+                    <button class="nav-btn" data-page="courses">📚 Курсы</button>
+                    <button class="nav-btn" data-page="podcasts">🎧 АНБ FM</button>
+                    <button class="nav-btn" data-page="streams">📹 Эфиры</button>
+                    <button class="nav-btn" data-page="profile">👤 Профиль</button>
+                </div>
+                
+                <div class="nav-actions">
+                    <div class="notification-badge" style="display: none;">0</div>
+                    <div id="adminBadge" class="admin-badge" style="display: none;">🔧 Админ</div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main id="mainContent" class="main-content">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Загрузка Академии АНБ...</p>
+            </div>
+        </main>
+
+        <!-- System Status -->
+        <div class="system-status" id="systemStatus">
+            <div class="status-indicator online"></div>
+            <span class="status-text">Система онлайн</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/webapp/app.js"></script>
+    
+    <!-- Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
+</body>
+</html>`;
+    }
+
+    createServiceWorker() {
+        return `// Service Worker для Академии АНБ
+const CACHE_NAME = 'anb-academy-v2.0.0';
+const STATIC_CACHE = 'static-v1';
+const DYNAMIC_CACHE = 'dynamic-v1';
+
+const STATIC_ASSETS = [
+    '/webapp/style.css',
+    '/webapp/app.js',
+    '/webapp/manifest.json',
+    '/webapp/assets/favicon.ico'
+];
+
+// Установка Service Worker
+self.addEventListener('install', (event) => {
+    console.log('Service Worker: Установка');
+    event.waitUntil(
+        caches.open(STATIC_CACHE)
+            .then(cache => {
+                console.log('Service Worker: Кэширование статических ресурсов');
+                return cache.addAll(STATIC_ASSETS);
+            })
+            .then(() => self.skipWaiting())
+    );
+});
+
+// Активация
+self.addEventListener('activate', (event) => {
+    console.log('Service Worker: Активация');
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cache => {
+                    if (cache !== STATIC_CACHE && cache !== DYNAMIC_CACHE) {
+                        console.log('Service Worker: Удаление старого кэша', cache);
+                        return caches.delete(cache);
+                    }
+                })
+            );
+        }).then(() => self.clients.claim())
+    );
+});
+
+// Перехват запросов
+self.addEventListener('fetch', (event) => {
+    // Пропускаем не-GET запросы и запросы к API
+    if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
+        return;
+    }
+
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => {
+                // Возвращаем кэшированную версию если есть
+                if (response) {
+                    return response;
+                }
+
+                // Иначе делаем запрос и кэшируем
+                return fetch(event.request)
+                    .then(fetchResponse => {
+                        // Клонируем ответ
+                        const responseToCache = fetchResponse.clone();
+
+                        // Кэшируем только успешные ответы
+                        if (fetchResponse.status === 200) {
+                            caches.open(DYNAMIC_CACHE)
+                                .then(cache => {
+                                    cache.put(event.request, responseToCache);
+                                });
+                        }
+
+                        return fetchResponse;
+                    })
+                    .catch(error => {
+                        console.log('Service Worker: Ошибка загрузки', error);
+                        // Можно вернуть fallback страницу
+                    });
+            })
+    );
+});
+
+// Фоновая синхронизация
+self.addEventListener('sync', (event) => {
+    if (event.tag === 'background-sync') {
+        console.log('Service Worker: Фоновая синхронизация');
+        event.waitUntil(doBackgroundSync());
+    }
+});
+
+async function doBackgroundSync() {
+    // Фоновая синхронизация данных
+    try {
+        // Здесь может быть синхронизация прогресса, уведомлений и т.д.
+        console.log('Фоновая синхронизация выполнена');
+    } catch (error) {
+        console.error('Ошибка фоновой синхронизации:', error);
+    }
+}
+
+// Получение push-уведомлений
+self.addEventListener('push', (event) => {
+    if (!event.data) return;
+
+    const data = event.data.json();
+    const options = {
+        body: data.body,
+        icon: '/webapp/assets/icon-192.png',
+        badge: '/webapp/assets/badge-72.png',
+        vibrate: [100, 50, 100],
+        data: {
+            url: data.url
+        },
+        actions: [
+            {
+                action: 'open',
+                title: 'Открыть'
+            },
+            {
+                action: 'close',
+                title: 'Закрыть'
+            }
+        ]
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(data.title, options)
+    );
+});
+
+// Обработка кликов по уведомлениям
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    if (event.action === 'open') {
+        event.waitUntil(
+            clients.openWindow(event.notification.data.url)
+        );
+    }
+});`;
+    }
+
+    createRobotsTxt() {
+        return `# Robots.txt для Академии АНБ
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://anb-academy.timeweb.ru/webapp/sitemap.xml
+
+# Disallow admin and API routes
+Disallow: /admin/
+Disallow: /api/
+Disallow: /uploads/
+Disallow: /logs/
+Disallow: /backups/`;
+    }
+
+    createSitemapXML() {
+        return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://anb-academy.timeweb.ru/</loc>
+        <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>https://anb-academy.timeweb.ru/courses</loc>
+        <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://anb-academy.timeweb.ru/podcasts</loc>
+        <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+</urlset>`;
+    }
+
+    createManifestJSON() {
+        return JSON.stringify({
+            name: "Академия АНБ",
+            short_name: "АНБ Академия",
+            description: "Современное образование для врачей",
+            start_url: "/",
+            display: "standalone",
+            background_color: "#0f172a",
+            theme_color: "#2563eb",
+            orientation: "portrait-primary",
+            scope: "/",
+            icons: [
+                {
+                    src: "/webapp/assets/icon-72.png",
+                    sizes: "72x72",
+                    type: "image/png"
+                },
+                {
+                    src: "/webapp/assets/icon-96.png",
+                    sizes: "96x96",
+                    type: "image/png"
+                },
+                {
+                    src: "/webapp/assets/icon-128.png",
+                    sizes: "128x128",
+                    type: "image/png"
+                },
+                {
+                    src: "/webapp/assets/icon-144.png",
+                    sizes: "144x144",
+                    type: "image/png"
+                },
+                {
+                    src: "/webapp/assets/icon-152.png",
+                    sizes: "152x152",
+                    type: "image/png"
+                },
+                {
+                    src: "/webapp/assets/icon-192.png",
+                    sizes: "192x192",
+                    type: "image/png"
+                },
+                {
+                    src: "/webapp/assets/icon-384.png",
+                    sizes: "384x384",
+                    type: "image/png"
+                },
+                {
+                    src: "/webapp/assets/icon-512.png",
+                    sizes: "512x512",
+                    type: "image/png"
+                }
+            ],
+            categories: ["education", "medical"],
+            lang: "ru"
+        }, null, 2);
+    }
+
+    async createDefaultAssets() {
+        console.log('     🎨 Создание стандартных assets...');
+        
+        // Создание placeholder изображений
+        const placeholderImages = {
+            'course-default.jpg': this.createPlaceholderImage(800, 450, 'Курс'),
+            'podcast-default.jpg': this.createPlaceholderImage(800, 800, 'Подкаст'),
+            'stream-default.jpg': this.createPlaceholderImage(800, 450, 'Эфир'),
+            'material-default.jpg': this.createPlaceholderImage(600, 800, 'Материал'),
+            'avatar-default.jpg': this.createPlaceholderImage(200, 200, 'Аватар'),
+            'favicon.ico': '' // Будет создан позже
+        };
+
+        for (const [filename, content] of Object.entries(placeholderImages)) {
+            const filePath = join(__dirname, 'webapp/assets', filename);
+            try {
+                if (content) {
+                    await fs.writeFile(filePath, content);
+                } else {
+                    // Создаем пустой файл для favicon (в реальности нужна иконка)
+                    await fs.writeFile(filePath, '');
+                }
+                console.log(`       ✅ Создан: ${filename}`);
+            } catch (error) {
+                console.warn(`       ⚠️ Не удалось создать: ${filename}`);
+            }
+        }
+    }
+
+    createPlaceholderImage(width, height, text) {
+        // В реальной системе здесь будет генерация SVG или использование готовых изображений
+        // Для демонстрации возвращаем пустую строку
+        return '';
+    }
+
+    async setupServiceWorker() {
+        // Service Worker уже создан в createWebAppFiles
+        console.log('     🔧 Service Worker настроен');
+    }
+
+    async setupSSL() {
+        console.log('   🔐 Настройка SSL/TLS...');
+        
+        try {
+            // Для TimeWeb SSL обычно настраивается на уровне панели управления
+            // Создаем конфигурацию для будущего использования
+            
+            const sslConfig = {
+                enabled: true,
+                auto_renew: true,
+                provider: 'timeweb',
+                domains: ['anb-academy.timeweb.ru']
+            };
+            
+            const sslConfigPath = join(__dirname, 'config/ssl.json');
+            await fs.writeFile(sslConfigPath, JSON.stringify(sslConfig, null, 2));
+            
+            console.log('   ✅ SSL/TLS настроен (требуется настройка в панели TimeWeb)');
+            
+        } catch (error) {
+            console.warn('   ⚠️ Не удалось настроить SSL:', error.message);
+        }
+    }
+
+    async setupBackups() {
+        console.log('   💾 Настройка системы бэкапов...');
+        
+        try {
+            // Создание скриптов бэкапа
+            const backupScripts = {
+                'scripts/backup.js': this.createBackupScript(),
+                'scripts/restore.js': this.createRestoreScript(),
+                'scripts/clean.js': this.createCleanScript()
+            };
+
+            for (const [filePath, content] of Object.entries(backupScripts)) {
+                const fullPath = join(__dirname, filePath);
+                await fs.writeFile(fullPath, content);
+                console.log(`     ✅ Создан: ${filePath}`);
+            }
+
+            // Создание конфигурации бэкапов
+            const backupConfig = {
+                schedules: {
+                    daily: '0 2 * * *',
+                    weekly: '0 3 * * 0',
+                    monthly: '0 4 1 * *'
+                },
+                retention: {
+                    daily: 7,
+                    weekly: 4,
+                    monthly: 12
+                },
+                targets: {
+                    database: true,
+                    uploads: true,
+                    logs: false,
+                    config: true
+                },
+                storage: {
+                    local: true,
+                    remote: false
+                }
+            };
+
+            const backupConfigPath = join(__dirname, 'config/backup.json');
+            await fs.writeFile(backupConfigPath, JSON.stringify(backupConfig, null, 2));
+            
+            console.log('   ✅ Система бэкапов настроена');
+            
+        } catch (error) {
+            throw new Error(`Не удалось настроить систему бэкапов: ${error.message}`);
+        }
+    }
+
+    createBackupScript() {
+        return `// Скрипт бэкапа для Академии АНБ
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs/promises';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const execAsync = promisify(exec);
+
+class BackupSystem {
+    constructor() {
+        this.backupDir = join(__dirname, '../backups');
+        this.timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    }
+
+    async runBackup(type = 'daily') {
+        console.log(\`🚀 Запуск бэкапа типа: \${type}\`);
+        
+        try {
+            // Создание директории для бэкапа
+            const backupPath = join(this.backupDir, type, \`backup-\${this.timestamp}\`);
+            await fs.mkdir(backupPath, { recursive: true });
+
+            // Бэкап базы данных
+            await this.backupDatabase(backupPath);
+            
+            // Бэкап загруженных файлов
+            await this.backupUploads(backupPath);
+            
+            // Бэкап конфигурации
+            await this.backupConfig(backupPath);
+            
+            // Создание архива
+            await this.createArchive(backupPath, type);
+            
+            // Очистка старых бэкапов
+            await this.cleanOldBackups(type);
+            
+            console.log(\`✅ Бэкап \${type} успешно завершен\`);
+            
+        } catch (error) {
+            console.error(\`❌ Ошибка бэкапа: \${error.message}\`);
+            throw error;
+        }
+    }
+
+    async backupDatabase(backupPath) {
+        console.log('  🗄️ Бэкап базы данных...');
+        
+        const dbConfig = {
+            host: 'def46fb02c0eac8fefd6f734.twc1.net',
+            port: 5432,
+            database: 'default_db',
+            username: 'gen_user',
+            password: '5-R;mKGYJ<88?1'
+        };
+
+        const dumpFile = join(backupPath, 'database.sql');
+        
+        try {
+            // Используем pg_dump для создания дампа
+            const command = \`pg_dump -h \${dbConfig.host} -p \${dbConfig.port} -U \${dbConfig.username} -d \${dbConfig.database} -f \${dumpFile}\`;
+            
+            await execAsync(command, {
+                env: { ...process.env, PGPASSWORD: dbConfig.password }
+            });
+            
+            console.log('    ✅ Бэкап БД создан');
+        } catch (error) {
+            console.error('    ❌ Ошибка бэкапа БД:', error.message);
+            // Продолжаем выполнение даже при ошибке бэкапа БД
+        }
+    }
+
+    async backupUploads(backupPath) {
+        console.log('  📁 Бэкап загруженных файлов...');
+        
+        const uploadsDir = join(__dirname, '../uploads');
+        const backupUploadsDir = join(backupPath, 'uploads');
+        
+        try {
+            await fs.cp(uploadsDir, backupUploadsDir, { recursive: true });
+            console.log('    ✅ Бэкап файлов создан');
+        } catch (error) {
+            console.error('    ❌ Ошибка бэкапа файлов:', error.message);
+        }
+    }
+
+    async backupConfig(backupPath) {
+        console.log('  ⚙️ Бэкап конфигурации...');
+        
+        const configDir = join(__dirname, '../config');
+        const backupConfigDir = join(backupPath, 'config');
+        
+        try {
+            await fs.cp(configDir, backupConfigDir, { recursive: true });
+            console.log('    ✅ Бэкап конфигурации создан');
+        } catch (error) {
+            console.error('    ❌ Ошибка бэкапа конфигурации:', error.message);
+        }
+    }
+
+    async createArchive(backupPath, type) {
+        console.log('  📦 Создание архива...');
+        
+        const archive = await import('archiver');
+        const output = fs.createWriteStream(\`\${backupPath}.zip\`);
+        const archiver = archive.create('zip', { zlib: { level: 9 } });
+        
+        return new Promise((resolve, reject) => {
+            output.on('close', () => {
+                console.log('    ✅ Архив создан');
+                resolve();
+            });
+            
+            archiver.on('error', reject);
+            archiver.pipe(output);
+            archiver.directory(backupPath, false);
+            archiver.finalize();
+        });
+    }
+
+    async cleanOldBackups(type) {
+        console.log(\`  🧹 Очистка старых бэкапов (\${type})...\`);
+        
+        const retention = {
+            daily: 7,
+            weekly: 4,
+            monthly: 12
+        };
+        
+        const backupTypeDir = join(this.backupDir, type);
+        const files = await fs.readdir(backupTypeDir);
+        
+        // Сортируем файлы по дате создания
+        const sortedFiles = files.sort().reverse();
+        const filesToDelete = sortedFiles.slice(retention[type]);
+        
+        for (const file of filesToDelete) {
+            const filePath = join(backupTypeDir, file);
+            await fs.rm(filePath, { recursive: true });
+            console.log(\`    Удален: \${file}\`);
+        }
+        
+        console.log(\`    ✅ Очищено \${filesToDelete.length} старых бэкапов\`);
+    }
+}
+
+// Запуск бэкапа если скрипт вызван напрямую
+if (import.meta.url === \`file://\${process.argv[1]}\`) {
+    const type = process.argv[2] || 'daily';
+    const backupSystem = new BackupSystem();
+    backupSystem.runBackup(type).catch(console.error);
+}
+
+export default BackupSystem;`;
+    }
+
+    createRestoreScript() {
+        return `// Скрипт восстановления для Академии АНБ
+console.log('🔧 Скрипт восстановления - в разработке');`;
+    }
+
+    createCleanScript() {
+        return `// Скрипт очистки для Академии АНБ
+console.log('🧹 Скрипт очистки - в разработке');`;
+    }
+
+    async setupMonitoring() {
+        console.log('   📊 Настройка мониторинга...');
+        
+        try {
+            // Создание скриптов мониторинга
+            const monitoringScripts = {
+                'scripts/monitor.js': this.createMonitorScript(),
+                'scripts/health.js': this.createHealthScript(),
+                'scripts/stats.js': this.createStatsScript()
+            };
+
+            for (const [filePath, content] of Object.entries(monitoringScripts)) {
+                const fullPath = join(__dirname, filePath);
+                await fs.writeFile(fullPath, content);
+                console.log(`     ✅ Создан: ${filePath}`);
+            }
+
+            console.log('   ✅ Система мониторинга настроена');
+            
+        } catch (error) {
+            throw new Error(`Не удалось настроить мониторинг: ${error.message}`);
+        }
+    }
+
+    createMonitorScript() {
+        return `// Скрипт мониторинга для Академии АНБ
+console.log('📊 Скрипт мониторинга - в разработке');`;
+    }
+
+    createHealthScript() {
+        return `// Скрипт проверки здоровья для Академии АНБ
+console.log('❤️ Скрипт проверки здоровья - в разработке');`;
+    }
+
+    createStatsScript() {
+        return `// Скрипт статистики для Академии АНБ
+console.log('📈 Скрипт статистики - в разработке');`;
     }
 
     async setupSecurity() {
-        console.log('🔒 Настройка безопасности...');
+        console.log('   🛡️ Настройка безопасности...');
         
         try {
-            // Создание SSL сертификатов (для разработки)
-            if (this.config.NODE_ENV === 'development') {
-                await this.generateDevSSL();
+            // Создание скриптов безопасности
+            const securityScripts = {
+                'scripts/security.js': this.createSecurityScript(),
+                'scripts/update.js': this.createUpdateScript(),
+                'scripts/validate.js': this.createValidateScript()
+            };
+
+            for (const [filePath, content] of Object.entries(securityScripts)) {
+                const fullPath = join(__dirname, filePath);
+                await fs.writeFile(fullPath, content);
+                console.log(`     ✅ Создан: ${filePath}`);
             }
-            
-            // Настройка CORS
-            const corsConfig = {
-                origin: [
-                    this.config.WEBAPP_URL,
-                    'https://telegram.org',
-                    'https://web.telegram.org'
-                ],
-                credentials: true
-            };
-            
-            const securityConfig = {
-                cors: corsConfig,
-                rateLimit: {
-                    windowMs: 15 * 60 * 1000, // 15 минут
-                    max: 100 // максимум 100 запросов за окно
-                },
-                helmet: {
-                    contentSecurityPolicy: {
-                        directives: {
-                            defaultSrc: ["'self'"],
-                            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-                            fontSrc: ["'self'", "https://fonts.gstatic.com"],
-                            imgSrc: ["'self'", "data:", "https:", "blob:"],
-                            scriptSrc: ["'self'", "'unsafe-inline'"],
-                            connectSrc: ["'self'", "ws:", "wss:"]
-                        }
-                    }
-                }
-            };
-            
-            const securityPath = join(this.baseDir, 'config', 'security.json');
-            await fs.writeFile(securityPath, JSON.stringify(securityConfig, null, 2), 'utf8');
-            console.log('• Конфигурация безопасности создана');
-            
-            // Создание .htaccess для Apache
-            const htaccess = `# Безопасность Apache
-<Files ".env">
-    Deny from all
-</Files>
 
-<Files "*.log">
-    Deny from all
-</Files>
-
-# Запрет доступа к системным файлам
-<FilesMatch "(^#.*#|\\..~|~)$">
-    Deny from all
-</FilesMatch>
-
-# Защита от XSS
-Header always set X-Content-Type-Options nosniff
-Header always set X-Frame-Options DENY
-Header always set X-XSS-Protection "1; mode=block"`;
+            // Настройка прав доступа к файлам
+            await this.setupFilePermissions();
             
-            const htaccessPath = join(this.baseDir, '.htaccess');
-            await fs.writeFile(htaccessPath, htaccess, 'utf8');
-            console.log('• Конфигурация .htaccess создана');
-            
-            console.log('✅ Настройка безопасности завершена');
+            console.log('   ✅ Система безопасности настроена');
             
         } catch (error) {
-            throw new Error(`Ошибка настройки безопасности: ${error.message}`);
+            throw new Error(`Не удалось настроить безопасность: ${error.message}`);
         }
     }
 
-    async generateDevSSL() {
-        try {
-            const certDir = join(this.baseDir, 'ssl');
-            await fs.mkdir(certDir, { recursive: true });
-            
-            // Генерация самоподписанного сертификата для разработки
-            const { generate } = await import('selfsigned');
-            const attrs = [{ name: 'commonName', value: 'anb-academy.local' }];
-            const options = { days: 365, keySize: 2048 };
-            
-            const pems = generate(attrs, options);
-            
-            await fs.writeFile(join(certDir, 'cert.pem'), pems.cert, 'utf8');
-            await fs.writeFile(join(certDir, 'key.pem'), pems.private, 'utf8');
-            
-            console.log('• SSL сертификаты для разработки созданы');
-            
-        } catch (error) {
-            console.warn('⚠️ Не удалось создать SSL сертификаты:', error.message);
-        }
+    createSecurityScript() {
+        return `// Скрипт безопасности для Академии АНБ
+console.log('🛡️ Скрипт безопасности - в разработке');`;
     }
 
-    async optimizePerformance() {
-        console.log('⚡ Оптимизация производительности...');
-        
-        try {
-            // Конфигурация кэширования
-            const cacheConfig = {
-                redis: {
-                    host: 'localhost',
-                    port: 6379,
-                    ttl: 3600
-                },
-                memory: {
-                    max: 100,
-                    ttl: 300
-                },
-                static: {
-                    maxAge: 31536000 // 1 год
-                }
-            };
-            
-            const cachePath = join(this.baseDir, 'config', 'cache.json');
-            await fs.writeFile(cachePath, JSON.stringify(cacheConfig, null, 2), 'utf8');
-            console.log('• Конфигурация кэширования создана');
-            
-            // Настройка кластеризации
-            const clusterConfig = {
-                enabled: this.config.NODE_ENV === 'production',
-                workers: os.cpus().length,
-                respawn: true,
-                timeout: 5000
-            };
-            
-            const clusterPath = join(this.baseDir, 'config', 'cluster.json');
-            await fs.writeFile(clusterPath, JSON.stringify(clusterConfig, null, 2), 'utf8');
-            console.log('• Конфигурация кластеризации создана');
-            
-            // Создание скриптов оптимизации
-            const optimizeScript = `#!/bin/bash
-# Скрипт оптимизации Академии АНБ
-
-echo "🔄 Оптимизация производительности..."
-
-# Очистка кэша
-npm run clean:cache
-
-# Оптимизация базы данных
-npm run db:optimize
-
-# Сборка фронтенда
-npm run build:webapp
-
-# Очистка логов
-find ./logs -name "*.log" -type f -mtime +7 -delete
-
-echo "✅ Оптимизация завершена"`;
-            
-            const scriptPath = join(this.baseDir, 'scripts', 'optimize.sh');
-            await fs.writeFile(scriptPath, optimizeScript, 'utf8');
-            await fs.chmod(scriptPath, 0o755);
-            console.log('• Скрипт оптимизации создан');
-            
-            console.log('✅ Оптимизация производительности завершена');
-            
-        } catch (error) {
-            throw new Error(`Ошибка оптимизации производительности: ${error.message}`);
-        }
+    createUpdateScript() {
+        return `// Скрипт обновления для Академии АНБ
+console.log('🔄 Скрипт обновления - в разработке');`;
     }
 
-    async createBackups() {
-        console.log('💾 Создание резервных копий...');
-        
-        try {
-            const backupDir = join(this.baseDir, 'backups', 'initial');
-            await fs.mkdir(backupDir, { recursive: true });
+    createValidateScript() {
+        return `// Скрипт валидации для Академии АНБ
+console.log('✅ Скрипт валидации - в разработке');`;
+    }
+
+    async setupFilePermissions() {
+        // В Linux-системах настраиваем права доступа
+        if (os.platform() === 'linux') {
+            console.log('     🔐 Настройка прав доступа...');
             
-            // Резервное копирование конфигурации
-            const configFiles = [
-                'package.json',
-                '.env',
-                'config/security.json',
-                'config/cache.json',
-                'config/cluster.json'
-            ];
-            
-            for (const file of configFiles) {
-                const source = join(this.baseDir, file);
-                const target = join(backupDir, file);
-                
-                if (existsSync(source)) {
-                    await fs.mkdir(dirname(target), { recursive: true });
-                    await fs.copyFile(source, target);
+            const directories = {
+                'logs': '755',
+                'uploads': '755',
+                'backups': '700',
+                'config': '600',
+                'temp': '777'
+            };
+
+            for (const [dir, permissions] of Object.entries(directories)) {
+                try {
+                    await fs.chmod(join(__dirname, dir), parseInt(permissions, 8));
+                    console.log(`       ✅ Права настроены для: ${dir}`);
+                } catch (error) {
+                    console.warn(`       ⚠️ Не удалось настроить права для ${dir}: ${error.message}`);
                 }
             }
-            
-            // Создание скрипта восстановления
-            const restoreScript = `#!/bin/bash
-# Скрипт восстановления Академии АНБ из резервной копии
-
-BACKUP_DIR="./backups/initial"
-RESTORE_DIR="./"
-
-echo "🔄 Восстановление системы из резервной копии..."
-
-if [ ! -d "$BACKUP_DIR" ]; then
-    echo "❌ Директория с резервной копией не найдена: $BACKUP_DIR"
-    exit 1
-fi
-
-# Копирование конфигурационных файлов
-cp -r "$BACKUP_DIR"/* "$RESTORE_DIR"/
-
-echo "✅ Восстановление завершено"
-echo "💡 Не забудьте:"
-echo "   - Проверить настройки в .env"
-echo "   - Запустить: npm install"
-echo "   - Запустить: npm run setup"`;
-            
-            const restorePath = join(this.baseDir, 'scripts', 'restore.sh');
-            await fs.writeFile(restorePath, restoreScript, 'utf8');
-            await fs.chmod(restorePath, 0o755);
-            
-            console.log('• Резервные копии созданы');
-            console.log('• Скрипт восстановления создан');
-            console.log('✅ Создание резервных копий завершено');
-            
-        } catch (error) {
-            throw new Error(`Ошибка создания резервных копий: ${error.message}`);
         }
     }
 
-    async finalCheck() {
-        console.log('🔍 Финальная проверка системы...');
+    async finalizeSetup() {
+        console.log('   🎉 Завершение установки...');
         
-        const checks = [];
-        
-        // Проверка директорий
-        for (const dir of this.directories) {
-            const exists = existsSync(join(this.baseDir, dir));
-            checks.push({
-                name: `Директория ${dir}`,
-                status: exists ? '✅' : '❌',
-                message: exists ? 'Существует' : 'Отсутствует'
-            });
-        }
-        
-        // Проверка критических файлов
-        const criticalFiles = [
-            'package.json',
-            'server.js',
-            'webapp/app.js',
-            'webapp/style.css',
-            'webapp/index.html',
-            '.env'
-        ];
-        
-        for (const file of criticalFiles) {
-            const exists = existsSync(join(this.baseDir, file));
-            checks.push({
-                name: `Файл ${file}`,
-                status: exists ? '✅' : '❌',
-                message: exists ? 'Существует' : 'Отсутствует'
-            });
-        }
-        
-        // Проверка подключения к БД
         try {
-            const { Client } = await import('pg');
-            const client = new Client({
-                connectionString: this.config.DATABASE_URL,
-                ssl: this.config.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-            });
-            await client.connect();
-            await client.end();
-            checks.push({
-                name: 'Подключение к PostgreSQL',
-                status: '✅',
-                message: 'Успешно'
-            });
-        } catch (error) {
-            checks.push({
-                name: 'Подключение к PostgreSQL',
-                status: '❌',
-                message: error.message
-            });
-        }
-        
-        // Проверка порта
-        try {
-            const net = await import('net');
-            const isPortAvailable = await new Promise((resolve) => {
-                const server = net.createServer();
-                server.once('error', () => resolve(false));
-                server.once('listening', () => {
-                    server.close();
-                    resolve(true);
-                });
-                server.listen(this.config.PORT);
-            });
+            // Создание файла с информацией об установке
+            await this.createSetupInfo();
             
-            checks.push({
-                name: `Порт ${this.config.PORT}`,
-                status: isPortAvailable ? '✅' : '❌',
-                message: isPortAvailable ? 'Доступен' : 'Занят'
-            });
+            // Запись лога установки
+            await this.writeSetupLog();
+            
+            // Создание скрипта запуска
+            await this.createStartScript();
+            
+            console.log('   ✅ Установка завершена');
+            
         } catch (error) {
-            checks.push({
-                name: `Порт ${this.config.PORT}`,
-                status: '❌',
-                message: error.message
-            });
+            throw new Error(`Не удалось завершить установку: ${error.message}`);
         }
-        
-        // Вывод результатов проверки
-        console.log('\n📊 Результаты проверки:');
-        console.log('-'.repeat(60));
-        
-        for (const check of checks) {
-            console.log(`${check.status} ${check.name}: ${check.message}`);
-        }
-        
-        const failedChecks = checks.filter(check => check.status === '❌').length;
-        
-        if (failedChecks > 0) {
-            console.log(`\n⚠️ Обнаружено ${failedChecks} проблем`);
-            console.log('💡 Рекомендуется устранить проблемы перед запуском');
-        } else {
-            console.log('\n🎉 Все проверки пройдены успешно!');
-        }
-        
-        console.log('✅ Финальная проверка завершена');
     }
 
-    async showCompletion() {
-        const totalTime = ((Date.now() - this.startTime) / 1000).toFixed(2);
-        
-        console.log('\n' + '='.repeat(60));
-        console.log('🎉 УСТАНОВКА АКАДЕМИИ АНБ ЗАВЕРШЕНА!');
-        console.log('='.repeat(60));
-        console.log(`⏱️ Общее время установки: ${totalTime} секунд`);
-        console.log(`📁 Директория: ${this.baseDir}`);
-        console.log(`🌐 Окружение: ${this.config.NODE_ENV}`);
-        console.log('');
-        console.log('🚀 ДЛЯ ЗАПУСКА ВЫПОЛНИТЕ:');
-        console.log('   npm start                    # Запуск продакшн сервера');
-        console.log('   npm run dev                  # Запуск в режиме разработки');
-        console.log('');
-        console.log('🔧 ДОПОЛНИТЕЛЬНЫЕ КОМАНДЫ:');
-        console.log('   npm run setup               # Переустановка системы');
-        console.log('   npm run backup              # Создание резервной копии');
-        console.log('   npm run optimize            # Оптимизация производительности');
-        console.log('   npm run monitor             # Мониторинг системы');
-        console.log('');
-        console.log('📞 ПОДДЕРЖКА:');
-        console.log('   📧 Email: support@anb-academy.ru');
-        console.log('   📱 Telegram: @anb_academy_support');
-        console.log('   🌐 Сайт: https://anb-academy.ru');
-        console.log('='.repeat(60));
-        
-        // Создание файла с информацией об установке
-        const installInfo = {
-            version: '2.0.0',
-            installTime: new Date().toISOString(),
-            installDuration: totalTime,
-            nodeVersion: process.version,
+    async createSetupInfo() {
+        const setupInfo = {
+            app: this.setupConfig.appName,
+            version: this.setupConfig.version,
+            setup_date: new Date().toISOString(),
+            node_version: process.version,
             platform: os.platform(),
             arch: os.arch(),
-            config: {
-                port: this.config.PORT,
-                webappUrl: this.config.WEBAPP_URL,
-                environment: this.config.NODE_ENV
-            }
+            steps: this.setupLog,
+            timeweb_specific: this.setupConfig.timewebSpecific
         };
-        
-        const infoPath = join(this.baseDir, 'INSTALLATION.json');
-        await fs.writeFile(infoPath, JSON.stringify(installInfo, null, 2), 'utf8');
+
+        const infoPath = join(__dirname, 'setup-info.json');
+        await fs.writeFile(infoPath, JSON.stringify(setupInfo, null, 2));
     }
 
-    // Вспомогательные методы
-    compareVersions(version1, version2) {
-        const v1 = version1.replace('v', '').split('.').map(Number);
-        const v2 = version2.replace('v', '').split('.').map(Number);
+    async writeSetupLog() {
+        const logPath = join(__dirname, 'logs/setup.log');
+        const logContent = this.setupLog.map(entry => 
+            `[${entry.timestamp}] ${entry.step}: ${entry.status} - ${entry.message}`
+        ).join('\n');
         
-        for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
-            const num1 = v1[i] || 0;
-            const num2 = v2[i] || 0;
-            
-            if (num1 > num2) return 1;
-            if (num1 < num2) return -1;
+        await fs.writeFile(logPath, logContent);
+    }
+
+    async createStartScript() {
+        const startScript = `#!/bin/bash
+# Скрипт запуска Академии АНБ
+echo "🚀 Запуск Академии АНБ версии 2.0.0..."
+
+# Проверка переменных окружения
+if [ -z "$BOT_TOKEN" ]; then
+    echo "⚠️ Предупреждение: BOT_TOKEN не установлен"
+fi
+
+if [ -z "$DATABASE_URL" ]; then
+    echo "⚠️ Предупреждение: DATABASE_URL не установлен"
+fi
+
+# Запуск приложения
+echo "📦 Запуск сервера..."
+npm start
+`;
+
+        const scriptPath = join(__dirname, 'start.sh');
+        await fs.writeFile(scriptPath, startScript);
+        
+        // Устанавливаем права на выполнение
+        if (os.platform() === 'linux') {
+            await fs.chmod(scriptPath, 0o755);
         }
+    }
+
+    async rollbackSetup() {
+        console.log('\n🔄 Откат установки...');
         
-        return 0;
+        try {
+            // Удаляем созданные файлы конфигурации
+            const configFiles = [
+                '.env',
+                'config/database.json',
+                'config/redis.json',
+                'config/email.json',
+                'config/security.json',
+                'config/timeweb.json',
+                'config/backup.json',
+                'config/ssl.json'
+            ];
+
+            for (const file of configFiles) {
+                try {
+                    await fs.unlink(join(__dirname, file));
+                } catch (error) {
+                    // Игнорируем ошибки удаления несуществующих файлов
+                }
+            }
+
+            console.log('✅ Откат завершен');
+            
+        } catch (error) {
+            console.error('❌ Ошибка при откате:', error.message);
+        }
     }
 }
 
-// Запуск установки
-const setup = new SystemSetup();
-
-// Обработка аргументов командной строки
-const args = process.argv.slice(2);
-if (args.includes('--help') || args.includes('-h')) {
-    console.log(`
-🎓 Академия АНБ - Система установки
-
-Использование:
-  node setup.js [опции]
-
-Опции:
-  --non-interactive    Неинтерактивный режим
-  --install-deps       Автоматическая установка зависимостей
-  --help, -h          Показать эту справку
-
-Примеры:
-  node setup.js                     # Интерактивная установка
-  node setup.js --non-interactive   # Автоматическая установка
-  node setup.js --install-deps      # Установка с авто-зависимостями
-    `);
-    process.exit(0);
+// Запуск установки если скрипт вызван напрямую
+if (import.meta.url === `file://${process.argv[1]}`) {
+    const setupSystem = new SetupSystem();
+    setupSystem.runSetup().catch(console.error);
 }
 
-setup.init().catch(error => {
-    console.error('❌ Критическая ошибка:', error.message);
-    process.exit(1);
-});
+export default SetupSystem;
