@@ -9,7 +9,6 @@ class AcademyApp {
         this.isSuperAdmin = false;
         this.isInitialized = false;
         
-        // Состояние приложения
         this.state = {
             currentCourse: null,
             currentStream: null,
@@ -37,7 +36,6 @@ class AcademyApp {
         try {
             this.initTelegramWebApp();
             
-            // Параллельная загрузка данных
             await Promise.all([
                 this.loadUserData(),
                 this.loadContent()
@@ -135,7 +133,6 @@ class AcademyApp {
     }
 
     setupEventListeners() {
-        // Поиск
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
@@ -144,9 +141,7 @@ class AcademyApp {
             });
         }
 
-        // Глобальные обработчики
         document.addEventListener('click', (e) => {
-            // Навигация
             const navBtn = e.target.closest('.nav-btn');
             if (navBtn) {
                 e.preventDefault();
@@ -155,7 +150,6 @@ class AcademyApp {
                 return;
             }
 
-            // Карточки навигации
             const navCard = e.target.closest('.nav-card');
             if (navCard) {
                 const section = navCard.dataset.section;
@@ -165,7 +159,6 @@ class AcademyApp {
                 return;
             }
 
-            // Кнопки избранного
             const favoriteBtn = e.target.closest('.favorite-btn');
             if (favoriteBtn) {
                 e.stopPropagation();
@@ -175,7 +168,6 @@ class AcademyApp {
                 return;
             }
 
-            // Кнопки действий
             const actionBtn = e.target.closest('.action-btn');
             if (actionBtn) {
                 const action = actionBtn.dataset.action;
@@ -183,7 +175,6 @@ class AcademyApp {
                 return;
             }
 
-            // Табы админки
             const adminTab = e.target.closest('.admin-tab');
             if (adminTab) {
                 const tab = adminTab.dataset.tab;
@@ -232,7 +223,6 @@ class AcademyApp {
                 this.isAdmin = this.currentUser.isAdmin || false;
                 this.isSuperAdmin = this.currentUser.isSuperAdmin || false;
                 
-                // Обновляем бейдж админа
                 const adminBadge = document.getElementById('adminBadge');
                 if (adminBadge) {
                     if (this.isSuperAdmin) {
@@ -256,7 +246,6 @@ class AcademyApp {
             }
         } catch (error) {
             console.error('Ошибка загрузки пользователя:', error);
-            // Создаем демо-пользователя как fallback
             this.createDemoUser();
         }
     }
@@ -505,12 +494,10 @@ class AcademyApp {
             return;
         }
 
-        // Обновляем навигацию
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.page === page);
         });
 
-        // Обновление кнопки "Назад" для Telegram
         if (window.Telegram && Telegram.WebApp) {
             if (page === 'home' && !subPage) {
                 Telegram.WebApp.BackButton.hide();
@@ -519,7 +506,6 @@ class AcademyApp {
             }
         }
 
-        // Рендерим страницу
         try {
             mainContent.innerHTML = this.getPageHTML(page, subPage);
             this.initializePage(page);
@@ -1775,8 +1761,6 @@ class AcademyApp {
         `;
     }
 
-    // ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ====================
-
     getMaterialTypeIcon(type) {
         const icons = {
             'mri': '🖼️',
@@ -1877,7 +1861,6 @@ class AcademyApp {
     filterContent(items, type) {
         let filtered = items;
         
-        // Поиск
         if (this.state.searchQuery) {
             const query = this.state.searchQuery.toLowerCase();
             filtered = filtered.filter(item => 
@@ -1887,7 +1870,6 @@ class AcademyApp {
             );
         }
 
-        // Фильтры по типу
         if (this.state.activeFilters[type]) {
             const filter = this.state.activeFilters[type];
             if (filter !== 'all') {
@@ -1911,8 +1893,6 @@ class AcademyApp {
 
         return filtered;
     }
-
-    // ==================== МЕТОДЫ ДЕЙСТВИЙ ====================
 
     handleAction(action, data) {
         const actions = {
@@ -1955,7 +1935,6 @@ class AcademyApp {
         }
     }
 
-    // Навигация по контенту
     openCourseDetail(courseId) {
         this.renderPage('courses', courseId);
     }
@@ -2013,7 +1992,6 @@ class AcademyApp {
         }
     }
 
-    // Избранное
     toggleFavorite(contentId, contentType) {
         contentId = parseInt(contentId);
         const favorites = this.state.favorites[contentType] || [];
@@ -2027,7 +2005,6 @@ class AcademyApp {
             this.state.favorites[contentType].push(contentId);
         }
         
-        // Обновляем кнопку
         const btn = document.querySelector(`.favorite-btn[data-id="${contentId}"][data-type="${contentType}"]`);
         if (btn) {
             btn.classList.toggle('active');
@@ -2041,7 +2018,6 @@ class AcademyApp {
         );
     }
 
-    // Покупки и регистрации
     purchaseCourse(courseId) {
         const course = this.allContent.courses?.find(c => c.id == courseId);
         this.showNotification(`💳 Покупка курса: "${course?.title}" за ${this.formatPrice(course?.price)}`);
@@ -2057,7 +2033,6 @@ class AcademyApp {
         this.showNotification(`🎁 Получаем предложение: "${promo?.title}"`);
     }
 
-    // Чат
     handleMessageKeypress(event, chatId) {
         if (event.key === 'Enter') {
             this.sendMessage(chatId);
@@ -2086,7 +2061,6 @@ class AcademyApp {
         }
     }
 
-    // Поддержка и информация
     showSupport() {
         this.showNotification('💬 Поддержка: @academy_anb\n📧 academy@anb.ru\n⏰ ПН-ПТ 11:00-19:00');
     }
@@ -2124,13 +2098,11 @@ class AcademyApp {
         this.showNotification(`📤 Поделиться курсом: "${course?.title}"`);
     }
 
-    // Админ методы
     initAdminPage() {
         console.log('🔧 Инициализация админ-панели');
     }
 
     switchAdminTab(tab) {
-        // Обновляем активные вкладки
         document.querySelectorAll('.admin-tab').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tab);
         });
@@ -2214,7 +2186,6 @@ class AcademyApp {
         this.showNotification('📥 Экспорт пользователей\n\nФайл с данными пользователей готов к скачиванию');
     }
 
-    // Утилиты
     showNotification(message) {
         if (window.Telegram && Telegram.WebApp) {
             Telegram.WebApp.showPopup({
