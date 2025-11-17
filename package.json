@@ -7,8 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "build": "node setup.js --non-interactive",
-    "prestart": "npm run build",
-    "setup": "node setup.js --non-interactive"
+    "prestart": "npm run build"
   },
   "dependencies": {
     "express": "^4.18.2",
