@@ -3287,7 +3287,7 @@ class ExpressServerSystem {
         // Временное отключение кэширования
 console.log('⚠️ API caching temporarily disabled');
 
-   setupFileUpload() {
+  setupFileUpload() {
     const storage = multer.diskStorage({
         destination: async (req, file, cb) => {
             const uploadType = file.fieldname || 'general';
@@ -3304,40 +3304,38 @@ console.log('⚠️ API caching temporarily disabled');
             const uniqueName = `${uuidv4()}-${file.originalname}`;
             cb(null, uniqueName);
         }
-    }); // ← ДОБАВЬТЕ ЗДЕСЬ ЗАКРЫВАЮЩУЮ СКОБКУ И ТОЧКУ С ЗАПЯТОЙ
+    }); // ← ЗАКРЫВАЮЩАЯ СКОБКА И ТОЧКА С ЗАПЯТОЙ ДОБАВЛЕНЫ
 
     const fileFilter = (req, file, cb) => {
-
-        const fileFilter = (req, file, cb) => {
-            const allowedTypes = {
-                'courses': ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime'],
-                'podcasts': ['audio/mpeg', 'audio/wav', 'audio/ogg'],
-                'streams': ['video/mp4', 'video/quicktime', 'image/jpeg', 'image/png'],
-                'videos': ['video/mp4', 'video/quicktime'],
-                'materials': ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-                'avatars': ['image/jpeg', 'image/png', 'image/webp'],
-                'documents': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
-            };
-
-            const fieldName = file.fieldname;
-            const allowedMimes = allowedTypes[fieldName] || allowedTypes['documents'];
-
-            if (allowedMimes && allowedMimes.includes(file.mimetype)) {
-                cb(null, true);
-            } else {
-                cb(new Error(`Неподдерживаемый тип файла для ${fieldName}: ${file.mimetype}`), false);
-            }
+        const allowedTypes = {
+            'courses': ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime'],
+            'podcasts': ['audio/mpeg', 'audio/wav', 'audio/ogg'],
+            'streams': ['video/mp4', 'video/quicktime', 'image/jpeg', 'image/png'],
+            'videos': ['video/mp4', 'video/quicktime'],
+            'materials': ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            'avatars': ['image/jpeg', 'image/png', 'image/webp'],
+            'documents': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
         };
 
-        this.upload = multer({
-            storage: storage,
-            limits: { 
-                fileSize: config.UPLOAD_MAX_SIZE,
-                files: 10
-            },
-            fileFilter: fileFilter
-        });
-    }
+        const fieldName = file.fieldname;
+        const allowedMimes = allowedTypes[fieldName] || allowedTypes['documents'];
+
+        if (allowedMimes && allowedMimes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`Неподдерживаемый тип файла для ${fieldName}: ${file.mimetype}`), false);
+        }
+    };
+
+    this.upload = multer({
+        storage: storage,
+        limits: { 
+            fileSize: config.UPLOAD_MAX_SIZE,
+            files: 10
+        },
+        fileFilter: fileFilter
+    });
+} // ← ЗАКРЫТИЕ МЕТОДА setupFileUpload
 
     setupRoutes() {
         // Health check
