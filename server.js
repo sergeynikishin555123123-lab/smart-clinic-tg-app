@@ -7,6 +7,8 @@ import fs from 'fs';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import net from 'net';
+import https from 'https'; 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -691,11 +693,11 @@ class TelegramBot {
         try {
             console.log('🤖 Инициализация Telegram бота...');
             
-            if (!config.BOT_TOKEN || config.BOT_TOKEN === '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4') {
-                console.log('⚠️ Бот-токен не настроен, запускаем без бота');
-                processManager.healthStatus.bot = 'disabled';
-                return;
-            }
+if (!config.BOT_TOKEN) {
+    console.log('⚠️ Бот-токен не настроен, запускаем без бота');
+    processManager.healthStatus.bot = 'disabled';
+    return;
+}
             
             this.bot = new Telegraf(config.BOT_TOKEN);
             
