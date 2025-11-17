@@ -5,29 +5,31 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "node setup.js --non-interactive",
-    "setup": "node setup.js --non-interactive",
-    "dev": "node server.js"
+    "build": "node setup.js --non-interactive"
   },
   "dependencies": {
     "express": "^4.18.2",
     "telegraf": "^4.16.3",
     "cors": "^2.8.5",
     "helmet": "^7.1.0",
-    "multer": "^1.4.5-lts.1",
+    "winston": "^3.11.0",
+    "morgan": "^1.10.0",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
-    "winston": "^3.11.0",
     "uuid": "^9.0.1",
-    "sharp": "^0.33.0",
+    "multer": "^1.4.5-lts.1",
+    "sharp": "^0.32.6",
+    "axios": "^1.6.2",
     "moment": "^2.29.4",
+    "lodash": "^4.17.21",
     "joi": "^17.11.0",
     "express-rate-limit": "^7.1.5",
-    "morgan": "^1.10.0",
+    "express-validator": "^7.0.1",
     "node-cron": "^3.0.3",
-    "compression": "^1.7.4",
-    "pg": "^8.11.3",
+    "nodemailer": "^6.9.7",
+    "qrcode": "^1.5.3",
+    "socket.io": "^4.7.4",
     "ioredis": "^5.3.2",
-    "socket.io": "^4.7.5"
+    "compression": "^1.7.4"
   }
 }
