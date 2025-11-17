@@ -7,13 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "build": "node setup.js",
-    "setup": "node setup.js",
-    "deploy": "npm run build && npm start",
-    "quick": "node quick-server.js",
-    "docker:build": "docker build -t anb-academy .",
-    "docker:run": "docker run -p 3000:3000 anb-academy",
-    "docker:prod": "npm run docker:build && npm run docker:run"
+    "quick": "node server.js"
   },
   "keywords": [
     "academy",
@@ -34,5 +28,5 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  } 
 }
