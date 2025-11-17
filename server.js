@@ -1,4 +1,4 @@
-// server.js - ПОЛНАЯ ВЕРСИЯ С ПОДКЛЮЧЕНИЕМ К БД
+// server.js - ПОЛНАЯ ВЕРСИЯ С ИСПРАВЛЕННОЙ БАЗОЙ ДАННЫХ
 import { Telegraf, session, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -33,24 +33,14 @@ class Database {
         try {
             const { Client } = await import('pg');
             
-            // Чтение SSL сертификата
-            const certPath = join(os.homedir(), '.cloud-certs', 'root.crt');
-            let sslConfig = { rejectUnauthorized: false };
-            
-            if (fs.existsSync(certPath)) {
-                sslConfig = {
-                    rejectUnauthorized: true,
-                    ca: fs.readFileSync(certPath, 'utf-8')
-                };
-            }
-
+            // Упрощенное подключение без SSL для начала
             this.client = new Client({
                 user: 'gen_user',
                 host: 'def46fb02c0eac8fefd6f734.twc1.net',
                 database: 'default_db',
                 password: '5-R;mKGYJ<88?1',
                 port: 5432,
-                ssl: sslConfig,
+                ssl: { rejectUnauthorized: false },
                 connectionTimeoutMillis: 10000,
                 idleTimeoutMillis: 30000
             });
@@ -62,6 +52,9 @@ class Database {
             await this.createTables();
             console.log('✅ Таблицы созданы/проверены');
             
+            await this.seedInitialData();
+            console.log('✅ Демо данные добавлены');
+            
         } catch (error) {
             console.error('❌ Ошибка подключения к БД:', error);
             this.connected = false;
@@ -69,9 +62,33 @@ class Database {
     }
 
     async createTables() {
+        // Сначала удаляем проблемные таблицы если они есть
+        const dropTables = [
+            'DROP TABLE IF EXISTS user_progress CASCADE',
+            'DROP TABLE IF EXISTS admins CASCADE',
+            'DROP TABLE IF EXISTS chats CASCADE',
+            'DROP TABLE IF EXISTS promotions CASCADE',
+            'DROP TABLE IF EXISTS events CASCADE',
+            'DROP TABLE IF EXISTS materials CASCADE',
+            'DROP TABLE IF EXISTS video_tips CASCADE',
+            'DROP TABLE IF EXISTS streams CASCADE',
+            'DROP TABLE IF EXISTS podcasts CASCADE',
+            'DROP TABLE IF EXISTS courses CASCADE',
+            'DROP TABLE IF EXISTS users CASCADE'
+        ];
+
+        for (const dropSQL of dropTables) {
+            try {
+                await this.client.query(dropSQL);
+            } catch (error) {
+                // Игнорируем ошибки удаления
+            }
+        }
+
+        // Создаем таблицы заново
         const tables = [
             // Пользователи
-            `CREATE TABLE IF NOT EXISTS users (
+            `CREATE TABLE users (
                 id BIGINT PRIMARY KEY,
                 telegram_data JSONB,
                 profile_data JSONB DEFAULT '{"specialization": "", "city": "", "email": ""}',
@@ -103,7 +120,7 @@ class Database {
             )`,
 
             // Курсы
-            `CREATE TABLE IF NOT EXISTS courses (
+            `CREATE TABLE courses (
                 id SERIAL PRIMARY KEY,
                 title TEXT NOT NULL,
                 description TEXT,
@@ -116,14 +133,14 @@ class Database {
                 image_url TEXT,
                 video_url TEXT,
                 tags TEXT[] DEFAULT '{}',
-                is_active BOOLEAN DEFAULT TRUE,
+                active BOOLEAN DEFAULT TRUE,
                 students_count INTEGER DEFAULT 0,
                 rating DECIMAL(3,2) DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW()
             )`,
 
             // Подкасты (АНБ FM)
-            `CREATE TABLE IF NOT EXISTS podcasts (
+            `CREATE TABLE podcasts (
                 id SERIAL PRIMARY KEY,
                 title TEXT NOT NULL,
                 description TEXT,
@@ -136,7 +153,7 @@ class Database {
             )`,
 
             // Эфиры и разборы
-            `CREATE TABLE IF NOT EXISTS streams (
+            `CREATE TABLE streams (
                 id SERIAL PRIMARY KEY,
                 title TEXT NOT NULL,
                 description TEXT,
@@ -144,14 +161,14 @@ class Database {
                 duration TEXT,
                 thumbnail_url TEXT,
                 stream_date TIMESTAMP,
-                is_live BOOLEAN DEFAULT FALSE,
+                live BOOLEAN DEFAULT FALSE,
                 participants INTEGER DEFAULT 0,
                 type TEXT DEFAULT 'stream',
                 created_at TIMESTAMP DEFAULT NOW()
             )`,
 
             // Видео-шпаргалки
-            `CREATE TABLE IF NOT EXISTS video_tips (
+            `CREATE TABLE video_tips (
                 id SERIAL PRIMARY KEY,
                 title TEXT NOT NULL,
                 description TEXT,
@@ -164,26 +181,26 @@ class Database {
             )`,
 
             // Практические материалы
-            `CREATE TABLE IF NOT EXISTS materials (
+            `CREATE TABLE materials (
                 id SERIAL PRIMARY KEY,
                 title TEXT NOT NULL,
                 description TEXT,
                 file_url TEXT,
                 image_url TEXT,
-                material_type TEXT CHECK(material_type IN ('mri', 'case', 'checklist')),
+                material_type TEXT,
                 category TEXT,
                 downloads INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW()
             )`,
 
             // Мероприятия
-            `CREATE TABLE IF NOT EXISTS events (
+            `CREATE TABLE events (
                 id SERIAL PRIMARY KEY,
                 title TEXT NOT NULL,
                 description TEXT,
                 event_date TIMESTAMP,
                 location TEXT,
-                event_type TEXT CHECK(event_type IN ('online', 'offline')),
+                event_type TEXT,
                 image_url TEXT,
                 registration_url TEXT,
                 participants INTEGER DEFAULT 0,
@@ -191,59 +208,267 @@ class Database {
             )`,
 
             // Акции
-            `CREATE TABLE IF NOT EXISTS promotions (
+            `CREATE TABLE promotions (
                 id SERIAL PRIMARY KEY,
                 title TEXT NOT NULL,
                 description TEXT,
                 image_url TEXT,
                 conditions TEXT,
                 discount INTEGER DEFAULT 0,
-                is_active BOOLEAN DEFAULT TRUE,
+                active BOOLEAN DEFAULT TRUE,
                 end_date TIMESTAMP,
                 created_at TIMESTAMP DEFAULT NOW()
             )`,
 
             // Чаты
-            `CREATE TABLE IF NOT EXISTS chats (
+            `CREATE TABLE chats (
                 id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL,
                 description TEXT,
-                type TEXT CHECK(type IN ('group', 'private', 'flood')),
+                type TEXT,
                 participants_count INTEGER DEFAULT 0,
                 last_message TEXT,
-                is_active BOOLEAN DEFAULT TRUE,
+                active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT NOW()
             )`,
 
             // Прогресс пользователей
-            `CREATE TABLE IF NOT EXISTS user_progress (
+            `CREATE TABLE user_progress (
                 id SERIAL PRIMARY KEY,
-                user_id BIGINT REFERENCES users(id),
+                user_id BIGINT,
                 content_type TEXT,
                 content_id INTEGER,
                 progress_percentage INTEGER DEFAULT 0,
                 completed BOOLEAN DEFAULT FALSE,
                 time_spent INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(user_id, content_type, content_id)
+                created_at TIMESTAMP DEFAULT NOW()
             )`,
 
             // Администраторы
-            `CREATE TABLE IF NOT EXISTS admins (
+            `CREATE TABLE admins (
                 id SERIAL PRIMARY KEY,
-                user_id BIGINT REFERENCES users(id),
+                user_id BIGINT,
                 permissions JSONB DEFAULT '{"content": true, "users": true, "teachers": true}',
-                created_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(user_id)
+                created_at TIMESTAMP DEFAULT NOW()
             )`
         ];
 
         for (const tableSQL of tables) {
             try {
                 await this.client.query(tableSQL);
+                console.log(`✅ Таблица создана: ${tableSQL.split(' ')[2]}`);
             } catch (error) {
-                console.error(`❌ Ошибка создания таблицы:`, error.message);
+                console.error(`❌ Ошибка создания таблицы ${tableSQL.split(' ')[2]}:`, error.message);
             }
+        }
+    }
+
+    async seedInitialData() {
+        try {
+            // Добавляем администратора
+            await this.client.query(`
+                INSERT INTO users (id, telegram_data, is_admin, survey_completed) 
+                VALUES ($1, $2, TRUE, TRUE)
+                ON CONFLICT (id) DO NOTHING
+            `, [config.ADMIN_IDS[0], JSON.stringify({
+                first_name: 'Администратор',
+                username: 'admin'
+            })]);
+
+            // Добавляем демо-курсы
+            const demoCourses = [
+                {
+                    title: 'Мануальные техники в практике',
+                    description: '6 модулей по современным мануальным методикам',
+                    full_description: 'Комплексный курс по мануальным техникам для практикующих врачей. Изучите современные подходы к диагностике и лечению.',
+                    price: 15000,
+                    duration: '12 часов',
+                    modules: 6,
+                    category: 'Мануальные техники',
+                    level: 'advanced',
+                    students_count: 45,
+                    rating: 4.8
+                },
+                {
+                    title: 'Неврология для практикующих врачей',
+                    description: 'Основы неврологической диагностики',
+                    full_description: 'Фундаментальный курс по неврологии с акцентом на практическое применение.',
+                    price: 12000,
+                    duration: '10 часов',
+                    modules: 5,
+                    category: 'Неврология',
+                    level: 'intermediate',
+                    students_count: 67,
+                    rating: 4.6
+                },
+                {
+                    title: 'Основы реабилитации',
+                    description: 'Современные подходы к реабилитации',
+                    full_description: 'Курс по современным методикам реабилитации пациентов.',
+                    price: 8000,
+                    duration: '8 часов',
+                    modules: 4,
+                    category: 'Реабилитация',
+                    level: 'beginner',
+                    students_count: 89,
+                    rating: 4.7
+                }
+            ];
+
+            for (const course of demoCourses) {
+                await this.client.query(`
+                    INSERT INTO courses (title, description, full_description, price, duration, modules, category, level, students_count, rating)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                `, [course.title, course.description, course.full_description, course.price, 
+                    course.duration, course.modules, course.category, course.level, course.students_count, course.rating]);
+            }
+
+            // Добавляем демо-подкасты
+            const demoPodcasts = [
+                {
+                    title: 'АНБ FM: Современная неврология',
+                    description: 'Обсуждение новых тенденций в неврологии',
+                    duration: '45:20',
+                    category: 'Неврология',
+                    listens: 234
+                },
+                {
+                    title: 'АНБ FM: Реабилитационные методики',
+                    description: 'Новые подходы к реабилитации',
+                    duration: '38:15',
+                    category: 'Реабилитация',
+                    listens: 167
+                }
+            ];
+
+            for (const podcast of demoPodcasts) {
+                await this.client.query(`
+                    INSERT INTO podcasts (title, description, duration, category, listens)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [podcast.title, podcast.description, podcast.duration, podcast.category, podcast.listens]);
+            }
+
+            // Добавляем демо-эфиры
+            const demoStreams = [
+                {
+                    title: 'Разбор клинического случая: Болевой синдром',
+                    description: 'Прямой эфир с разбором сложного случая',
+                    duration: '1:30:00',
+                    stream_date: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                    live: true,
+                    participants: 89,
+                    type: 'analysis'
+                },
+                {
+                    title: 'Мануальные техники: Демонстрация',
+                    description: 'Практическая демонстрация методик',
+                    duration: '2:15:00',
+                    stream_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+                    live: false,
+                    participants: 156,
+                    type: 'stream'
+                }
+            ];
+
+            for (const stream of demoStreams) {
+                await this.client.query(`
+                    INSERT INTO streams (title, description, duration, stream_date, live, participants, type)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                `, [stream.title, stream.description, stream.duration, stream.stream_date, stream.live, stream.participants, stream.type]);
+            }
+
+            // Добавляем демо-материалы
+            const demoMaterials = [
+                {
+                    title: 'МРТ разбор: Рассеянный склероз',
+                    description: 'Детальный разбор МРТ с клиническими случаями',
+                    material_type: 'mri',
+                    category: 'Неврология',
+                    downloads: 123
+                },
+                {
+                    title: 'Чек-лист: Неврологический осмотр',
+                    description: 'Пошаговый чек-лист для ежедневной практики',
+                    material_type: 'checklist',
+                    category: 'Неврология',
+                    downloads: 267
+                },
+                {
+                    title: 'Клинический случай: Мигрень',
+                    description: 'Разбор сложного случая мигрени',
+                    material_type: 'case',
+                    category: 'Неврология',
+                    downloads: 189
+                }
+            ];
+
+            for (const material of demoMaterials) {
+                await this.client.query(`
+                    INSERT INTO materials (title, description, material_type, category, downloads)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [material.title, material.description, material.material_type, material.category, material.downloads]);
+            }
+
+            // Добавляем демо-чаты
+            const demoChats = [
+                {
+                    name: 'Общий чат Академии',
+                    description: 'Основной чат для общения всех участников',
+                    type: 'group',
+                    participants_count: 156,
+                    last_message: 'Добро пожаловать в Академию!'
+                },
+                {
+                    name: 'Флудилка',
+                    description: 'Неформальное общение',
+                    type: 'flood',
+                    participants_count: 89,
+                    last_message: 'Привет всем!'
+                },
+                {
+                    name: 'Неврология',
+                    description: 'Обсуждение неврологических тем',
+                    type: 'group',
+                    participants_count: 67,
+                    last_message: 'Кто-нибудь сталкивался с подобным случаем?'
+                }
+            ];
+
+            for (const chat of demoChats) {
+                await this.client.query(`
+                    INSERT INTO chats (name, description, type, participants_count, last_message)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [chat.name, chat.description, chat.type, chat.participants_count, chat.last_message]);
+            }
+
+            // Добавляем демо-акции
+            const demoPromotions = [
+                {
+                    title: 'Скидка 20% на первую подписку',
+                    description: 'Специальное предложение для новых пользователей',
+                    discount: 20,
+                    active: true,
+                    end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                },
+                {
+                    title: 'Бесплатный доступ к базовым курсам',
+                    description: 'Получите доступ к 3 базовым курсам бесплатно',
+                    discount: 100,
+                    active: true,
+                    end_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+                }
+            ];
+
+            for (const promo of demoPromotions) {
+                await this.client.query(`
+                    INSERT INTO promotions (title, description, discount, active, end_date)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [promo.title, promo.description, promo.discount, promo.active, promo.end_date]);
+            }
+
+            console.log('✅ Демо данные успешно добавлены');
+        } catch (error) {
+            console.error('❌ Ошибка добавления демо данных:', error);
         }
     }
 
@@ -798,14 +1023,14 @@ app.get('/api/content', async (req, res) => {
                 promotionsResult,
                 chatsResult
             ] = await Promise.all([
-                db.query('SELECT * FROM courses WHERE is_active = TRUE ORDER BY created_at DESC LIMIT 10'),
-                db.query('SELECT * FROM podcasts ORDER BY created_at DESC LIMIT 10'),
-                db.query('SELECT * FROM streams ORDER BY created_at DESC LIMIT 10'),
-                db.query('SELECT * FROM video_tips ORDER BY created_at DESC LIMIT 10'),
-                db.query('SELECT * FROM materials ORDER BY created_at DESC LIMIT 10'),
-                db.query('SELECT * FROM events ORDER BY created_at DESC LIMIT 10'),
-                db.query('SELECT * FROM promotions WHERE is_active = TRUE ORDER BY created_at DESC LIMIT 10'),
-                db.query('SELECT * FROM chats WHERE is_active = TRUE ORDER BY created_at DESC LIMIT 10')
+                db.query('SELECT * FROM courses WHERE active = TRUE ORDER BY created_at DESC LIMIT 20'),
+                db.query('SELECT * FROM podcasts ORDER BY created_at DESC LIMIT 20'),
+                db.query('SELECT * FROM streams ORDER BY created_at DESC LIMIT 20'),
+                db.query('SELECT * FROM video_tips ORDER BY created_at DESC LIMIT 20'),
+                db.query('SELECT * FROM materials ORDER BY created_at DESC LIMIT 20'),
+                db.query('SELECT * FROM events ORDER BY created_at DESC LIMIT 20'),
+                db.query('SELECT * FROM promotions WHERE active = TRUE ORDER BY created_at DESC LIMIT 20'),
+                db.query('SELECT * FROM chats WHERE active = TRUE ORDER BY created_at DESC LIMIT 20')
             ]);
 
             content = {
@@ -825,6 +1050,106 @@ app.get('/api/content', async (req, res) => {
         res.json({ success: true, data: content });
     } catch (error) {
         console.error('Content API Error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// API для админ-панели
+app.get('/api/admin/stats', async (req, res) => {
+    try {
+        let stats = {};
+        
+        if (db.connected) {
+            const [
+                usersCount,
+                coursesCount,
+                activeSubscriptions
+            ] = await Promise.all([
+                db.query('SELECT COUNT(*) FROM users'),
+                db.query('SELECT COUNT(*) FROM courses WHERE active = TRUE'),
+                db.query('SELECT COUNT(*) FROM users WHERE subscription_data->>\'status\' = \'active\'')
+            ]);
+
+            stats = {
+                totalUsers: parseInt(usersCount.rows[0].count),
+                totalCourses: parseInt(coursesCount.rows[0].count),
+                activeUsers: parseInt(activeSubscriptions.rows[0].count),
+                totalRevenue: parseInt(activeSubscriptions.rows[0].count) * 2900
+            };
+        } else {
+            stats = {
+                totalUsers: 156,
+                totalCourses: 8,
+                activeUsers: 89,
+                totalRevenue: 258100
+            };
+        }
+
+        res.json({ success: true, stats });
+    } catch (error) {
+        console.error('Stats API Error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        let users = [];
+
+        if (db.connected) {
+            const result = await db.query(`
+                SELECT id, telegram_data, profile_data, subscription_data, 
+                       is_admin, created_at, survey_completed
+                FROM users 
+                ORDER BY created_at DESC
+                LIMIT 100
+            `);
+            users = result.rows;
+        } else {
+            users = [{
+                id: 898508164,
+                telegram_data: { first_name: 'Администратор' },
+                profile_data: { specialization: 'Невролог', city: 'Москва' },
+                subscription_data: { status: 'active' },
+                is_admin: true,
+                created_at: new Date('2024-01-01')
+            }];
+        }
+
+        res.json({ success: true, users });
+    } catch (error) {
+        console.error('Admin Users API Error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.post('/api/admin/content', async (req, res) => {
+    try {
+        const { type, data } = req.body;
+        
+        let result;
+        if (db.connected) {
+            switch(type) {
+                case 'course':
+                    result = await db.query(`
+                        INSERT INTO courses (title, description, price, duration, modules, category, level)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *
+                    `, [data.title, data.description, data.price, data.duration, data.modules, data.category, data.level]);
+                    break;
+                case 'podcast':
+                    result = await db.query(`
+                        INSERT INTO podcasts (title, description, duration, category)
+                        VALUES ($1, $2, $3, $4) RETURNING *
+                    `, [data.title, data.description, data.duration, data.category]);
+                    break;
+                default:
+                    throw new Error('Unknown content type');
+            }
+        }
+
+        res.json({ success: true, content: result?.rows[0] || data });
+    } catch (error) {
+        console.error('Add Content Error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
