@@ -26,9 +26,9 @@ async function setup() {
         // Создаем .env если не существует
         const envPath = join(__dirname, '.env');
         if (!existsSync(envPath)) {
-            const envContent = `BOT_TOKEN=${process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4'}
-DATABASE_URL=${process.env.DATABASE_URL || 'postgresql://gen_user:5-R;mKGYJ<88?1@45.89.190.49:5432/default_db?sslmode=require'}
-WEBAPP_URL=${process.env.WEBAPP_URL || 'https://anb-academy.timeweb.ru'}
+            const envContent = `BOT_TOKEN=8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4
+DATABASE_URL=postgresql://gen_user:5-R;mKGYJ<88?1@45.89.190.49:5432/default_db?sslmode=require
+WEBAPP_URL=https://sergeynikishin555123123-lab-smart-clinic-tg-app-f84f.twc1.net
 PORT=3000
 NODE_ENV=production
 ADMIN_IDS=898508164
@@ -40,14 +40,10 @@ MAX_FILE_SIZE=52428800`;
             console.log('✓ Created: .env');
         }
         
-        // Пропускаем создание .htaccess - вызывает ошибку прав доступа
-        console.log('⚠️ Skipping .htaccess creation (permission issue)');
-        
         console.log('✅ Build completed successfully!');
         
     } catch (error) {
         console.error('❌ Build error:', error.message);
-        // Не выходим с ошибкой, чтобы сборка продолжалась
     }
 }
 
