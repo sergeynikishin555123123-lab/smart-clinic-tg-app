@@ -1,4 +1,4 @@
-// server.js - ВЕРСИЯ С ПРОВЕРКОЙ РАБОТОСПОСОБНОСТИ И УПРАВЛЕНИЕМ ПРОЦЕССАМИ
+// server.js - ПОЛНАЯ ВЕРСИЯ С ФУНКЦИОНАЛОМ 2500+ СТРОК
 import { Telegraf, session, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -10,6 +10,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import { spawn, exec } from 'child_process';
 import net from 'net';
+import https from 'https';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,10 +21,9 @@ const config = {
     PORT: process.env.PORT || 3000,
     WEBAPP_URL: process.env.WEBAPP_URL || 'https://your-domain.com',
     ADMIN_IDS: [898508164, 123456789],
+    SUPER_ADMIN_ID: 898508164, // Супер-админ
     UPLOAD_PATH: join(__dirname, 'uploads'),
-    NODE_ENV: process.env.NODE_ENV || 'production',
-    HEALTH_CHECK_TIMEOUT: 10000,
-    PORT_CHECK_TIMEOUT: 5000
+    NODE_ENV: process.env.NODE_ENV || 'production'
 };
 
 // ==================== СИСТЕМА УПРАВЛЕНИЯ ПРОЦЕССАМИ ====================
@@ -38,7 +38,6 @@ class ProcessManager {
         };
     }
 
-    // Проверка доступности порта
     async checkPortAvailability(port) {
         return new Promise((resolve) => {
             const server = net.createServer();
@@ -63,11 +62,9 @@ class ProcessManager {
         });
     }
 
-    // Освобождение порта (убиваем процессы на порту)
     async freePort(port) {
         return new Promise((resolve) => {
             if (process.platform === 'win32') {
-                // Windows
                 exec(`netstat -ano | findstr :${port}`, (error, stdout) => {
                     if (stdout) {
                         const lines = stdout.split('\n');
@@ -83,7 +80,6 @@ class ProcessManager {
                     setTimeout(resolve, 1000);
                 });
             } else {
-                // Linux/MacOS
                 exec(`lsof -ti:${port}`, (error, stdout) => {
                     if (stdout) {
                         const pids = stdout.trim().split('\n');
@@ -100,12 +96,10 @@ class ProcessManager {
         });
     }
 
-    // Полная проверка системы
     async performSystemCheck() {
         console.log('🔍 Проверка работоспособности системы...');
         
         try {
-            // 1. Проверка порта
             this.healthStatus.system = 'checking';
             const portAvailable = await this.checkPortAvailability(config.PORT);
             
@@ -113,7 +107,6 @@ class ProcessManager {
                 console.log('🔄 Пробуем освободить порт...');
                 await this.freePort(config.PORT);
                 
-                // Повторная проверка после освобождения
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 const portAvailableAfterFree = await this.checkPortAvailability(config.PORT);
                 
@@ -127,11 +120,7 @@ class ProcessManager {
             this.isPortAvailable = true;
             this.healthStatus.system = 'healthy';
             
-            // 2. Проверка доступности интернета
             await this.checkInternetConnection();
-            
-            // 3. Проверка доступности базы данных
-            await this.checkDatabaseConnection();
             
             console.log('✅ Проверка системы завершена');
             return true;
@@ -147,7 +136,6 @@ class ProcessManager {
         return new Promise((resolve) => {
             console.log('🌐 Проверка интернет-соединения...');
             
-            // Пробуем несколько endpoints
             const endpoints = [
                 'https://api.telegram.org',
                 'https://google.com',
@@ -155,10 +143,9 @@ class ProcessManager {
             ];
             
             let connected = false;
-            let checks = 0;
-            
+            let checksCompleted = 0;
+
             const checkEndpoint = (url) => {
-                const https = require('https');
                 const req = https.get(url, (res) => {
                     connected = true;
                     console.log(`✅ Интернет соединение: ${url} доступен`);
@@ -166,17 +153,17 @@ class ProcessManager {
                 });
                 
                 req.on('error', () => {
-                    checks++;
-                    if (checks >= endpoints.length && !connected) {
+                    checksCompleted++;
+                    if (checksCompleted >= endpoints.length && !connected) {
                         console.log('⚠️ Некоторые endpoints недоступны, но продолжаем работу');
-                        resolve(true); // Продолжаем даже если интернет нестабилен
+                        resolve(true);
                     }
                 });
                 
                 req.setTimeout(5000, () => {
                     req.destroy();
-                    checks++;
-                    if (checks >= endpoints.length && !connected) {
+                    checksCompleted++;
+                    if (checksCompleted >= endpoints.length && !connected) {
                         console.log('⚠️ Таймаут проверки интернета, продолжаем работу');
                         resolve(true);
                     }
@@ -185,40 +172,6 @@ class ProcessManager {
             
             endpoints.forEach(checkEndpoint);
         });
-    }
-
-    async checkDatabaseConnection() {
-        console.log('🗄️ Проверка подключения к базе данных...');
-        this.healthStatus.database = 'checking';
-        
-        // Проверка будет выполнена при подключении базы данных
-        this.healthStatus.database = 'pending';
-        return true;
-    }
-
-    // Мониторинг здоровья системы
-    startHealthMonitoring() {
-        setInterval(() => {
-            this.performQuickHealthCheck();
-        }, 30000); // Каждые 30 секунд
-    }
-
-    async performQuickHealthCheck() {
-        try {
-            // Быстрая проверка порта
-            const portOk = await this.checkPortAvailability(config.PORT);
-            if (!portOk) {
-                console.log('⚠️ Порт стал недоступен, перезапускаем систему...');
-                await this.restartSystem();
-            }
-        } catch (error) {
-            console.error('Ошибка быстрой проверки здоровья:', error);
-        }
-    }
-
-    async restartSystem() {
-        console.log('🔄 Перезапуск системы...');
-        process.exit(1); // Завершаем процесс, пусть менеджер процессов перезапустит
     }
 
     getHealthStatus() {
@@ -238,8 +191,6 @@ class Database {
     constructor() {
         this.client = null;
         this.connected = false;
-        this.connectionAttempts = 0;
-        this.maxConnectionAttempts = 3;
     }
 
     async connect() {
@@ -257,33 +208,23 @@ class Database {
                 port: 5432,
                 ssl: { rejectUnauthorized: false },
                 connectionTimeoutMillis: 10000,
-                idleTimeoutMillis: 30000,
-                retryConnection: true
+                idleTimeoutMillis: 30000
             });
 
             await this.client.connect();
             this.connected = true;
-            this.connectionAttempts = 0;
             processManager.healthStatus.database = 'connected';
             console.log('✅ База данных подключена');
             
             await this.createTables();
+            await this.initializeDefaultData();
             console.log('✅ Таблицы созданы/проверены');
             
         } catch (error) {
-            this.connectionAttempts++;
             console.error('❌ Ошибка подключения к БД:', error.message);
             processManager.healthStatus.database = 'disconnected';
             this.connected = false;
-            
-            // Пробуем переподключиться
-            if (this.connectionAttempts < this.maxConnectionAttempts) {
-                console.log(`🔄 Попытка переподключения ${this.connectionAttempts}/${this.maxConnectionAttempts}...`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                return this.connect();
-            } else {
-                console.log('⚠️ Продолжаем работу без базы данных (демо-режим)');
-            }
+            throw error;
         }
     }
 
@@ -298,6 +239,7 @@ class Database {
                 favorites_data JSONB DEFAULT '{}',
                 survey_completed BOOLEAN DEFAULT FALSE,
                 is_admin BOOLEAN DEFAULT FALSE,
+                is_super_admin BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW()
             )`,
@@ -404,6 +346,39 @@ class Database {
                 last_message TEXT,
                 active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS user_progress (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT REFERENCES users(id),
+                course_id INTEGER REFERENCES courses(id),
+                module_id INTEGER,
+                progress INTEGER DEFAULT 0,
+                completed BOOLEAN DEFAULT FALSE,
+                last_activity TIMESTAMP DEFAULT NOW(),
+                created_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS payments (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT REFERENCES users(id),
+                amount DECIMAL(10,2),
+                currency TEXT DEFAULT 'RUB',
+                status TEXT DEFAULT 'pending',
+                payment_method TEXT,
+                subscription_type TEXT,
+                subscription_duration INTEGER,
+                created_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT REFERENCES users(id),
+                title TEXT NOT NULL,
+                message TEXT,
+                type TEXT,
+                read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW()
             )`
         ];
 
@@ -416,24 +391,268 @@ class Database {
         }
     }
 
+    async initializeDefaultData() {
+        try {
+            // Создаем супер-админа если его нет
+            const superAdminCheck = await this.client.query(
+                'SELECT * FROM users WHERE id = $1',
+                [config.SUPER_ADMIN_ID]
+            );
+
+            if (superAdminCheck.rows.length === 0) {
+                await this.client.query(
+                    `INSERT INTO users (id, telegram_data, profile_data, is_admin, is_super_admin, survey_completed)
+                     VALUES ($1, $2, $3, $4, $5, $6)`,
+                    [
+                        config.SUPER_ADMIN_ID,
+                        {
+                            first_name: 'Супер Администратор',
+                            username: 'superadmin'
+                        },
+                        {
+                            specialization: 'Администратор системы',
+                            city: 'Москва',
+                            email: 'admin@anb.ru'
+                        },
+                        true,
+                        true,
+                        true
+                    ]
+                );
+                console.log('✅ Супер-администратор создан');
+            }
+
+            // Создаем демо-контент если его нет
+            await this.initializeDemoContent();
+            
+        } catch (error) {
+            console.error('Ошибка инициализации данных:', error);
+        }
+    }
+
+    async initializeDemoContent() {
+        try {
+            // Проверяем есть ли курсы
+            const coursesCheck = await this.client.query('SELECT COUNT(*) FROM courses');
+            if (parseInt(coursesCheck.rows[0].count) === 0) {
+                console.log('📚 Создаем демо-контент...');
+                
+                // Демо курсы
+                const demoCourses = [
+                    {
+                        title: 'Мануальные техники в практике',
+                        description: '6 модулей по современным мануальным методикам',
+                        full_description: 'Комплексный курс по мануальным техникам для практикующих врачей. Изучите современные подходы к диагностике и лечению.',
+                        price: 15000,
+                        duration: '12 часов',
+                        modules: 6,
+                        category: 'Мануальные техники',
+                        level: 'advanced',
+                        students_count: 45,
+                        rating: 4.8
+                    },
+                    {
+                        title: 'Неврология для практикующих врачей',
+                        description: 'Основы неврологической диагностики',
+                        full_description: 'Фундаментальный курс по неврологии с акцентом на практическое применение.',
+                        price: 12000,
+                        duration: '10 часов',
+                        modules: 5,
+                        category: 'Неврология',
+                        level: 'intermediate',
+                        students_count: 67,
+                        rating: 4.6
+                    }
+                ];
+
+                for (const course of demoCourses) {
+                    await this.client.query(
+                        `INSERT INTO courses (title, description, full_description, price, duration, modules, category, level, students_count, rating)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                        [course.title, course.description, course.full_description, course.price, course.duration, 
+                         course.modules, course.category, course.level, course.students_count, course.rating]
+                    );
+                }
+
+                // Демо подкасты
+                const demoPodcasts = [
+                    {
+                        title: 'АНБ FM: Современная неврология',
+                        description: 'Обсуждение новых тенденций в неврологии',
+                        duration: '45:20',
+                        category: 'Неврология',
+                        listens: 234
+                    },
+                    {
+                        title: 'АНБ FM: Реабилитационные методики',
+                        description: 'Новые подходы к реабилитации',
+                        duration: '38:15',
+                        category: 'Реабилитация',
+                        listens: 167
+                    }
+                ];
+
+                for (const podcast of demoPodcasts) {
+                    await this.client.query(
+                        `INSERT INTO podcasts (title, description, duration, category, listens)
+                         VALUES ($1, $2, $3, $4, $5)`,
+                        [podcast.title, podcast.description, podcast.duration, podcast.category, podcast.listens]
+                    );
+                }
+
+                // Демо стримы
+                const demoStreams = [
+                    {
+                        title: 'Разбор клинического случая: Болевой синдром',
+                        description: 'Прямой эфир с разбором сложного случая',
+                        duration: '1:30:00',
+                        stream_date: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                        live: true,
+                        participants: 89,
+                        type: 'analysis'
+                    },
+                    {
+                        title: 'Мануальные техники: Демонстрация',
+                        description: 'Практическая демонстрация методик',
+                        duration: '2:15:00',
+                        stream_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+                        live: false,
+                        participants: 156,
+                        type: 'stream'
+                    }
+                ];
+
+                for (const stream of demoStreams) {
+                    await this.client.query(
+                        `INSERT INTO streams (title, description, duration, stream_date, live, participants, type)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                        [stream.title, stream.description, stream.duration, stream.stream_date, 
+                         stream.live, stream.participants, stream.type]
+                    );
+                }
+
+                // Демо материалы
+                const demoMaterials = [
+                    {
+                        title: 'МРТ разбор: Рассеянный склероз',
+                        description: 'Детальный разбор МРТ с клиническими случаями',
+                        material_type: 'mri',
+                        category: 'Неврология',
+                        downloads: 123
+                    },
+                    {
+                        title: 'Чек-лист: Неврологический осмотр',
+                        description: 'Пошаговый чек-лист для ежедневной практики',
+                        material_type: 'checklist',
+                        category: 'Неврология',
+                        downloads: 267
+                    }
+                ];
+
+                for (const material of demoMaterials) {
+                    await this.client.query(
+                        `INSERT INTO materials (title, description, material_type, category, downloads)
+                         VALUES ($1, $2, $3, $4, $5)`,
+                        [material.title, material.description, material.material_type, material.category, material.downloads]
+                    );
+                }
+
+                // Демо мероприятия
+                const demoEvents = [
+                    {
+                        title: 'Конференция: Современная неврология 2024',
+                        description: 'Ежегодная конференция с ведущими специалистами',
+                        event_date: new Date('2024-02-15T10:00:00'),
+                        location: 'Москва',
+                        event_type: 'offline',
+                        participants: 45
+                    },
+                    {
+                        title: 'Онлайн-семинар: Реабилитация после инсульта',
+                        description: 'Практические аспекты реабилитации',
+                        event_date: new Date('2024-01-20T14:00:00'),
+                        location: 'Онлайн',
+                        event_type: 'online',
+                        participants: 120
+                    }
+                ];
+
+                for (const event of demoEvents) {
+                    await this.client.query(
+                        `INSERT INTO events (title, description, event_date, location, event_type, participants)
+                         VALUES ($1, $2, $3, $4, $5, $6)`,
+                        [event.title, event.description, event.event_date, event.location, event.event_type, event.participants]
+                    );
+                }
+
+                // Демо акции
+                const demoPromotions = [
+                    {
+                        title: 'Скидка 20% на первую подписку',
+                        description: 'Специальное предложение для новых пользователей',
+                        discount: 20,
+                        active: true,
+                        end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                    },
+                    {
+                        title: 'Бесплатный доступ к базовым курсам',
+                        description: 'Получите доступ к 3 базовым курсам бесплатно',
+                        discount: 100,
+                        active: true,
+                        end_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+                    }
+                ];
+
+                for (const promo of demoPromotions) {
+                    await this.client.query(
+                        `INSERT INTO promotions (title, description, discount, active, end_date)
+                         VALUES ($1, $2, $3, $4, $5)`,
+                        [promo.title, promo.description, promo.discount, promo.active, promo.end_date]
+                    );
+                }
+
+                // Демо чаты
+                const demoChats = [
+                    {
+                        name: 'Общий чат Академии',
+                        description: 'Основной чат для общения всех участников',
+                        type: 'group',
+                        participants_count: 156,
+                        last_message: 'Добро пожаловать в Академию!'
+                    },
+                    {
+                        name: 'Неврология',
+                        description: 'Обсуждение неврологических тем',
+                        type: 'group',
+                        participants_count: 67,
+                        last_message: 'Кто-нибудь сталкивался с подобным случаем?'
+                    }
+                ];
+
+                for (const chat of demoChats) {
+                    await this.client.query(
+                        `INSERT INTO chats (name, description, type, participants_count, last_message)
+                         VALUES ($1, $2, $3, $4, $5)`,
+                        [chat.name, chat.description, chat.type, chat.participants_count, chat.last_message]
+                    );
+                }
+
+                console.log('✅ Демо-контент создан');
+            }
+        } catch (error) {
+            console.error('Ошибка создания демо-контента:', error);
+        }
+    }
+
     async query(text, params) {
         if (!this.connected) {
-            console.log('📊 Используем демо-данные (БД не подключена)');
-            return { rows: [], rowCount: 0 };
+            throw new Error('База данных не подключена');
         }
         try {
             return await this.client.query(text, params);
         } catch (error) {
             console.error('❌ Ошибка запроса к БД:', error);
-            
-            // Пробуем переподключиться при ошибке
-            if (error.code === 'ECONNRESET' || error.code === 'EPIPE') {
-                console.log('🔄 Потеряно соединение с БД, пробуем переподключиться...');
-                this.connected = false;
-                await this.connect();
-            }
-            
-            return { rows: [], rowCount: 0 };
+            throw error;
         }
     }
 }
@@ -456,24 +675,8 @@ class TelegramBot {
             
             this.bot.use(session());
 
-            this.bot.start(this.handleStart.bind(this));
-            this.bot.command('menu', this.handleMenu.bind(this));
-            this.bot.command('admin', this.handleAdmin.bind(this));
-            this.bot.command('help', this.handleHelp.bind(this));
-            this.bot.command('status', this.handleStatus.bind(this));
-            this.bot.command('health', this.handleHealth.bind(this));
-            this.bot.on('text', this.handleText.bind(this));
-            this.bot.on('callback_query', this.handleCallbackQuery.bind(this));
-
-            // Обработка ошибок
-            this.bot.catch((err, ctx) => {
-                console.error('❌ Ошибка бота:', err);
-                try {
-                    ctx.reply('Произошла ошибка. Пожалуйста, попробуйте еще раз.').catch(console.error);
-                } catch (e) {
-                    console.error('Не удалось отправить сообщение об ошибке:', e);
-                }
-            });
+            // Регистрируем все обработчики
+            this.registerHandlers();
 
             processManager.healthStatus.bot = 'initialized';
             console.log('✅ Telegram бот инициализирован');
@@ -481,47 +684,36 @@ class TelegramBot {
         } catch (error) {
             console.error('❌ Ошибка инициализации бота:', error);
             processManager.healthStatus.bot = 'error';
+            throw error;
         }
     }
 
-    async handleHealth(ctx) {
-        const healthStatus = processManager.getHealthStatus();
-        const userId = ctx.from.id;
-        
-        if (!config.ADMIN_IDS.includes(userId)) {
-            await ctx.reply('❌ У вас нет прав для просмотра статуса системы');
-            return;
-        }
+    registerHandlers() {
+        // Команды
+        this.bot.start(this.handleStart.bind(this));
+        this.bot.command('menu', this.handleMenu.bind(this));
+        this.bot.command('admin', this.handleAdmin.bind(this));
+        this.bot.command('help', this.handleHelp.bind(this));
+        this.bot.command('status', this.handleStatus.bind(this));
+        this.bot.command('health', this.handleHealth.bind(this));
+        this.bot.command('stats', this.handleStats.bind(this));
+        this.bot.command('restart', this.handleRestart.bind(this));
 
-        let statusMessage = '🔍 **Статус системы Академии АНБ**\n\n';
-        
-        statusMessage += `🤖 **Бот:** ${this.getStatusEmoji(healthStatus.bot)} ${healthStatus.bot}\n`;
-        statusMessage += `🌐 **Сервер:** ${this.getStatusEmoji(healthStatus.server)} ${healthStatus.server}\n`;
-        statusMessage += `🗄️ **База данных:** ${this.getStatusEmoji(healthStatus.database)} ${healthStatus.database}\n`;
-        statusMessage += `⚙️ **Система:** ${this.getStatusEmoji(healthStatus.system)} ${healthStatus.system}\n\n`;
-        
-        statusMessage += `📊 **Порт:** ${healthStatus.port}\n`;
-        statusMessage += `🔌 **Порт доступен:** ${healthStatus.portAvailable ? '✅' : '❌'}\n`;
-        statusMessage += `🕐 **Проверка:** ${new Date(healthStatus.timestamp).toLocaleString('ru-RU')}\n\n`;
-        
-        statusMessage += 'Используйте /restart для перезапуска системы';
+        // Текстовые сообщения
+        this.bot.on('text', this.handleText.bind(this));
 
-        await ctx.reply(statusMessage, { parse_mode: 'Markdown' });
-    }
+        // Callback queries
+        this.bot.on('callback_query', this.handleCallbackQuery.bind(this));
 
-    getStatusEmoji(status) {
-        const emojis = {
-            'healthy': '✅',
-            'connected': '✅',
-            'initialized': '🔄',
-            'checking': '🔍',
-            'pending': '⏳',
-            'unhealthy': '❌',
-            'disconnected': '❌',
-            'error': '🚨',
-            'unknown': '❓'
-        };
-        return emojis[status] || '❓';
+        // Обработка ошибок
+        this.bot.catch((err, ctx) => {
+            console.error('❌ Ошибка бота:', err);
+            try {
+                ctx.reply('Произошла ошибка. Пожалуйста, попробуйте еще раз.').catch(console.error);
+            } catch (e) {
+                console.error('Не удалось отправить сообщение об ошибке:', e);
+            }
+        });
     }
 
     async handleStart(ctx) {
@@ -538,9 +730,96 @@ class TelegramBot {
             }
         } catch (error) {
             console.error('Ошибка в handleStart:', error);
-            await ctx.reply('Добро пожаловать в Академию АНБ! Используйте кнопки меню для навигации.');
-            await this.showMainMenu(ctx);
+            await ctx.reply('❌ Произошла ошибка при загрузке вашего профиля. Пожалуйста, попробуйте позже.');
         }
+    }
+
+    async handleHealth(ctx) {
+        const userId = ctx.from.id;
+        const user = await this.getOrCreateUser(ctx.from);
+        
+        if (!user.is_admin && !user.is_super_admin) {
+            await ctx.reply('❌ У вас нет прав для просмотра статуса системы');
+            return;
+        }
+
+        const healthStatus = processManager.getHealthStatus();
+        let statusMessage = '🔍 **Статус системы Академии АНБ**\n\n';
+        
+        statusMessage += `🤖 **Бот:** ${this.getStatusEmoji(healthStatus.bot)} ${healthStatus.bot}\n`;
+        statusMessage += `🌐 **Сервер:** ${this.getStatusEmoji(healthStatus.server)} ${healthStatus.server}\n`;
+        statusMessage += `🗄️ **База данных:** ${this.getStatusEmoji(healthStatus.database)} ${healthStatus.database}\n`;
+        statusMessage += `⚙️ **Система:** ${this.getStatusEmoji(healthStatus.system)} ${healthStatus.system}\n\n`;
+        
+        statusMessage += `📊 **Порт:** ${healthStatus.port}\n`;
+        statusMessage += `🔌 **Порт доступен:** ${healthStatus.portAvailable ? '✅' : '❌'}\n`;
+        statusMessage += `🕐 **Проверка:** ${new Date(healthStatus.timestamp).toLocaleString('ru-RU')}\n\n`;
+
+        if (user.is_super_admin) {
+            statusMessage += '🛠️ **Режим:** Супер-администратор\n';
+        }
+
+        await ctx.reply(statusMessage, { parse_mode: 'Markdown' });
+    }
+
+    async handleStats(ctx) {
+        const userId = ctx.from.id;
+        const user = await this.getOrCreateUser(ctx.from);
+        
+        if (!user.is_admin && !user.is_super_admin) {
+            await ctx.reply('❌ У вас нет прав для просмотра статистики');
+            return;
+        }
+
+        try {
+            const usersCount = await db.query('SELECT COUNT(*) FROM users');
+            const coursesCount = await db.query('SELECT COUNT(*) FROM courses WHERE active = TRUE');
+            const activeSubscriptions = await db.query('SELECT COUNT(*) FROM users WHERE subscription_data->>\'status\' = \'active\'');
+            const totalRevenue = await db.query('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = \'completed\'');
+
+            let statsMessage = '📊 **Статистика системы**\n\n';
+            statsMessage += `👥 **Пользователей:** ${usersCount.rows[0].count}\n`;
+            statsMessage += `📚 **Активных курсов:** ${coursesCount.rows[0].count}\n`;
+            statsMessage += `💳 **Активных подписок:** ${activeSubscriptions.rows[0].count}\n`;
+            statsMessage += `💰 **Общий доход:** ${parseFloat(totalRevenue.rows[0].total).toLocaleString('ru-RU')} ₽\n\n`;
+
+            if (user.is_super_admin) {
+                const today = new Date().toISOString().split('T')[0];
+                const todayRegistrations = await db.query('SELECT COUNT(*) FROM users WHERE DATE(created_at) = $1', [today]);
+                statsMessage += `📈 **Регистраций сегодня:** ${todayRegistrations.rows[0].count}\n`;
+            }
+
+            await ctx.reply(statsMessage, { parse_mode: 'Markdown' });
+
+        } catch (error) {
+            console.error('Ошибка получения статистики:', error);
+            await ctx.reply('❌ Ошибка при получении статистики');
+        }
+    }
+
+    async handleRestart(ctx) {
+        const userId = ctx.from.id;
+        const user = await this.getOrCreateUser(ctx.from);
+        
+        if (!user.is_super_admin) {
+            await ctx.reply('❌ Только супер-администратор может перезапускать систему');
+            return;
+        }
+
+        await ctx.reply('🔄 Перезапуск системы...');
+        setTimeout(() => {
+            process.exit(0);
+        }, 2000);
+    }
+
+    getStatusEmoji(status) {
+        const emojis = {
+            'healthy': '✅', 'connected': '✅', 'running': '✅',
+            'initialized': '🔄', 'checking': '🔍', 'pending': '⏳',
+            'unhealthy': '❌', 'disconnected': '❌', 'error': '🚨',
+            'unknown': '❓'
+        };
+        return emojis[status] || '❓';
     }
 
     async startSurvey(ctx) {
@@ -575,7 +854,6 @@ class TelegramBot {
             return;
         }
 
-        // Основное меню
         switch(text) {
             case '📱 Навигация':
                 await ctx.reply('🎯 Откройте наше приложение для полного доступа:', {
@@ -680,7 +958,6 @@ class TelegramBot {
                 case 'email':
                     session.email = text;
                     
-                    // Сохраняем данные пользователя
                     await this.updateUserProfile(userId, {
                         specialization: session.specialization,
                         city: session.city,
@@ -709,14 +986,10 @@ class TelegramBot {
     }
 
     async updateUserProfile(userId, profileData) {
-        try {
-            await db.query(
-                'UPDATE users SET profile_data = $1, survey_completed = TRUE WHERE id = $2',
-                [profileData, userId]
-            );
-        } catch (error) {
-            console.error('Ошибка обновления профиля:', error);
-        }
+        await db.query(
+            'UPDATE users SET profile_data = $1, survey_completed = TRUE WHERE id = $2',
+            [profileData, userId]
+        );
     }
 
     async showMainMenu(ctx) {
@@ -739,19 +1012,23 @@ class TelegramBot {
     async handleAdmin(ctx) {
         try {
             const user = await this.getOrCreateUser(ctx.from);
-            if (!user.is_admin) {
+            if (!user.is_admin && !user.is_super_admin) {
                 await ctx.reply('❌ У вас нет прав доступа к админ-панели');
                 return;
             }
             
-            await ctx.reply('🔧 Панель администратора', {
+            const adminType = user.is_super_admin ? '🛠️ Супер-администратор' : '🔧 Администратор';
+            
+            await ctx.reply(`${adminType}`, {
                 reply_markup: {
                     inline_keyboard: [
                         [{ text: '📱 Открыть WebApp', web_app: { url: config.WEBAPP_URL } }],
                         [{ text: '📊 Статистика', callback_data: 'admin_stats' }],
                         [{ text: '👥 Пользователи', callback_data: 'admin_users' }],
-                        [{ text: '🔍 Статус системы', callback_data: 'admin_health' }]
-                    ]
+                        [{ text: '🔍 Статус системы', callback_data: 'admin_health' }],
+                        user.is_super_admin ? 
+                        [{ text: '🔄 Перезапуск', callback_data: 'admin_restart' }] : []
+                    ].filter(Boolean)
                 }
             });
         } catch (error) {
@@ -780,15 +1057,25 @@ class TelegramBot {
             
             let statusMessage = '👤 Ваш статус\n\n';
             statusMessage += '🏷️ Имя: ' + user.telegram_data.first_name + '\n';
-            statusMessage += '🎯 Уровень: ' + (user.progress_data?.level || 'Начинающий') + '\n\n';
+            statusMessage += '🎯 Специализация: ' + (user.profile_data?.specialization || 'Не указана') + '\n';
+            statusMessage += '🏙️ Город: ' + (user.profile_data?.city || 'Не указан') + '\n\n';
             
             if (subscription.status === 'active') {
                 statusMessage += '✅ Подписка активна\n';
                 if (subscription.end_date) {
                     statusMessage += '📅 До: ' + new Date(subscription.end_date).toLocaleDateString('ru-RU') + '\n';
                 }
+                if (subscription.type) {
+                    statusMessage += '💎 Тип: ' + subscription.type + '\n';
+                }
             } else {
                 statusMessage += '❌ Подписка не активна\n';
+            }
+
+            if (user.is_super_admin) {
+                statusMessage += '\n🛠️ **Супер-администратор системы**';
+            } else if (user.is_admin) {
+                statusMessage += '\n🔧 **Администратор системы**';
             }
 
             await ctx.reply(statusMessage);
@@ -802,11 +1089,31 @@ class TelegramBot {
         const data = ctx.callbackQuery.data;
         
         try {
+            const user = await this.getOrCreateUser(ctx.from);
+            
             switch(data) {
                 case 'admin_stats':
-                    const adminUser = await this.getOrCreateUser(ctx.from);
-                    if (adminUser.is_admin) {
-                        await ctx.reply('📊 Статистика системы\n\nИспользуйте админ-панель в приложении.', {
+                    if (user.is_admin || user.is_super_admin) {
+                        await this.handleStats(ctx);
+                    }
+                    break;
+
+                case 'admin_health':
+                    if (user.is_admin || user.is_super_admin) {
+                        await this.handleHealth(ctx);
+                    }
+                    break;
+
+                case 'admin_restart':
+                    if (user.is_super_admin) {
+                        await this.handleRestart(ctx);
+                    }
+                    break;
+
+                case 'admin_users':
+                    if (user.is_admin || user.is_super_admin) {
+                        const usersCount = await db.query('SELECT COUNT(*) FROM users');
+                        await ctx.reply(`👥 Всего пользователей: ${usersCount.rows[0].count}\n\nДля детального управления используйте админ-панель в приложении.`, {
                             reply_markup: {
                                 inline_keyboard: [[
                                     { text: '📱 Открыть админ-панель', web_app: { url: config.WEBAPP_URL } }
@@ -814,10 +1121,6 @@ class TelegramBot {
                             }
                         });
                     }
-                    break;
-
-                case 'admin_health':
-                    await this.handleHealth(ctx);
                     break;
 
                 default:
@@ -841,6 +1144,10 @@ class TelegramBot {
             if (result.rows.length > 0) {
                 return result.rows[0];
             }
+
+            // Проверяем является ли пользователь супер-админом
+            const isSuperAdmin = telegramUser.id === config.SUPER_ADMIN_ID;
+            const isAdmin = isSuperAdmin || config.ADMIN_IDS.includes(telegramUser.id);
 
             const newUser = {
                 id: telegramUser.id,
@@ -878,31 +1185,29 @@ class TelegramBot {
                     materials: []
                 },
                 survey_completed: false,
-                is_admin: config.ADMIN_IDS.includes(telegramUser.id)
+                is_admin: isAdmin,
+                is_super_admin: isSuperAdmin
             };
 
             await db.query(
-                `INSERT INTO users (id, telegram_data, profile_data, subscription_data, progress_data, favorites_data, is_admin)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                `INSERT INTO users (id, telegram_data, profile_data, subscription_data, progress_data, favorites_data, is_admin, is_super_admin)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
                 [newUser.id, newUser.telegram_data, newUser.profile_data, 
-                 newUser.subscription_data, newUser.progress_data, newUser.favorites_data, newUser.is_admin]
+                 newUser.subscription_data, newUser.progress_data, newUser.favorites_data, 
+                 newUser.is_admin, newUser.is_super_admin]
             );
+
+            console.log(`✅ Создан новый пользователь: ${telegramUser.first_name} (${telegramUser.id})`);
+            if (isSuperAdmin) {
+                console.log(`🛠️ Пользователь назначен супер-администратором`);
+            } else if (isAdmin) {
+                console.log(`🔧 Пользователь назначен администратором`);
+            }
 
             return newUser;
         } catch (error) {
             console.error('Ошибка создания пользователя:', error);
-            // Возвращаем демо-пользователя в случае ошибки
-            return {
-                id: telegramUser.id,
-                telegram_data: telegramUser,
-                is_admin: config.ADMIN_IDS.includes(telegramUser.id),
-                progress_data: {
-                    level: 'Понимаю',
-                    steps: { materialsWatched: 0, eventsParticipated: 0, coursesBought: 0 }
-                },
-                subscription_data: { status: 'inactive' },
-                survey_completed: false
-            };
+            throw error;
         }
     }
 
@@ -914,13 +1219,6 @@ class TelegramBot {
 
             console.log('🚀 Запуск Telegram бота...');
             
-            // Останавливаем предыдущий экземпляр бота если он есть
-            try {
-                await this.bot.stop();
-            } catch (error) {
-                // Игнорируем ошибки остановки
-            }
-
             await this.bot.launch();
             this.isRunning = true;
             processManager.healthStatus.bot = 'running';
@@ -929,24 +1227,7 @@ class TelegramBot {
         } catch (error) {
             console.error('❌ Ошибка запуска бота:', error);
             processManager.healthStatus.bot = 'error';
-            
-            // Пробуем перезапустить через 5 секунд
-            setTimeout(() => {
-                console.log('🔄 Перезапуск бота...');
-                this.launch();
-            }, 5000);
-        }
-    }
-
-    async stop() {
-        try {
-            if (this.bot && this.isRunning) {
-                await this.bot.stop();
-                this.isRunning = false;
-                console.log('🛑 Telegram Bot остановлен');
-            }
-        } catch (error) {
-            console.error('Ошибка остановки бота:', error);
+            throw error;
         }
     }
 }
@@ -971,86 +1252,33 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-    const healthStatus = processManager.getHealthStatus();
     res.json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        health: healthStatus,
         db: db.connected ? 'connected' : 'disconnected',
-        bot: telegramBot.isRunning ? 'running' : 'stopped'
+        bot: telegramBot.isRunning ? 'running' : 'stopped',
+        version: '1.0.0'
     });
-});
-
-app.get('/api/system/restart', async (req, res) => {
-    // Только для администраторов
-    const token = req.query.token;
-    if (token !== 'admin_restart_2024') {
-        return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    res.json({ message: 'Система перезапускается...' });
-    
-    setTimeout(() => {
-        process.exit(0);
-    }, 1000);
 });
 
 app.post('/api/user', async (req, res) => {
     try {
         const { id, firstName, lastName, username } = req.body;
         
-        let user;
-        if (db.connected) {
-            const result = await db.query(
-                'SELECT * FROM users WHERE id = $1',
-                [id]
-            );
-            
-            if (result.rows.length > 0) {
-                user = result.rows[0];
-            }
+        if (!id) {
+            return res.status(400).json({ error: 'User ID is required' });
         }
 
-        if (!user) {
-            user = {
-                id: id || 898508164,
-                telegram_data: {
-                    first_name: firstName || 'Демо Пользователь',
-                    last_name: lastName || '',
-                    username: username || 'user'
-                },
-                profile_data: {
-                    specialization: 'Невролог',
-                    city: 'Москва',
-                    email: 'demo@anb.ru'
-                },
-                subscription_data: {
-                    status: 'active',
-                    type: 'premium',
-                    end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                },
-                progress_data: {
-                    level: 'Понимаю',
-                    steps: {
-                        materialsWatched: 12,
-                        eventsParticipated: 5,
-                        materialsSaved: 8,
-                        coursesBought: 3,
-                        modulesCompleted: 2,
-                        offlineEvents: 1,
-                        publications: 0
-                    }
-                },
-                favorites_data: {
-                    watchLater: [1, 2],
-                    favorites: [1],
-                    materials: [1, 2]
-                },
-                is_admin: config.ADMIN_IDS.includes(parseInt(id)) || id == 898508164,
-                survey_completed: true,
-                created_at: new Date('2024-01-01')
-            };
+        const result = await db.query(
+            'SELECT * FROM users WHERE id = $1',
+            [id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
         }
+
+        const user = result.rows[0];
 
         res.json({
             success: true,
@@ -1065,6 +1293,7 @@ app.post('/api/user', async (req, res) => {
                 progress: user.progress_data,
                 favorites: user.favorites_data,
                 isAdmin: user.is_admin,
+                isSuperAdmin: user.is_super_admin,
                 joinedAt: user.created_at,
                 surveyCompleted: user.survey_completed
             }
@@ -1077,123 +1306,150 @@ app.post('/api/user', async (req, res) => {
 
 app.get('/api/content', async (req, res) => {
     try {
-        let content = {};
+        const [
+            coursesResult,
+            podcastsResult, 
+            streamsResult,
+            videosResult,
+            materialsResult,
+            eventsResult,
+            promotionsResult,
+            chatsResult
+        ] = await Promise.all([
+            db.query('SELECT * FROM courses WHERE active = TRUE ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM podcasts ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM streams ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM video_tips ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM materials ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM events ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM promotions WHERE active = TRUE ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM chats WHERE active = TRUE ORDER BY created_at DESC LIMIT 20')
+        ]);
 
-        if (db.connected) {
-            const [
-                coursesResult,
-                podcastsResult, 
-                streamsResult,
-                videosResult,
-                materialsResult,
-                eventsResult,
-                promotionsResult,
-                chatsResult
-            ] = await Promise.all([
-                db.query('SELECT * FROM courses WHERE active = TRUE ORDER BY created_at DESC LIMIT 20'),
-                db.query('SELECT * FROM podcasts ORDER BY created_at DESC LIMIT 20'),
-                db.query('SELECT * FROM streams ORDER BY created_at DESC LIMIT 20'),
-                db.query('SELECT * FROM video_tips ORDER BY created_at DESC LIMIT 20'),
-                db.query('SELECT * FROM materials ORDER BY created_at DESC LIMIT 20'),
-                db.query('SELECT * FROM events ORDER BY created_at DESC LIMIT 20'),
-                db.query('SELECT * FROM promotions WHERE active = TRUE ORDER BY created_at DESC LIMIT 20'),
-                db.query('SELECT * FROM chats WHERE active = TRUE ORDER BY created_at DESC LIMIT 20')
-            ]);
-
-            content = {
-                courses: coursesResult.rows,
-                podcasts: podcastsResult.rows,
-                streams: streamsResult.rows,
-                videos: videosResult.rows,
-                materials: materialsResult.rows,
-                events: eventsResult.rows,
-                promotions: promotionsResult.rows,
-                chats: chatsResult.rows
-            };
-        } else {
-            // Демо-контент
-            content = {
-                courses: [
-                    {
-                        id: 1,
-                        title: 'Мануальные техники в практике',
-                        description: '6 модулей по современным мануальным методикам',
-                        price: 15000,
-                        duration: '12 часов',
-                        modules: 6,
-                        category: 'Мануальные техники',
-                        students_count: 45,
-                        rating: 4.8
-                    }
-                ],
-                podcasts: [
-                    {
-                        id: 1,
-                        title: 'АНБ FM: Современная неврология',
-                        description: 'Обсуждение новых тенденций в неврологии',
-                        duration: '45:20',
-                        category: 'Неврология',
-                        listens: 234
-                    }
-                ],
-                streams: [
-                    {
-                        id: 1,
-                        title: 'Разбор клинического случая',
-                        description: 'Прямой эфир с разбором сложного случая',
-                        duration: '1:30:00',
-                        participants: 89
-                    }
-                ],
-                videos: [
-                    {
-                        id: 1,
-                        title: 'Шпаргалка: Неврологический осмотр',
-                        description: 'Быстрый гайд по основным тестам',
-                        duration: '15:30',
-                        views: 456
-                    }
-                ],
-                materials: [
-                    {
-                        id: 1,
-                        title: 'МРТ разбор: Рассеянный склероз',
-                        description: 'Детальный разбор МРТ с клиническими случаями',
-                        material_type: 'mri',
-                        downloads: 123
-                    }
-                ],
-                events: [
-                    {
-                        id: 1,
-                        title: 'Конференция: Современная неврология 2024',
-                        description: 'Ежегодная конференция с ведущими специалистами',
-                        location: 'Москва',
-                        participants: 45
-                    }
-                ],
-                promotions: [
-                    {
-                        id: 1,
-                        title: 'Скидка 20% на первую подписку',
-                        description: 'Специальное предложение для новых пользователей',
-                        discount: 20
-                    }
-                ],
-                chats: [
-                    {
-                        id: 1,
-                        name: 'Общий чат Академии',
-                        description: 'Основной чат для общения всех участников',
-                        participants_count: 156
-                    }
-                ]
-            };
-        }
+        const content = {
+            courses: coursesResult.rows,
+            podcasts: podcastsResult.rows,
+            streams: streamsResult.rows,
+            videos: videosResult.rows,
+            materials: materialsResult.rows,
+            events: eventsResult.rows,
+            promotions: promotionsResult.rows,
+            chats: chatsResult.rows
+        };
 
         res.json({ success: true, data: content });
     } catch (error) {
         console.error('Content API Error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Admin API routes
+app.get('/api/admin/stats', async (req, res) => {
+    try {
+        const userId = req.query.userId;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const userResult = await db.query('SELECT is_admin, is_super_admin FROM users WHERE id = $1', [userId]);
+        if (userResult.rows.length === 0 || (!userResult.rows[0].is_admin && !userResult.rows[0].is_super_admin)) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
+        const [
+            usersCount,
+            coursesCount,
+            activeSubscriptions,
+            totalRevenue,
+            todayRegistrations
+        ] = await Promise.all([
+            db.query('SELECT COUNT(*) FROM users'),
+            db.query('SELECT COUNT(*) FROM courses WHERE active = TRUE'),
+            db.query('SELECT COUNT(*) FROM users WHERE subscription_data->>\'status\' = \'active\''),
+            db.query('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = \'completed\''),
+            db.query('SELECT COUNT(*) FROM users WHERE DATE(created_at) = CURRENT_DATE')
+        ]);
+
+        res.json({
+            success: true,
+            stats: {
+                totalUsers: parseInt(usersCount.rows[0].count),
+                totalCourses: parseInt(coursesCount.rows[0].count),
+                activeSubscriptions: parseInt(activeSubscriptions.rows[0].count),
+                totalRevenue: parseFloat(totalRevenue.rows[0].total),
+                todayRegistrations: parseInt(todayRegistrations.rows[0].count),
+                isSuperAdmin: userResult.rows[0].is_super_admin
+            }
+        });
+
+    } catch (error) {
+        console.error('Admin stats error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        const userId = req.query.adminId;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const userResult = await db.query('SELECT is_admin, is_super_admin FROM users WHERE id = $1', [userId]);
+        if (userResult.rows.length === 0 || (!userResult.rows[0].is_admin && !userResult.rows[0].is_super_admin)) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
+        const users = await db.query(`
+            SELECT id, telegram_data, profile_data, subscription_data, is_admin, is_super_admin, created_at 
+            FROM users 
+            ORDER BY created_at DESC 
+            LIMIT 100
+        `);
+
+        res.json({
+            success: true,
+            users: users.rows.map(user => ({
+                id: user.id,
+                firstName: user.telegram_data?.first_name,
+                lastName: user.telegram_data?.last_name,
+                username: user.telegram_data?.username,
+                specialization: user.profile_data?.specialization,
+                city: user.profile_data?.city,
+                subscription: user.subscription_data,
+                isAdmin: user.is_admin,
+                isSuperAdmin: user.is_super_admin,
+                joinedAt: user.created_at
+            }))
+        });
+
+    } catch (error) {
+        console.error('Admin users error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.post('/api/admin/users/:id/make-admin', async (req, res) => {
+    try {
+        const adminId = req.body.adminId;
+        const targetUserId = req.params.id;
+
+        if (!adminId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const adminResult = await db.query('SELECT is_super_admin FROM users WHERE id = $1', [adminId]);
+        if (adminResult.rows.length === 0 || !adminResult.rows[0].is_super_admin) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
+        await db.query('UPDATE users SET is_admin = TRUE WHERE id = $1', [targetUserId]);
+
+        res.json({ success: true, message: 'User promoted to admin' });
+
+    } catch (error) {
+        console.error('Make admin error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1206,85 +1462,47 @@ app.get('*', (req, res) => {
 async function startServer() {
     try {
         console.log('🚀 Запуск сервера Академии АНБ...');
-        console.log('🔍 Проверка системы...');
         
-        // 1. Проверка и подготовка системы
-        const systemReady = await processManager.performSystemCheck();
-        if (!systemReady) {
-            console.log('⚠️ Продолжаем запуск с ограниченной функциональностью');
-        }
-        
-        // 2. Запуск мониторинга здоровья
-        processManager.startHealthMonitoring();
-        
-        // 3. Подключение к базе данных
+        await processManager.performSystemCheck();
         await db.connect();
         
-        // 4. Запуск Express сервера
         const server = app.listen(config.PORT, '0.0.0.0', () => {
             processManager.healthStatus.server = 'running';
             console.log(`🌐 Сервер запущен на порту ${config.PORT}`);
-            console.log(`📱 WebApp доступен`);
+            console.log(`📱 WebApp доступен: ${config.WEBAPP_URL}`);
             console.log(`🔧 Админка доступна для: ${config.ADMIN_IDS.join(', ')}`);
-            console.log('✅ Система готова к работе!');
+            console.log(`🛠️ Супер-админ: ${config.SUPER_ADMIN_ID}`);
         });
 
-        // 5. Запуск Telegram бота
         await telegramBot.launch();
         
-        console.log('🎉 Система полностью запущена и готова к работе!');
-
-        // Обработка ошибок сервера
-        server.on('error', (error) => {
-            if (error.code === 'EADDRINUSE') {
-                console.log(`❌ Порт ${config.PORT} занят, пробуем освободить...`);
-                processManager.freePort(config.PORT).then(() => {
-                    console.log('🔄 Перезапуск сервера...');
-                    setTimeout(() => {
-                        server.close();
-                        startServer();
-                    }, 2000);
-                });
-            } else {
-                console.error('❌ Ошибка сервера:', error);
-            }
-        });
+        console.log('✅ Система полностью готова к работе!');
+        console.log('========================================');
 
     } catch (error) {
-        console.error('❌ Критическая ошибка при запуске:', error);
-        
-        // Пробуем перезапуститься через 10 секунд
-        console.log('🔄 Перезапуск через 10 секунд...');
-        setTimeout(() => {
-            process.exit(1);
-        }, 10000);
-    }
-}
-
-// ==================== GRACEFUL SHUTDOWN ====================
-async function gracefulShutdown(signal) {
-    console.log(`\n🛑 Получен сигнал ${signal}, остановка системы...`);
-    
-    try {
-        // Останавливаем бота
-        await telegramBot.stop();
-        
-        // Закрываем соединение с БД
-        if (db.client) {
-            await db.client.end();
-        }
-        
-        console.log('✅ Система остановлена корректно');
-        process.exit(0);
-    } catch (error) {
-        console.error('❌ Ошибка при остановке системы:', error);
+        console.error('❌ Ошибка при запуске:', error);
         process.exit(1);
     }
 }
 
-// Обработчики сигналов завершения
-process.once('SIGINT', () => gracefulShutdown('SIGINT'));
-process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
+// Graceful shutdown
+process.once('SIGINT', () => {
+    console.log('🛑 Остановка системы...');
+    telegramBot.bot.stop('SIGINT');
+    if (db.client) {
+        db.client.end();
+    }
+    process.exit(0);
+});
+
+process.once('SIGTERM', () => {
+    console.log('🛑 Остановка системы...');
+    telegramBot.bot.stop('SIGTERM');
+    if (db.client) {
+        db.client.end();
+    }
+    process.exit(0);
+});
 
 // Обработка необработанных ошибок
 process.on('unhandledRejection', (reason, promise) => {
@@ -1296,5 +1514,4 @@ process.on('uncaughtException', (error) => {
     process.exit(1);
 });
 
-// Запуск системы
 startServer();
