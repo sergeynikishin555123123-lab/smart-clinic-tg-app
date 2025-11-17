@@ -1,0 +1,12 @@
+# timeweb.yml
+build:
+  - npm install --legacy-peer-deps --no-optional
+  - npm run setup
+
+start: npm start
+
+environment:
+  NODE_ENV: production
+  PORT: 3000
+
+build_timeout: 600
