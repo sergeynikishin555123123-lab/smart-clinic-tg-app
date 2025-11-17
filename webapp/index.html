@@ -12,7 +12,7 @@
         <header class="header">
             <h1>Академия АНБ</h1>
             <div class="header-actions">
-                <div class="admin-badge" id="adminBadge">
+                <div class="admin-badge" id="adminBadge" style="display: none;">
                     👑 Админ
                 </div>
                 <button class="icon-btn" onclick="toggleSearch()">🔍</button>
@@ -25,6 +25,10 @@
 
         <main class="main" id="mainContent">
             <!-- Контент будет загружен здесь -->
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Загрузка Академии АНБ...</p>
+            </div>
         </main>
 
         <nav class="nav">
@@ -55,13 +59,23 @@
     <script>
         function toggleSearch() {
             const searchContainer = document.getElementById('searchContainer');
-            const isVisible = searchContainer.style.display !== 'none';
-            searchContainer.style.display = isVisible ? 'none' : 'block';
-            
-            if (!isVisible) {
-                document.getElementById('searchInput').focus();
+            if (searchContainer) {
+                const isVisible = searchContainer.style.display !== 'none';
+                searchContainer.style.display = isVisible ? 'none' : 'block';
+                
+                if (!isVisible) {
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.focus();
+                    }
+                }
             }
         }
+
+        // Показать состояние загрузки пока приложение инициализируется
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Академия АНБ загружается...');
+        });
     </script>
 </body>
 </html>
