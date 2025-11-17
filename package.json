@@ -7,9 +7,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "build": "echo 'No build step required'",
+    "build": "node setup.js",
     "setup": "node setup.js",
-    "deploy": "npm run setup && npm start",
+    "deploy": "npm run build && npm start",
     "quick": "node quick-server.js",
     "test": "echo 'No tests specified'"
   },
@@ -32,9 +32,5 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/anb-academy/smart-clinic"
   }
 }
