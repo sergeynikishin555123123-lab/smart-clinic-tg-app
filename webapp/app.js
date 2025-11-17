@@ -172,22 +172,7 @@ class AcademyApp {
             }
         });
     }
-
-    async loadUserData() {
-        return new Promise((resolve) => {
-            setTimeout(async () => {
-                try {
-                    let userId = this.getUserId();
-                    let firstName = 'Пользователь';
-                    
-                    if (window.Telegram && Telegram.WebApp) {
-                        const tgUser = Telegram.WebApp.initDataUnsafe.user;
-                        if (tgUser) {
-                            userId = tgUser.id;
-                            firstName = tgUser.first_name;
-                        }
-                    }
-
+    
  async loadUserData() {
         try {
             let userId = this.getUserId();
@@ -290,12 +275,12 @@ class AcademyApp {
     }
 
     getUserId() {
-        if (window.Telegram && Telegram.WebApp) {
-            const tgUser = Telegram.Webgram.WebApp.initDataUnsafe.user;
-            return tgUser?.id || 898508164;
-        }
-        return 898508164;
+    if (window.Telegram && Telegram.WebApp) {
+        const tgUser = Telegram.WebApp.initDataUnsafe?.user; // ✅ ПРАВИЛЬНО: Telegram.WebApp
+        return tgUser?.id || 898508164;
     }
+    return 898508164;
+}
 
     createDemoUser() {
         this.currentUser = {
