@@ -187,6 +187,66 @@ class AcademyApp {
                             firstName = tgUser.first_name;
                         }
                     }
+
+ async loadUserData() {
+        try {
+            let userId = this.getUserId();
+            let firstName = 'Пользователь';
+            let username = 'user';
+            
+            if (window.Telegram && Telegram.WebApp) {
+                const tgUser = Telegram.WebApp.initDataUnsafe?.user;
+                if (tgUser) {
+                    userId = tgUser.id;
+                    firstName = tgUser.first_name || 'Пользователь';
+                    username = tgUser.username || 'user';
+                }
+            }
+            
+            const response = await fetch('/api/user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    id: userId, 
+                    firstName: firstName,
+                    username: username
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.success && data.user) {
+                this.currentUser = data.user;
+                this.isAdmin = this.currentUser.isAdmin;
+                this.isSuperAdmin = this.currentUser.isSuperAdmin;
+                
+                // Обновляем бейдж админа
+                const adminBadge = document.getElementById('adminBadge');
+                if (adminBadge) {
+                    if (this.isSuperAdmin) {
+                        adminBadge.innerHTML = '🛠️ Супер-админ';
+                    } else if (this.isAdmin) {
+                        adminBadge.innerHTML = '🔧 Админ';
+                    }
+                    adminBadge.style.display = 'flex';
+                }
+
+                this.state.favorites = this.currentUser.favorites || {
+                    courses: [], podcasts: [], streams: [], videos: [], materials: []
+                };
+            } else {
+                throw new Error('Invalid user data');
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки пользователя:', error);
+            this.showError('Ошибка загрузки профиля. Пожалуйста, обновите страницу.');
+            throw error;
+        }
+    }
                     
                     const response = await fetch('/api/user', {
                         method: 'POST',
@@ -1490,49 +1550,129 @@ class AcademyApp {
         `;
     }
 
-    createAdminPage() {
-        if (!this.isAdmin) {
+   createAdminPage() {
+        if (!this.isAdmin && !this.isSuperAdmin) {
             return this.createAccessDeniedPage();
         }
 
         return `
             <div class="page">
                 <div class="admin-header">
-                    <h2>🔧 Админ-панель</h2>
-                    <div class="admin-badge">Администратор</div>
+                    <h2>${this.isSuperAdmin ? '🛠️ Супер-админ панель' : '🔧 Админ-панель'}</h2>
+                    <div class="admin-badge">${this.isSuperAdmin ? 'Супер-администратор' : 'Администратор'}</div>
                 </div>
 
                 <div class="admin-tabs">
                     <button class="tab-btn active" data-tab="dashboard">📊 Дашборд</button>
-                    <button class="tab-btn" data-tab="content">📝 Контент</button>
                     <button class="tab-btn" data-tab="users">👥 Пользователи</button>
-                    <button class="tab-btn" data-tab="teachers">👨‍⚕️ Преподаватели</button>
-                    <button class="tab-btn" data-tab="analytics">📈 Аналитика</button>
-                    <button class="tab-btn" data-tab="settings">⚙️ Настройки</button>
+                    <button class="tab-btn" data-tab="content">📝 Контент</button>
+                    ${this.isSuperAdmin ? '<button class="tab-btn" data-tab="system">⚙️ Система</button>' : ''}
                 </div>
 
                 <div class="admin-content">
                     <div id="adminDashboard" class="admin-tab-content active">
                         ${this.createAdminDashboard()}
                     </div>
-                    <div id="adminContent" class="admin-tab-content">
-                        ${this.createAdminContent()}
-                    </div>
                     <div id="adminUsers" class="admin-tab-content">
                         ${this.createAdminUsers()}
                     </div>
-                    <div id="adminTeachers" class="admin-tab-content">
-                        ${this.createAdminTeachers()}
+                    <div id="adminContent" class="admin-tab-content">
+                        ${this.createAdminContent()}
                     </div>
-                    <div id="adminAnalytics" class="admin-tab-content">
-                        ${this.createAdminAnalytics()}
+                    ${this.isSuperAdmin ? `
+                    <div id="adminSystem" class="admin-tab-content">
+                        ${this.createAdminSystem()}
                     </div>
-                    <div id="adminSettings" class="admin-tab-content">
-                        ${this.createAdminSettings()}
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    createAdminSystem() {
+        return `
+            <div class="admin-section">
+                <h3>⚙️ Управление системой</h3>
+                <div class="system-actions">
+                    <button class="btn btn-danger" onclick="app.restartSystem()">
+                        🔄 Перезапустить систему
+                    </button>
+                    <button class="btn btn-outline" onclick="app.clearCache()">
+                        🧹 Очистить кэш
+                    </button>
+                </div>
+                
+                <div class="system-info">
+                    <h4>Информация о системе</h4>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Версия:</span>
+                            <span class="info-value">1.0.0</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">База данных:</span>
+                            <span class="info-value" id="dbStatus">Проверка...</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Бот:</span>
+                            <span class="info-value" id="botStatus">Проверка...</span>
+                        </div>
                     </div>
                 </div>
             </div>
         `;
+    }
+
+    async loadAdminStats() {
+        try {
+            const response = await fetch(`/api/admin/stats?userId=${this.currentUser.id}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.updateAdminDashboard(data.stats);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки статистики:', error);
+        }
+    }
+
+    async loadAdminUsers() {
+        try {
+            const response = await fetch(`/api/admin/users?adminId=${this.currentUser.id}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.renderAdminUsers(data.users);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки пользователей:', error);
+        }
+    }
+
+    async makeUserAdmin(userId) {
+        if (!this.isSuperAdmin) {
+            this.showNotification('❌ Только супер-администратор может назначать администраторов');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/admin/users/${userId}/make-admin`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ adminId: this.currentUser.id })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                this.showNotification('✅ Пользователь назначен администратором');
+                this.loadAdminUsers();
+            } else {
+                this.showNotification('❌ Ошибка назначения администратора');
+            }
+        } catch (error) {
+            console.error('Ошибка назначения администратора:', error);
+            this.showNotification('❌ Ошибка назначения администратора');
+        }
     }
 
     createAdminDashboard() {
