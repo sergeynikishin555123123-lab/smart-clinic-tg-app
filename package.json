@@ -11,7 +11,9 @@
     "setup": "node setup.js",
     "deploy": "npm run build && npm start",
     "quick": "node quick-server.js",
-    "test": "echo 'No tests specified'"
+    "docker:build": "docker build -t anb-academy .",
+    "docker:run": "docker run -p 3000:3000 anb-academy",
+    "docker:prod": "npm run docker:build && npm run docker:run"
   },
   "keywords": [
     "academy",
