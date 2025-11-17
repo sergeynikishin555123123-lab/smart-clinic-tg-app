@@ -1,4 +1,4 @@
-// server.js - ПОЛНОСТЬЮ ПЕРЕРАБОТАННАЯ ВЕРСИЯ ДЛЯ TIMEWEB
+// server.js - только основные импорты
 import { Telegraf, session, Markup, Scenes } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -29,6 +29,26 @@ import QRCode from 'qrcode';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import Redis from 'ioredis';
+
+// Закомментируйте проблемные импорты:
+// import apicache from 'apicache';
+// import cloudinary from 'cloudinary';
+// import Stripe from 'stripe';
+// import PDFDocument from 'pdfkit';
+// import ExcelJS from 'exceljs';
+// import archiver from 'archiver';
+// import fetch from 'node-fetch';
+// import WebSocket from 'ws';
+// import { Parser } from 'json2csv';
+// import csv from 'csv-parser';
+// import { parseString } from 'xml2js';
+// import cheerio from 'cheerio';
+// import puppeteer from 'puppeteer';
+// import nodeHtmlToImage from 'node-html-to-image';
+// import { createCanvas } from 'canvas';
+// import ffmpeg from 'fluent-ffmpeg';
+// import ffmpegStatic from 'ffmpeg-static';
+// import musicMetadata from 'music-metadata';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
