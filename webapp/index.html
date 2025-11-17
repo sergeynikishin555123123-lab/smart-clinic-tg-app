@@ -24,6 +24,7 @@
         </div>
 
         <main class="main" id="mainContent">
+            <!-- Контент будет загружен здесь -->
             <div class="loading-state">
                 <div class="loading-spinner"></div>
                 <p>Загрузка Академии АНБ...</p>
@@ -35,13 +36,17 @@
                 🏠
                 <span class="nav-label">Главная</span>
             </button>
-            <button class="nav-btn" data-page="courses">
-                📚
-                <span class="nav-label">Курсы</span>
+            <button class="nav-btn" data-page="community">
+                👥
+                <span class="nav-label">Сообщество</span>
             </button>
-            <button class="nav-btn" data-page="streams">
-                📹
-                <span class="nav-label">Эфиры</span>
+            <button class="nav-btn" data-page="chats">
+                💬
+                <span class="nav-label">Чаты</span>
+            </button>
+            <button class="nav-btn" data-page="favorites">
+                ❤️
+                <span class="nav-label">Материалы</span>
             </button>
             <button class="nav-btn" data-page="profile">
                 👤
@@ -66,6 +71,11 @@
                 }
             }
         }
+
+        // Показать состояние загрузки пока приложение инициализируется
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Академия АНБ загружается...');
+        });
     </script>
 </body>
 </html>
