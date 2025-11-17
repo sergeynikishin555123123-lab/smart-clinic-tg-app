@@ -4,73 +4,107 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Академия АНБ</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .app { max-width: 400px; margin: 0 auto; background: white; min-height: 100vh; }
+        .header { background: #667eea; color: white; padding: 15px; text-align: center; }
+        .main { padding: 20px; padding-bottom: 80px; }
+        .nav { position: fixed; bottom: 0; width: 100%; max-width: 400px; background: white; display: flex; border-top: 1px solid #ddd; }
+        .nav-btn { flex: 1; padding: 10px; border: none; background: none; cursor: pointer; }
+        .nav-btn.active { color: #667eea; }
+        .page { padding: 20px; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .loading { text-align: center; padding: 50px 20px; }
+        .btn { padding: 10px 15px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="app">
         <header class="header">
             <h1>Академия АНБ</h1>
-            <div class="header-actions">
-                <div class="admin-badge" id="adminBadge" style="display: none;">
-                    👑 Админ
-                </div>
-                <button class="icon-btn" onclick="toggleSearch()">🔍</button>
-            </div>
         </header>
-
-        <div class="search-container" id="searchContainer" style="display: none;">
-            <input type="text" placeholder="Поиск по курсам, материалам, эфирам..." class="search-input" id="searchInput">
-        </div>
-
+        
         <main class="main" id="mainContent">
-            <div class="loading-state">
-                <div class="loading-spinner"></div>
-                <p>Загрузка Академии АНБ...</p>
+            <div class="loading">
+                <h2>Загрузка...</h2>
+                <p>Академия АНБ запускается</p>
             </div>
         </main>
 
         <nav class="nav">
-            <button class="nav-btn active" data-page="home">
-                🏠
-                <span class="nav-label">Главная</span>
-            </button>
-            <button class="nav-btn" data-page="courses">
-                📚
-                <span class="nav-label">Курсы</span>
-            </button>
-            <button class="nav-btn" data-page="streams">
-                📹
-                <span class="nav-label">Эфиры</span>
-            </button>
-            <button class="nav-btn" data-page="profile">
-                👤
-                <span class="nav-label">Профиль</span>
-            </button>
+            <button class="nav-btn active" onclick="showPage('home')">🏠 Главная</button>
+            <button class="nav-btn" onclick="showPage('courses')">📚 Курсы</button>
+            <button class="nav-btn" onclick="showPage('profile')">👤 Профиль</button>
         </nav>
     </div>
 
-    <script src="app.js"></script>
     <script>
-        function toggleSearch() {
-            const searchContainer = document.getElementById('searchContainer');
-            if (searchContainer) {
-                const isVisible = searchContainer.style.display !== 'none';
-                searchContainer.style.display = isVisible ? 'none' : 'block';
-                
-                if (!isVisible) {
-                    const searchInput = document.getElementById('searchInput');
-                    if (searchInput) {
-                        searchInput.focus();
-                    }
-                }
+        function showPage(page) {
+            const main = document.getElementById('mainContent');
+            let content = '';
+            
+            switch(page) {
+                case 'home':
+                    content = `
+                        <div class="page">
+                            <h2>Добро пожаловать в Академию АНБ!</h2>
+                            <p>Образовательная платформа для врачей</p>
+                            <div style="margin-top: 20px;">
+                                <button onclick="showPage('courses')" class="btn">📚 Курсы</button>
+                                <button onclick="showPage('profile')" class="btn">👤 Профиль</button>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'courses':
+                    content = `
+                        <div class="page">
+                            <h2>📚 Курсы</h2>
+                            <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                <h3>Мануальные техники в практике</h3>
+                                <p>6 модулей по современным методикам</p>
+                                <button class="btn" style="margin-top: 10px;">Подробнее</button>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'profile':
+                    content = `
+                        <div class="page">
+                            <h2>👤 Профиль</h2>
+                            <div style="margin-top: 15px;">
+                                <p><strong>Имя:</strong> Демо Пользователь</p>
+                                <p><strong>Специализация:</strong> Невролог</p>
+                                <p><strong>Статус:</strong> ✅ Активен</p>
+                            </div>
+                        </div>
+                    `;
+                    break;
             }
+            
+            main.innerHTML = content;
+            
+            // Обновляем активные кнопки
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
         }
 
-        // Показываем что приложение загружается
+        // Показываем главную страницу при загрузке
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Академия АНБ загружается...');
+            showPage('home');
+            console.log('✅ Академия АНБ загружена!');
         });
+
+        // Инициализация Telegram WebApp
+        if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.expand();
+            Telegram.WebApp.ready();
+            console.log('📱 Telegram WebApp инициализирован');
+        }
     </script>
 </body>
 </html>
