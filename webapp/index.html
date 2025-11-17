@@ -4,66 +4,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Академия АНБ</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-align: center;
-        }
-        .container {
-            max-width: 600px;
-            margin: 100px auto;
-            padding: 40px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-        }
-        h1 {
-            font-size: 2.5em;
-            margin-bottom: 20px;
-        }
-        .status {
-            padding: 20px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 10px;
-            margin: 20px 0;
-        }
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            background: white;
-            color: #667eea;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: bold;
-            margin: 5px;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>🎓 Академия АНБ</h1>
-        <p>Современное образование для врачей</p>
-        
-        <div class="status">
-            <p>✅ Сервер работает успешно!</p>
-            <p>🌐 Приложение готово к использованию</p>
+    <div class="app">
+        <header class="header">
+            <h1>Академия АНБ</h1>
+            <div class="header-actions">
+                <div class="admin-badge" id="adminBadge" style="display: none;">
+                    👑 Админ
+                </div>
+                <button class="icon-btn" onclick="toggleSearch()">🔍</button>
+            </div>
+        </header>
+
+        <div class="search-container" id="searchContainer" style="display: none;">
+            <input type="text" placeholder="Поиск по курсам, материалам, эфирам..." class="search-input" id="searchInput">
         </div>
 
-        <div style="margin: 20px 0;">
-            <a href="/api/health" class="btn">🔍 Проверить статус API</a>
-            <a href="/api/content" class="btn">📚 Посмотреть контент</a>
-        </div>
+        <main class="main" id="mainContent">
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Загрузка Академии АНБ...</p>
+            </div>
+        </main>
 
-        <div style="margin-top: 30px; font-size: 0.9em; opacity: 0.8;">
-            <p>📱 Для использования в Telegram откройте бота</p>
-            <p>🔗 Ссылка: <a href="https://t.me/ANB_Academy_Bot" style="color: white;">t.me/ANB_Academy_Bot</a></p>
-        </div>
+        <nav class="nav">
+            <button class="nav-btn active" data-page="home">
+                🏠
+                <span class="nav-label">Главная</span>
+            </button>
+            <button class="nav-btn" data-page="courses">
+                📚
+                <span class="nav-label">Курсы</span>
+            </button>
+            <button class="nav-btn" data-page="streams">
+                📹
+                <span class="nav-label">Эфиры</span>
+            </button>
+            <button class="nav-btn" data-page="profile">
+                👤
+                <span class="nav-label">Профиль</span>
+            </button>
+        </nav>
     </div>
 
     <script src="app.js"></script>
+    <script>
+        function toggleSearch() {
+            const searchContainer = document.getElementById('searchContainer');
+            if (searchContainer) {
+                const isVisible = searchContainer.style.display !== 'none';
+                searchContainer.style.display = isVisible ? 'none' : 'block';
+                
+                if (!isVisible) {
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.focus();
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>
