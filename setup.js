@@ -1,4 +1,4 @@
-// setup.js - создаем placeholder изображения
+// setup.js
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs/promises';
@@ -18,26 +18,24 @@ async function setup() {
             console.log(`✓ Создана: ${dir}`);
         }
 
-        // Создаем placeholder изображения
+        // Создаем SVG placeholder изображения
         const images = [
-            'course-manual.jpg',
-            'course-diagnosis.jpg', 
-            'podcast-neurology.jpg',
-            'stream-pain-syndrome.jpg',
-            'video-neurological-exam.jpg',
-            'material-ms-mri.jpg',
-            'event-neurology-conf.jpg',
-            'promo-welcome.jpg',
-            'chat-main.jpg',
-            'course-default.jpg'
+            'course-manual.svg',
+            'course-diagnosis.svg', 
+            'podcast-neurology.svg',
+            'stream-pain-syndrome.svg',
+            'video-neurological-exam.svg',
+            'material-ms-mri.svg',
+            'event-neurology-conf.svg',
+            'promo-welcome.svg',
+            'chat-main.svg'
         ];
 
-        // Создаем простые SVG placeholder
         for (const image of images) {
             const svgContent = createPlaceholderSVG(image);
-            const filePath = join(__dirname, 'webapp/assets', image.replace('.jpg', '.svg'));
+            const filePath = join(__dirname, 'webapp/assets', image);
             await fs.writeFile(filePath, svgContent);
-            console.log(`✓ Создан: ${image.replace('.jpg', '.svg')}`);
+            console.log(`✓ Создан: ${image}`);
         }
 
         console.log('✅ Настройка завершена!');
@@ -48,7 +46,7 @@ async function setup() {
 }
 
 function createPlaceholderSVG(filename) {
-    const name = filename.replace('.jpg', '').replace(/-/g, ' ');
+    const name = filename.replace('.svg', '').replace(/-/g, ' ');
     return `
 <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
     <defs>
