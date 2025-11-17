@@ -233,15 +233,20 @@ class ProcessManager {
 
 const processManager = new ProcessManager();
 
-// ==================== БАЗА ДАННЫХ ===================
+// ==================== БАЗА ДАННЫХ ====================
 class Database {
     constructor() {
         this.client = null;
         this.connected = false;
+        this.connectionAttempts = 0;
+        this.maxConnectionAttempts = 3;
     }
 
     async connect() {
         try {
+            console.log('🗄️ Подключение к базе данных...');
+            processManager.healthStatus.database = 'connecting';
+            
             const { Client } = await import('pg');
             
             this.client = new Client({
@@ -252,19 +257,33 @@ class Database {
                 port: 5432,
                 ssl: { rejectUnauthorized: false },
                 connectionTimeoutMillis: 10000,
-                idleTimeoutMillis: 30000
+                idleTimeoutMillis: 30000,
+                retryConnection: true
             });
 
             await this.client.connect();
             this.connected = true;
+            this.connectionAttempts = 0;
+            processManager.healthStatus.database = 'connected';
             console.log('✅ База данных подключена');
             
             await this.createTables();
             console.log('✅ Таблицы созданы/проверены');
             
         } catch (error) {
-            console.error('❌ Ошибка подключения к БД:', error);
+            this.connectionAttempts++;
+            console.error('❌ Ошибка подключения к БД:', error.message);
+            processManager.healthStatus.database = 'disconnected';
             this.connected = false;
+            
+            // Пробуем переподключиться
+            if (this.connectionAttempts < this.maxConnectionAttempts) {
+                console.log(`🔄 Попытка переподключения ${this.connectionAttempts}/${this.maxConnectionAttempts}...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                return this.connect();
+            } else {
+                console.log('⚠️ Продолжаем работу без базы данных (демо-режим)');
+            }
         }
     }
 
@@ -406,6 +425,14 @@ class Database {
             return await this.client.query(text, params);
         } catch (error) {
             console.error('❌ Ошибка запроса к БД:', error);
+            
+            // Пробуем переподключиться при ошибке
+            if (error.code === 'ECONNRESET' || error.code === 'EPIPE') {
+                console.log('🔄 Потеряно соединение с БД, пробуем переподключиться...');
+                this.connected = false;
+                await this.connect();
+            }
+            
             return { rows: [], rowCount: 0 };
         }
     }
@@ -416,27 +443,85 @@ const db = new Database();
 // ==================== TELEGRAM BOT ====================
 class TelegramBot {
     constructor() {
-        this.bot = new Telegraf(config.BOT_TOKEN);
+        this.bot = null;
         this.userSessions = new Map();
+        this.isRunning = false;
         this.init();
     }
 
     init() {
-        this.bot.use(session());
+        try {
+            console.log('🤖 Инициализация Telegram бота...');
+            this.bot = new Telegraf(config.BOT_TOKEN);
+            
+            this.bot.use(session());
 
-        this.bot.start(this.handleStart.bind(this));
-        this.bot.command('menu', this.handleMenu.bind(this));
-        this.bot.command('admin', this.handleAdmin.bind(this));
-        this.bot.command('help', this.handleHelp.bind(this));
-        this.bot.command('status', this.handleStatus.bind(this));
-        this.bot.on('text', this.handleText.bind(this));
-        this.bot.on('callback_query', this.handleCallbackQuery.bind(this));
+            this.bot.start(this.handleStart.bind(this));
+            this.bot.command('menu', this.handleMenu.bind(this));
+            this.bot.command('admin', this.handleAdmin.bind(this));
+            this.bot.command('help', this.handleHelp.bind(this));
+            this.bot.command('status', this.handleStatus.bind(this));
+            this.bot.command('health', this.handleHealth.bind(this));
+            this.bot.on('text', this.handleText.bind(this));
+            this.bot.on('callback_query', this.handleCallbackQuery.bind(this));
 
-        // Обработка ошибок
-        this.bot.catch((err, ctx) => {
-            console.error('❌ Ошибка бота:', err);
-            ctx.reply('Произошла ошибка. Пожалуйста, попробуйте еще раз.').catch(console.error);
-        });
+            // Обработка ошибок
+            this.bot.catch((err, ctx) => {
+                console.error('❌ Ошибка бота:', err);
+                try {
+                    ctx.reply('Произошла ошибка. Пожалуйста, попробуйте еще раз.').catch(console.error);
+                } catch (e) {
+                    console.error('Не удалось отправить сообщение об ошибке:', e);
+                }
+            });
+
+            processManager.healthStatus.bot = 'initialized';
+            console.log('✅ Telegram бот инициализирован');
+            
+        } catch (error) {
+            console.error('❌ Ошибка инициализации бота:', error);
+            processManager.healthStatus.bot = 'error';
+        }
+    }
+
+    async handleHealth(ctx) {
+        const healthStatus = processManager.getHealthStatus();
+        const userId = ctx.from.id;
+        
+        if (!config.ADMIN_IDS.includes(userId)) {
+            await ctx.reply('❌ У вас нет прав для просмотра статуса системы');
+            return;
+        }
+
+        let statusMessage = '🔍 **Статус системы Академии АНБ**\n\n';
+        
+        statusMessage += `🤖 **Бот:** ${this.getStatusEmoji(healthStatus.bot)} ${healthStatus.bot}\n`;
+        statusMessage += `🌐 **Сервер:** ${this.getStatusEmoji(healthStatus.server)} ${healthStatus.server}\n`;
+        statusMessage += `🗄️ **База данных:** ${this.getStatusEmoji(healthStatus.database)} ${healthStatus.database}\n`;
+        statusMessage += `⚙️ **Система:** ${this.getStatusEmoji(healthStatus.system)} ${healthStatus.system}\n\n`;
+        
+        statusMessage += `📊 **Порт:** ${healthStatus.port}\n`;
+        statusMessage += `🔌 **Порт доступен:** ${healthStatus.portAvailable ? '✅' : '❌'}\n`;
+        statusMessage += `🕐 **Проверка:** ${new Date(healthStatus.timestamp).toLocaleString('ru-RU')}\n\n`;
+        
+        statusMessage += 'Используйте /restart для перезапуска системы';
+
+        await ctx.reply(statusMessage, { parse_mode: 'Markdown' });
+    }
+
+    getStatusEmoji(status) {
+        const emojis = {
+            'healthy': '✅',
+            'connected': '✅',
+            'initialized': '🔄',
+            'checking': '🔍',
+            'pending': '⏳',
+            'unhealthy': '❌',
+            'disconnected': '❌',
+            'error': '🚨',
+            'unknown': '❓'
+        };
+        return emojis[status] || '❓';
     }
 
     async handleStart(ctx) {
@@ -664,7 +749,8 @@ class TelegramBot {
                     inline_keyboard: [
                         [{ text: '📱 Открыть WebApp', web_app: { url: config.WEBAPP_URL } }],
                         [{ text: '📊 Статистика', callback_data: 'admin_stats' }],
-                        [{ text: '👥 Пользователи', callback_data: 'admin_users' }]
+                        [{ text: '👥 Пользователи', callback_data: 'admin_users' }],
+                        [{ text: '🔍 Статус системы', callback_data: 'admin_health' }]
                     ]
                 }
             });
@@ -728,6 +814,10 @@ class TelegramBot {
                             }
                         });
                     }
+                    break;
+
+                case 'admin_health':
+                    await this.handleHealth(ctx);
                     break;
 
                 default:
@@ -818,11 +908,45 @@ class TelegramBot {
 
     async launch() {
         try {
+            if (!this.bot) {
+                throw new Error('Бот не инициализирован');
+            }
+
+            console.log('🚀 Запуск Telegram бота...');
+            
+            // Останавливаем предыдущий экземпляр бота если он есть
+            try {
+                await this.bot.stop();
+            } catch (error) {
+                // Игнорируем ошибки остановки
+            }
+
             await this.bot.launch();
-            console.log('✅ Telegram Bot запущен');
+            this.isRunning = true;
+            processManager.healthStatus.bot = 'running';
+            console.log('✅ Telegram Bot запущен успешно');
+            
         } catch (error) {
             console.error('❌ Ошибка запуска бота:', error);
-            process.exit(1);
+            processManager.healthStatus.bot = 'error';
+            
+            // Пробуем перезапустить через 5 секунд
+            setTimeout(() => {
+                console.log('🔄 Перезапуск бота...');
+                this.launch();
+            }, 5000);
+        }
+    }
+
+    async stop() {
+        try {
+            if (this.bot && this.isRunning) {
+                await this.bot.stop();
+                this.isRunning = false;
+                console.log('🛑 Telegram Bot остановлен');
+            }
+        } catch (error) {
+            console.error('Ошибка остановки бота:', error);
         }
     }
 }
@@ -847,11 +971,28 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
+    const healthStatus = processManager.getHealthStatus();
     res.json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        db: db.connected ? 'connected' : 'disconnected'
+        health: healthStatus,
+        db: db.connected ? 'connected' : 'disconnected',
+        bot: telegramBot.isRunning ? 'running' : 'stopped'
     });
+});
+
+app.get('/api/system/restart', async (req, res) => {
+    // Только для администраторов
+    const token = req.query.token;
+    if (token !== 'admin_restart_2024') {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    res.json({ message: 'Система перезапускается...' });
+    
+    setTimeout(() => {
+        process.exit(0);
+    }, 1000);
 });
 
 app.post('/api/user', async (req, res) => {
@@ -1065,42 +1206,85 @@ app.get('*', (req, res) => {
 async function startServer() {
     try {
         console.log('🚀 Запуск сервера Академии АНБ...');
+        console.log('🔍 Проверка системы...');
         
+        // 1. Проверка и подготовка системы
+        const systemReady = await processManager.performSystemCheck();
+        if (!systemReady) {
+            console.log('⚠️ Продолжаем запуск с ограниченной функциональностью');
+        }
+        
+        // 2. Запуск мониторинга здоровья
+        processManager.startHealthMonitoring();
+        
+        // 3. Подключение к базе данных
         await db.connect();
         
-        app.listen(config.PORT, '0.0.0.0', () => {
+        // 4. Запуск Express сервера
+        const server = app.listen(config.PORT, '0.0.0.0', () => {
+            processManager.healthStatus.server = 'running';
             console.log(`🌐 Сервер запущен на порту ${config.PORT}`);
             console.log(`📱 WebApp доступен`);
             console.log(`🔧 Админка доступна для: ${config.ADMIN_IDS.join(', ')}`);
+            console.log('✅ Система готова к работе!');
         });
 
+        // 5. Запуск Telegram бота
         await telegramBot.launch();
-        console.log('✅ Система полностью готова к работе!');
+        
+        console.log('🎉 Система полностью запущена и готова к работе!');
+
+        // Обработка ошибок сервера
+        server.on('error', (error) => {
+            if (error.code === 'EADDRINUSE') {
+                console.log(`❌ Порт ${config.PORT} занят, пробуем освободить...`);
+                processManager.freePort(config.PORT).then(() => {
+                    console.log('🔄 Перезапуск сервера...');
+                    setTimeout(() => {
+                        server.close();
+                        startServer();
+                    }, 2000);
+                });
+            } else {
+                console.error('❌ Ошибка сервера:', error);
+            }
+        });
 
     } catch (error) {
-        console.error('❌ Ошибка при запуске:', error);
+        console.error('❌ Критическая ошибка при запуске:', error);
+        
+        // Пробуем перезапуститься через 10 секунд
+        console.log('🔄 Перезапуск через 10 секунд...');
+        setTimeout(() => {
+            process.exit(1);
+        }, 10000);
+    }
+}
+
+// ==================== GRACEFUL SHUTDOWN ====================
+async function gracefulShutdown(signal) {
+    console.log(`\n🛑 Получен сигнал ${signal}, остановка системы...`);
+    
+    try {
+        // Останавливаем бота
+        await telegramBot.stop();
+        
+        // Закрываем соединение с БД
+        if (db.client) {
+            await db.client.end();
+        }
+        
+        console.log('✅ Система остановлена корректно');
+        process.exit(0);
+    } catch (error) {
+        console.error('❌ Ошибка при остановке системы:', error);
         process.exit(1);
     }
 }
 
-// Graceful shutdown
-process.once('SIGINT', () => {
-    console.log('🛑 Остановка системы...');
-    telegramBot.bot.stop('SIGINT');
-    if (db.client) {
-        db.client.end();
-    }
-    process.exit(0);
-});
-
-process.once('SIGTERM', () => {
-    console.log('🛑 Остановка системы...');
-    telegramBot.bot.stop('SIGTERM');
-    if (db.client) {
-        db.client.end();
-    }
-    process.exit(0);
-});
+// Обработчики сигналов завершения
+process.once('SIGINT', () => gracefulShutdown('SIGINT'));
+process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 // Обработка необработанных ошибок
 process.on('unhandledRejection', (reason, promise) => {
@@ -1112,4 +1296,5 @@ process.on('uncaughtException', (error) => {
     process.exit(1);
 });
 
+// Запуск системы
 startServer();
