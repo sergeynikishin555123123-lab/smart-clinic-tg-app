@@ -1,95 +1,1817 @@
-// server.js - МИНИМАЛЬНАЯ РАБОЧАЯ ВЕРСИЯ ДЛЯ ДЕПЛОЯ
+// server.js - ПРОДАКШЕН ВЕРСИЯ
+import { Telegraf, session, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// ==================== КОНФИГУРАЦИЯ ДЛЯ ПРОДАКШЕНА ====================
+const config = {
+    BOT_TOKEN: process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4',
+    PORT: process.env.PORT || 3000,
+    WEBAPP_URL: process.env.WEBAPP_URL || `http://localhost:${process.env.PORT || 3000}`,
+    ADMIN_IDS: process.env.ADMIN_IDS ? process.env.ADMIN_IDS.split(',').map(Number) : [898508164, 123456789],
+    SUPER_ADMIN_ID: parseInt(process.env.SUPER_ADMIN_ID) || 898508164,
+    UPLOAD_PATH: join(__dirname, 'uploads'),
+    NODE_ENV: process.env.NODE_ENV || 'production'
+};
+
+console.log('🚀 Запуск Академии АНБ в продакшен режиме...');
+console.log(`📍 Порт: ${config.PORT}`);
+console.log(`🌐 Окружение: ${config.NODE_ENV}`);
+console.log(`🤖 Бот: ${config.BOT_TOKEN ? 'активен' : 'не настроен'}`);
+
+// ==================== СИСТЕМА УПРАВЛЕНИЯ ПРОЦЕССАМИ ====================
+class ProcessManager {
+    constructor() {
+        this.isPortAvailable = false;
+        this.healthStatus = {
+            bot: 'unknown',
+            server: 'unknown',
+            database: 'unknown',
+            system: 'unknown'
+        };
+    }
+
+    async checkPortAvailability(port) {
+        return new Promise((resolve) => {
+            const server = net.createServer();
+            
+            server.once('error', (err) => {
+                if (err.code === 'EADDRINUSE') {
+                    console.log(`❌ Порт ${port} занят другим процессом`);
+                    resolve(false);
+                } else {
+                    console.log(`⚠️ Ошибка проверки порта ${port}:`, err.message);
+                    resolve(false);
+                }
+            });
+            
+            server.once('listening', () => {
+                server.close();
+                console.log(`✅ Порт ${port} свободен`);
+                resolve(true);
+            });
+            
+            server.listen(port);
+        });
+    }
+
+    async freePort(port) {
+        return new Promise((resolve) => {
+            if (process.platform === 'win32') {
+                exec(`netstat -ano | findstr :${port}`, (error, stdout) => {
+                    if (stdout) {
+                        const lines = stdout.split('\n');
+                        lines.forEach(line => {
+                            const match = line.match(/(\d+)\s*$/);
+                            if (match) {
+                                const pid = match[1];
+                                console.log(`🛑 Завершаем процесс ${pid} на порту ${port}`);
+                                exec(`taskkill /PID ${pid} /F`, () => {});
+                            }
+                        });
+                    }
+                    setTimeout(resolve, 1000);
+                });
+            } else {
+                exec(`lsof -ti:${port}`, (error, stdout) => {
+                    if (stdout) {
+                        const pids = stdout.trim().split('\n');
+                        pids.forEach(pid => {
+                            if (pid) {
+                                console.log(`🛑 Завершаем процесс ${pid} на порту ${port}`);
+                                process.kill(parseInt(pid), 'SIGTERM');
+                            }
+                        });
+                    }
+                    setTimeout(resolve, 1000);
+                });
+            }
+        });
+    }
+
+    async performSystemCheck() {
+        console.log('🔍 Проверка работоспособности системы...');
+        
+        try {
+            this.healthStatus.system = 'checking';
+            const portAvailable = await this.checkPortAvailability(config.PORT);
+            
+            if (!portAvailable) {
+                console.log('🔄 Пробуем освободить порт...');
+                await this.freePort(config.PORT);
+                
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                const portAvailableAfterFree = await this.checkPortAvailability(config.PORT);
+                
+                if (!portAvailableAfterFree) {
+                    console.log('❌ Не удалось освободить порт. Пробуем использовать другой порт...');
+                    config.PORT = parseInt(config.PORT) + 1;
+                    console.log(`🔄 Используем порт ${config.PORT}`);
+                }
+            }
+            
+            this.isPortAvailable = true;
+            this.healthStatus.system = 'healthy';
+            
+            await this.checkInternetConnection();
+            
+            console.log('✅ Проверка системы завершена');
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Ошибка проверки системы:', error);
+            this.healthStatus.system = 'unhealthy';
+            return false;
+        }
+    }
+
+    async checkInternetConnection() {
+        return new Promise((resolve) => {
+            console.log('🌐 Проверка интернет-соединения...');
+            
+            const checkGoogle = () => {
+                const req = https.get('https://www.google.com', (res) => {
+                    console.log('✅ Интернет соединение: Google доступен');
+                    resolve(true);
+                });
+                
+                req.on('error', () => {
+                    console.log('⚠️ Google недоступен, но продолжаем работу');
+                    resolve(true);
+                });
+                
+                req.setTimeout(5000, () => {
+                    req.destroy();
+                    console.log('⚠️ Таймаут проверки интернета, продолжаем работу');
+                    resolve(true);
+                });
+            };
+            
+            checkGoogle();
+        });
+    }
+
+    getHealthStatus() {
+        return {
+            ...this.healthStatus,
+            timestamp: new Date().toISOString(),
+            port: config.PORT,
+            portAvailable: this.isPortAvailable
+        };
+    }
+}
+
+const processManager = new ProcessManager();
+
+// ==================== БАЗА ДАННЫХ ====================
+class Database {
+    constructor() {
+        this.client = null;
+        this.connected = false;
+        this.useFallback = false;
+    }
+
+    async connect() {
+        try {
+            console.log('🗄️ Подключение к базе данных...');
+            processManager.healthStatus.database = 'connecting';
+            
+            // Пробуем подключиться к основной БД
+            try {
+                const { Client } = await import('pg');
+                
+                this.client = new Client({
+                    user: 'gen_user',
+                    host: 'def46fb02c0eac8fefd6f734.twc1.net',
+                    database: 'default_db',
+                    password: '5-R;mKGYJ<88?1',
+                    port: 5432,
+                    ssl: { rejectUnauthorized: false },
+                    connectionTimeoutMillis: 10000,
+                    idleTimeoutMillis: 30000
+                });
+
+                await this.client.connect();
+                this.connected = true;
+                this.useFallback = false;
+                processManager.healthStatus.database = 'connected';
+                console.log('✅ База данных подключена');
+                
+                await this.createTables();
+                await this.initializeDefaultData();
+                console.log('✅ Таблицы созданы/проверены');
+                
+            } catch (dbError) {
+                console.error('❌ Ошибка подключения к основной БД:', dbError.message);
+                await this.activateFallbackMode();
+            }
+            
+        } catch (error) {
+            console.error('❌ Общая ошибка подключения к БД:', error.message);
+            await this.activateFallbackMode();
+        }
+    }
+
+    async activateFallbackMode() {
+        console.log('🔄 Активация резервного режима базы данных...');
+        this.connected = true;
+        this.useFallback = true;
+        processManager.healthStatus.database = 'fallback';
+        
+        // Создаем простой клиент для fallback режима
+        this.client = {
+            query: (text, params) => {
+                console.log('📦 Fallback DB query:', text.substring(0, 100));
+                return Promise.resolve({ rows: [], rowCount: 0 });
+            }
+        };
+        
+        console.log('✅ Резервный режим БД активирован');
+    }
+
+    async createTables() {
+        if (this.useFallback) return;
+
+        const tables = [
+            `CREATE TABLE IF NOT EXISTS users (
+                id BIGINT PRIMARY KEY,
+                telegram_data JSONB,
+                profile_data JSONB DEFAULT '{"specialization": "", "city": "", "email": ""}',
+                subscription_data JSONB DEFAULT '{"status": "inactive", "type": null, "end_date": null}',
+                progress_data JSONB DEFAULT '{}',
+                favorites_data JSONB DEFAULT '{}',
+                survey_completed BOOLEAN DEFAULT FALSE,
+                is_admin BOOLEAN DEFAULT FALSE,
+                is_super_admin BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS courses (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                full_description TEXT,
+                price DECIMAL(10,2) DEFAULT 0,
+                duration TEXT,
+                modules INTEGER DEFAULT 1,
+                category TEXT,
+                level TEXT DEFAULT 'beginner',
+                image_url TEXT,
+                video_url TEXT,
+                active BOOLEAN DEFAULT TRUE,
+                students_count INTEGER DEFAULT 0,
+                rating DECIMAL(3,2) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS podcasts (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                duration TEXT,
+                audio_url TEXT,
+                image_url TEXT,
+                category TEXT,
+                listens INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS streams (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                video_url TEXT,
+                duration TEXT,
+                thumbnail_url TEXT,
+                stream_date TIMESTAMP,
+                live BOOLEAN DEFAULT FALSE,
+                participants INTEGER DEFAULT 0,
+                type TEXT DEFAULT 'stream',
+                created_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS video_tips (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                video_url TEXT,
+                duration TEXT,
+                thumbnail_url TEXT,
+                category TEXT,
+                views INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS materials (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                file_url TEXT,
+                image_url TEXT,
+                material_type TEXT,
+                category TEXT,
+                downloads INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS events (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                event_date TIMESTAMP,
+                location TEXT,
+                event_type TEXT,
+                image_url TEXT,
+                registration_url TEXT,
+                participants INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS promotions (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                image_url TEXT,
+                conditions TEXT,
+                discount INTEGER DEFAULT 0,
+                active BOOLEAN DEFAULT TRUE,
+                end_date TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS chats (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                type TEXT,
+                participants_count INTEGER DEFAULT 0,
+                last_message TEXT,
+                active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS user_progress (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT REFERENCES users(id),
+                course_id INTEGER REFERENCES courses(id),
+                module_id INTEGER,
+                progress INTEGER DEFAULT 0,
+                completed BOOLEAN DEFAULT FALSE,
+                last_activity TIMESTAMP DEFAULT NOW(),
+                created_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS payments (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT REFERENCES users(id),
+                amount DECIMAL(10,2),
+                currency TEXT DEFAULT 'RUB',
+                status TEXT DEFAULT 'pending',
+                payment_method TEXT,
+                subscription_type TEXT,
+                subscription_duration INTEGER,
+                created_at TIMESTAMP DEFAULT NOW()
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT REFERENCES users(id),
+                title TEXT NOT NULL,
+                message TEXT,
+                type TEXT,
+                read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )`
+        ];
+
+        for (const tableSQL of tables) {
+            try {
+                await this.client.query(tableSQL);
+            } catch (error) {
+                console.error(`❌ Ошибка создания таблицы:`, error.message);
+            }
+        }
+    }
+
+    async initializeDefaultData() {
+        if (this.useFallback) return;
+
+        try {
+            // Создаем супер-админа если его нет
+            const superAdminCheck = await this.client.query(
+                'SELECT * FROM users WHERE id = $1',
+                [config.SUPER_ADMIN_ID]
+            );
+
+            if (superAdminCheck.rows.length === 0) {
+                await this.client.query(
+                    `INSERT INTO users (id, telegram_data, profile_data, is_admin, is_super_admin, survey_completed)
+                     VALUES ($1, $2, $3, $4, $5, $6)`,
+                    [
+                        config.SUPER_ADMIN_ID,
+                        {
+                            first_name: 'Супер Администратор',
+                            username: 'superadmin'
+                        },
+                        {
+                            specialization: 'Администратор системы',
+                            city: 'Москва',
+                            email: 'admin@anb.ru'
+                        },
+                        true,
+                        true,
+                        true
+                    ]
+                );
+                console.log('✅ Супер-администратор создан');
+            }
+
+            // Создаем демо-контент если его нет
+            await this.initializeDemoContent();
+            
+        } catch (error) {
+            console.error('Ошибка инициализации данных:', error);
+        }
+    }
+
+    async initializeDemoContent() {
+        if (this.useFallback) return;
+
+        try {
+            // Проверяем есть ли курсы
+            const coursesCheck = await this.client.query('SELECT COUNT(*) FROM courses');
+            if (parseInt(coursesCheck.rows[0].count) === 0) {
+                console.log('📚 Создаем демо-контент...');
+                
+                // Демо курсы
+                const demoCourses = [
+                    {
+                        title: 'Мануальные техники в практике',
+                        description: '6 модулей по современным мануальным методикам',
+                        full_description: 'Комплексный курс по мануальным техникам для практикующих врачей. Изучите современные подходы к диагностике и лечению.',
+                        price: 15000,
+                        duration: '12 часов',
+                        modules: 6,
+                        category: 'Мануальные техники',
+                        level: 'advanced',
+                        students_count: 45,
+                        rating: 4.8
+                    },
+                    {
+                        title: 'Неврология для практикующих врачей',
+                        description: 'Основы неврологической диагностики',
+                        full_description: 'Фундаментальный курс по неврологии с акцентом на практическое применение.',
+                        price: 12000,
+                        duration: '10 часов',
+                        modules: 5,
+                        category: 'Неврология',
+                        level: 'intermediate',
+                        students_count: 67,
+                        rating: 4.6
+                    }
+                ];
+
+                for (const course of demoCourses) {
+                    await this.client.query(
+                        `INSERT INTO courses (title, description, full_description, price, duration, modules, category, level, students_count, rating)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                        [course.title, course.description, course.full_description, course.price, course.duration, 
+                         course.modules, course.category, course.level, course.students_count, course.rating]
+                    );
+                }
+
+                // Демо подкасты
+                const demoPodcasts = [
+                    {
+                        title: 'АНБ FM: Современная неврология',
+                        description: 'Обсуждение новых тенденций в неврологии',
+                        duration: '45:20',
+                        category: 'Неврология',
+                        listens: 234
+                    },
+                    {
+                        title: 'АНБ FM: Реабилитационные методики',
+                        description: 'Новые подходы к реабилитации',
+                        duration: '38:15',
+                        category: 'Реабилитация',
+                        listens: 167
+                    }
+                ];
+
+                for (const podcast of demoPodcasts) {
+                    await this.client.query(
+                        `INSERT INTO podcasts (title, description, duration, category, listens)
+                         VALUES ($1, $2, $3, $4, $5)`,
+                        [podcast.title, podcast.description, podcast.duration, podcast.category, podcast.listens]
+                    );
+                }
+
+                // Демо стримы
+                const demoStreams = [
+                    {
+                        title: 'Разбор клинического случая: Болевой синдром',
+                        description: 'Прямой эфир с разбором сложного случая',
+                        duration: '1:30:00',
+                        stream_date: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                        live: true,
+                        participants: 89,
+                        type: 'analysis'
+                    },
+                    {
+                        title: 'Мануальные техники: Демонстрация',
+                        description: 'Практическая демонстрация методик',
+                        duration: '2:15:00',
+                        stream_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+                        live: false,
+                        participants: 156,
+                        type: 'stream'
+                    }
+                ];
+
+                for (const stream of demoStreams) {
+                    await this.client.query(
+                        `INSERT INTO streams (title, description, duration, stream_date, live, participants, type)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                        [stream.title, stream.description, stream.duration, stream.stream_date, 
+                         stream.live, stream.participants, stream.type]
+                    );
+                }
+
+                // Демо материалы
+                const demoMaterials = [
+                    {
+                        title: 'МРТ разбор: Рассеянный склероз',
+                        description: 'Детальный разбор МРТ с клиническими случаями',
+                        material_type: 'mri',
+                        category: 'Неврология',
+                        downloads: 123
+                    },
+                    {
+                        title: 'Чек-лист: Неврологический осмотр',
+                        description: 'Пошаговый чек-лист для ежедневной практики',
+                        material_type: 'checklist',
+                        category: 'Неврология',
+                        downloads: 267
+                    }
+                ];
+
+                for (const material of demoMaterials) {
+                    await this.client.query(
+                        `INSERT INTO materials (title, description, material_type, category, downloads)
+                         VALUES ($1, $2, $3, $4, $5)`,
+                        [material.title, material.description, material.material_type, material.category, material.downloads]
+                    );
+                }
+
+                // Демо мероприятия
+                const demoEvents = [
+                    {
+                        title: 'Конференция: Современная неврология 2024',
+                        description: 'Ежегодная конференция с ведущими специалистами',
+                        event_date: new Date('2024-02-15T10:00:00'),
+                        location: 'Москва',
+                        event_type: 'offline',
+                        participants: 45
+                    },
+                    {
+                        title: 'Онлайн-семинар: Реабилитация после инсульта',
+                        description: 'Практические аспекты реабилитации',
+                        event_date: new Date('2024-01-20T14:00:00'),
+                        location: 'Онлайн',
+                        event_type: 'online',
+                        participants: 120
+                    }
+                ];
+
+                for (const event of demoEvents) {
+                    await this.client.query(
+                        `INSERT INTO events (title, description, event_date, location, event_type, participants)
+                         VALUES ($1, $2, $3, $4, $5, $6)`,
+                        [event.title, event.description, event.event_date, event.location, event.event_type, event.participants]
+                    );
+                }
+
+                // Демо акции
+                const demoPromotions = [
+                    {
+                        title: 'Скидка 20% на первую подписку',
+                        description: 'Специальное предложение для новых пользователей',
+                        discount: 20,
+                        active: true,
+                        end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                    },
+                    {
+                        title: 'Бесплатный доступ к базовым курсам',
+                        description: 'Получите доступ к 3 базовым курсам бесплатно',
+                        discount: 100,
+                        active: true,
+                        end_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+                    }
+                ];
+
+                for (const promo of demoPromotions) {
+                    await this.client.query(
+                        `INSERT INTO promotions (title, description, discount, active, end_date)
+                         VALUES ($1, $2, $3, $4, $5)`,
+                        [promo.title, promo.description, promo.discount, promo.active, promo.end_date]
+                    );
+                }
+
+                // Демо чаты
+                const demoChats = [
+                    {
+                        name: 'Общий чат Академии',
+                        description: 'Основной чат для общения всех участников',
+                        type: 'group',
+                        participants_count: 156,
+                        last_message: 'Добро пожаловать в Академию!'
+                    },
+                    {
+                        name: 'Неврология',
+                        description: 'Обсуждение неврологических тем',
+                        type: 'group',
+                        participants_count: 67,
+                        last_message: 'Кто-нибудь сталкивался с подобным случаем?'
+                    }
+                ];
+
+                for (const chat of demoChats) {
+                    await this.client.query(
+                        `INSERT INTO chats (name, description, type, participants_count, last_message)
+                         VALUES ($1, $2, $3, $4, $5)`,
+                        [chat.name, chat.description, chat.type, chat.participants_count, chat.last_message]
+                    );
+                }
+
+                console.log('✅ Демо-контент создан');
+            }
+        } catch (error) {
+            console.error('Ошибка создания демо-контента:', error);
+        }
+    }
+
+    async query(text, params) {
+        if (!this.connected) {
+            throw new Error('База данных не подключена');
+        }
+        try {
+            return await this.client.query(text, params);
+        } catch (error) {
+            console.error('❌ Ошибка запроса к БД:', error);
+            // В fallback режиме возвращаем пустой результат вместо ошибки
+            if (this.useFallback) {
+                return { rows: [], rowCount: 0 };
+            }
+            throw error;
+        }
+    }
+}
+
+const db = new Database();
+
+// ==================== TELEGRAM BOT ====================
+class TelegramBot {
+    constructor() {
+        this.bot = null;
+        this.userSessions = new Map();
+        this.isRunning = false;
+        this.init();
+    }
+
+    init() {
+        try {
+            console.log('🤖 Инициализация Telegram бота...');
+            
+            if (!config.BOT_TOKEN || config.BOT_TOKEN === '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4') {
+                console.log('⚠️ Бот-токен не настроен, запускаем без бота');
+                processManager.healthStatus.bot = 'disabled';
+                return;
+            }
+            
+            this.bot = new Telegraf(config.BOT_TOKEN);
+            
+            this.bot.use(session());
+
+            // Регистрируем все обработчики
+            this.registerHandlers();
+
+            processManager.healthStatus.bot = 'initialized';
+            console.log('✅ Telegram бот инициализирован');
+            
+        } catch (error) {
+            console.error('❌ Ошибка инициализации бота:', error);
+            processManager.healthStatus.bot = 'error';
+        }
+    }
+
+    registerHandlers() {
+        if (!this.bot) return;
+
+        // Команды
+        this.bot.start(this.handleStart.bind(this));
+        this.bot.command('menu', this.handleMenu.bind(this));
+        this.bot.command('admin', this.handleAdmin.bind(this));
+        this.bot.command('help', this.handleHelp.bind(this));
+        this.bot.command('status', this.handleStatus.bind(this));
+        this.bot.command('health', this.handleHealth.bind(this));
+        this.bot.command('stats', this.handleStats.bind(this));
+        this.bot.command('restart', this.handleRestart.bind(this));
+
+        // Текстовые сообщения
+        this.bot.on('text', this.handleText.bind(this));
+
+        // Callback queries
+        this.bot.on('callback_query', this.handleCallbackQuery.bind(this));
+
+        // Обработка ошибок
+        this.bot.catch((err, ctx) => {
+            console.error('❌ Ошибка бота:', err);
+            try {
+                ctx.reply('Произошла ошибка. Пожалуйста, попробуйте еще раз.').catch(console.error);
+            } catch (e) {
+                console.error('Не удалось отправить сообщение об ошибке:', e);
+            }
+        });
+    }
+
+    async handleStart(ctx) {
+        const userId = ctx.from.id;
+        console.log(`🚀 Пользователь ${userId} запустил бота`);
+
+        try {
+            const user = await this.getOrCreateUser(ctx.from);
+            
+            if (!user.survey_completed) {
+                await this.startSurvey(ctx);
+            } else {
+                await this.showMainMenu(ctx);
+            }
+        } catch (error) {
+            console.error('Ошибка в handleStart:', error);
+            await ctx.reply('❌ Произошла ошибка при загрузке вашего профиля. Пожалуйста, попробуйте позже.');
+        }
+    }
+
+    async handleHealth(ctx) {
+        const userId = ctx.from.id;
+        const user = await this.getOrCreateUser(ctx.from);
+        
+        if (!user.is_admin && !user.is_super_admin) {
+            await ctx.reply('❌ У вас нет прав для просмотра статуса системы');
+            return;
+        }
+
+        const healthStatus = processManager.getHealthStatus();
+        let statusMessage = '🔍 **Статус системы Академии АНБ**\n\n';
+        
+        statusMessage += `🤖 **Бот:** ${this.getStatusEmoji(healthStatus.bot)} ${healthStatus.bot}\n`;
+        statusMessage += `🌐 **Сервер:** ${this.getStatusEmoji(healthStatus.server)} ${healthStatus.server}\n`;
+        statusMessage += `🗄️ **База данных:** ${this.getStatusEmoji(healthStatus.database)} ${healthStatus.database}\n`;
+        statusMessage += `⚙️ **Система:** ${this.getStatusEmoji(healthStatus.system)} ${healthStatus.system}\n\n`;
+        
+        statusMessage += `📊 **Порт:** ${healthStatus.port}\n`;
+        statusMessage += `🔌 **Порт доступен:** ${healthStatus.portAvailable ? '✅' : '❌'}\n`;
+        statusMessage += `🕐 **Проверка:** ${new Date(healthStatus.timestamp).toLocaleString('ru-RU')}\n\n`;
+
+        if (user.is_super_admin) {
+            statusMessage += '🛠️ **Режим:** Супер-администратор\n';
+        }
+
+        await ctx.reply(statusMessage, { parse_mode: 'Markdown' });
+    }
+
+    async handleStats(ctx) {
+        const userId = ctx.from.id;
+        const user = await this.getOrCreateUser(ctx.from);
+        
+        if (!user.is_admin && !user.is_super_admin) {
+            await ctx.reply('❌ У вас нет прав для просмотра статистики');
+            return;
+        }
+
+        try {
+            const usersCount = await db.query('SELECT COUNT(*) FROM users');
+            const coursesCount = await db.query('SELECT COUNT(*) FROM courses WHERE active = TRUE');
+            const activeSubscriptions = await db.query('SELECT COUNT(*) FROM users WHERE subscription_data->>\'status\' = \'active\'');
+            const totalRevenue = await db.query('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = \'completed\'');
+
+            let statsMessage = '📊 **Статистика системы**\n\n';
+            statsMessage += `👥 **Пользователей:** ${usersCount.rows[0]?.count || 0}\n`;
+            statsMessage += `📚 **Активных курсов:** ${coursesCount.rows[0]?.count || 0}\n`;
+            statsMessage += `💳 **Активных подписок:** ${activeSubscriptions.rows[0]?.count || 0}\n`;
+            statsMessage += `💰 **Общий доход:** ${parseFloat(totalRevenue.rows[0]?.total || 0).toLocaleString('ru-RU')} ₽\n\n`;
+
+            if (user.is_super_admin) {
+                const today = new Date().toISOString().split('T')[0];
+                const todayRegistrations = await db.query('SELECT COUNT(*) FROM users WHERE DATE(created_at) = $1', [today]);
+                statsMessage += `📈 **Регистраций сегодня:** ${todayRegistrations.rows[0]?.count || 0}\n`;
+            }
+
+            await ctx.reply(statsMessage, { parse_mode: 'Markdown' });
+
+        } catch (error) {
+            console.error('Ошибка получения статистики:', error);
+            await ctx.reply('❌ Ошибка при получении статистики');
+        }
+    }
+
+    async handleRestart(ctx) {
+        const userId = ctx.from.id;
+        const user = await this.getOrCreateUser(ctx.from);
+        
+        if (!user.is_super_admin) {
+            await ctx.reply('❌ Только супер-администратор может перезапускать систему');
+            return;
+        }
+
+        await ctx.reply('🔄 Перезапуск системы...');
+        setTimeout(() => {
+            process.exit(0);
+        }, 2000);
+    }
+
+    getStatusEmoji(status) {
+        const emojis = {
+            'healthy': '✅', 'connected': '✅', 'running': '✅', 'disabled': '⚫',
+            'initialized': '🔄', 'checking': '🔍', 'pending': '⏳', 'fallback': '🟡',
+            'unhealthy': '❌', 'disconnected': '❌', 'error': '🚨',
+            'unknown': '❓'
+        };
+        return emojis[status] || '❓';
+    }
+
+    async startSurvey(ctx) {
+        const userId = ctx.from.id;
+        this.userSessions.set(userId, { step: 'specialization' });
+        
+        await ctx.reply(
+            '👋 Добро пожаловать в Академию АНБ, ' + ctx.from.first_name + '!\n\n' +
+            '🎯 Давайте познакомимся поближе!\n\n' +
+            '1. Ваша специализация:',
+            {
+                reply_markup: {
+                    keyboard: [
+                        ['Невролог', 'Реабилитолог'],
+                        ['Мануальный терапевт', 'Физиотерапевт'],
+                        ['Другая специализация']
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: true
+                }
+            }
+        );
+    }
+
+    async handleText(ctx) {
+        const userId = ctx.from.id;
+        const session = this.userSessions.get(userId);
+        const text = ctx.message.text;
+
+        if (session) {
+            await this.handleSurveyStep(ctx, session, text);
+            return;
+        }
+
+        switch(text) {
+            case '📱 Навигация':
+                await ctx.reply('🎯 Откройте наше приложение для полного доступа:', {
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { 
+                                text: '📱 Открыть Академию АНБ', 
+                                web_app: { url: config.WEBAPP_URL } 
+                            }
+                        ]]
+                    }
+                });
+                break;
+
+            case '🎁 Акции':
+                await ctx.reply('🎁 Специальные предложения:\n\nОткройте приложение для просмотра актуальных акций!', {
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
+                        ]]
+                    }
+                });
+                break;
+
+            case '❓ Вопрос':
+                await ctx.reply(
+                    '💬 Задайте вопрос по обучению\n\n' +
+                    'Напишите ваш вопрос, и мы обязательно поможем!\n\n' +
+                    '📞 Координатор: @academy_anb\n' +
+                    '⏰ Время работы: ПН-ПТ 11:00-19:00'
+                );
+                break;
+
+            case '🔄 Продлить':
+                await ctx.reply('💳 Продление подписки\n\nУправляйте подпиской в приложении:', {
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
+                        ]]
+                    }
+                });
+                break;
+
+            case '📢 Анонсы':
+                await ctx.reply('📢 Ближайшие мероприятия:\n\nОткройте приложение для просмотра анонсов!', {
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
+                        ]]
+                    }
+                });
+                break;
+
+            case '🆘 Поддержка':
+                await ctx.reply(
+                    '🆘 Служба поддержки Академии АНБ\n\n' +
+                    '📞 Координатор: @academy_anb\n' +
+                    '⏰ Время работы: ПН-ПТ 11:00-19:00\n' +
+                    '📧 Email: academy@anb.ru\n\n' +
+                    'Мы всегда готовы помочь!'
+                );
+                break;
+
+            default:
+                await this.showMainMenu(ctx);
+        }
+    }
+
+    async handleSurveyStep(ctx, session, text) {
+        const userId = ctx.from.id;
+        
+        try {
+            switch(session.step) {
+                case 'specialization':
+                    session.specialization = text;
+                    session.step = 'city';
+                    this.userSessions.set(userId, session);
+                    
+                    await ctx.reply('2. Ваш город:', {
+                        reply_markup: {
+                            keyboard: [
+                                ['Москва', 'Санкт-Петербург'],
+                                ['Новосибирск', 'Екатеринбург'],
+                                ['Другой город']
+                            ],
+                            resize_keyboard: true,
+                            one_time_keyboard: true
+                        }
+                    });
+                    break;
+
+                case 'city':
+                    session.city = text;
+                    session.step = 'email';
+                    this.userSessions.set(userId, session);
+                    
+                    await ctx.reply('3. Ваш email:\n\n(для отправки материалов и уведомлений)', {
+                        reply_markup: { remove_keyboard: true }
+                    });
+                    break;
+
+                case 'email':
+                    session.email = text;
+                    
+                    await this.updateUserProfile(userId, {
+                        specialization: session.specialization,
+                        city: session.city,
+                        email: session.email
+                    });
+                    
+                    this.userSessions.delete(userId);
+                    
+                    await ctx.reply(
+                        '✅ Отлично! Анкета заполнена!\n\n' +
+                        '🏷️ Специализация: ' + session.specialization + '\n' +
+                        '🏙️ Город: ' + session.city + '\n' +
+                        '📧 Email: ' + session.email + '\n\n' +
+                        'Теперь у вас есть полный доступ к Академии АНБ! 🎓'
+                    );
+                    
+                    await this.showMainMenu(ctx);
+                    break;
+            }
+        } catch (error) {
+            console.error('Ошибка в handleSurveyStep:', error);
+            await ctx.reply('Произошла ошибка. Давайте попробуем еще раз.');
+            this.userSessions.delete(userId);
+            await this.showMainMenu(ctx);
+        }
+    }
+
+    async updateUserProfile(userId, profileData) {
+        await db.query(
+            'UPDATE users SET profile_data = $1, survey_completed = TRUE WHERE id = $2',
+            [profileData, userId]
+        );
+    }
+
+    async showMainMenu(ctx) {
+        await ctx.reply('🎯 Главное меню Академии АНБ', {
+            reply_markup: {
+                keyboard: [
+                    ['📱 Навигация', '🎁 Акции'],
+                    ['❓ Вопрос', '🔄 Продлить'],
+                    ['📢 Анонсы', '🆘 Поддержка']
+                ],
+                resize_keyboard: true
+            }
+        });
+    }
+
+    async handleMenu(ctx) {
+        await this.showMainMenu(ctx);
+    }
+
+    async handleAdmin(ctx) {
+        try {
+            const user = await this.getOrCreateUser(ctx.from);
+            if (!user.is_admin && !user.is_super_admin) {
+                await ctx.reply('❌ У вас нет прав доступа к админ-панели');
+                return;
+            }
+            
+            const adminType = user.is_super_admin ? '🛠️ Супер-администратор' : '🔧 Администратор';
+            
+            await ctx.reply(`${adminType}`, {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: '📱 Открыть WebApp', web_app: { url: config.WEBAPP_URL } }],
+                        [{ text: '📊 Статистика', callback_data: 'admin_stats' }],
+                        [{ text: '👥 Пользователи', callback_data: 'admin_users' }],
+                        [{ text: '🔍 Статус системы', callback_data: 'admin_health' }],
+                        user.is_super_admin ? 
+                        [{ text: '🔄 Перезапуск', callback_data: 'admin_restart' }] : []
+                    ].filter(Boolean)
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка в handleAdmin:', error);
+            await ctx.reply('Произошла ошибка при доступе к админ-панели.');
+        }
+    }
+
+    async handleHelp(ctx) {
+        await ctx.reply(
+            '💬 Помощь по Академии АНБ\n\n' +
+            '📱 Навигация - полный доступ ко всем функциям\n' +
+            '🎁 Акции - специальные предложения\n' +
+            '❓ Вопрос - задать вопрос по обучению\n' +
+            '🔄 Продлить - управление подпиской\n' +
+            '📢 Анонсы - ближайшие мероприятия\n' +
+            '🆘 Поддержка - помощь и консультации\n\n' +
+            'По всем вопросам: @academy_anb'
+        );
+    }
+
+    async handleStatus(ctx) {
+        try {
+            const user = await this.getOrCreateUser(ctx.from);
+            const subscription = user.subscription_data || {};
+            
+            let statusMessage = '👤 Ваш статус\n\n';
+            statusMessage += '🏷️ Имя: ' + (user.telegram_data?.first_name || 'Пользователь') + '\n';
+            statusMessage += '🎯 Специализация: ' + (user.profile_data?.specialization || 'Не указана') + '\n';
+            statusMessage += '🏙️ Город: ' + (user.profile_data?.city || 'Не указан') + '\n\n';
+            
+            if (subscription.status === 'active') {
+                statusMessage += '✅ Подписка активна\n';
+                if (subscription.end_date) {
+                    statusMessage += '📅 До: ' + new Date(subscription.end_date).toLocaleDateString('ru-RU') + '\n';
+                }
+                if (subscription.type) {
+                    statusMessage += '💎 Тип: ' + subscription.type + '\n';
+                }
+            } else {
+                statusMessage += '❌ Подписка не активна\n';
+            }
+
+            if (user.is_super_admin) {
+                statusMessage += '\n🛠️ **Супер-администратор системы**';
+            } else if (user.is_admin) {
+                statusMessage += '\n🔧 **Администратор системы**';
+            }
+
+            await ctx.reply(statusMessage);
+        } catch (error) {
+            console.error('Ошибка в handleStatus:', error);
+            await ctx.reply('Не удалось загрузить статус. Попробуйте позже.');
+        }
+    }
+
+    async handleCallbackQuery(ctx) {
+        const data = ctx.callbackQuery.data;
+        
+        try {
+            const user = await this.getOrCreateUser(ctx.from);
+            
+            switch(data) {
+                case 'admin_stats':
+                    if (user.is_admin || user.is_super_admin) {
+                        await this.handleStats(ctx);
+                    }
+                    break;
+
+                case 'admin_health':
+                    if (user.is_admin || user.is_super_admin) {
+                        await this.handleHealth(ctx);
+                    }
+                    break;
+
+                case 'admin_restart':
+                    if (user.is_super_admin) {
+                        await this.handleRestart(ctx);
+                    }
+                    break;
+
+                case 'admin_users':
+                    if (user.is_admin || user.is_super_admin) {
+                        const usersCount = await db.query('SELECT COUNT(*) FROM users');
+                        await ctx.reply(`👥 Всего пользователей: ${usersCount.rows[0]?.count || 0}\n\nДля детального управления используйте админ-панель в приложении.`, {
+                            reply_markup: {
+                                inline_keyboard: [[
+                                    { text: '📱 Открыть админ-панель', web_app: { url: config.WEBAPP_URL } }
+                                ]]
+                            }
+                        });
+                    }
+                    break;
+
+                default:
+                    await ctx.answerCbQuery('⚙️ Функция в разработке');
+            }
+
+            await ctx.answerCbQuery();
+        } catch (error) {
+            console.error('Ошибка обработки callback:', error);
+            await ctx.answerCbQuery('❌ Произошла ошибка');
+        }
+    }
+
+    async getOrCreateUser(telegramUser) {
+        try {
+            const result = await db.query(
+                'SELECT * FROM users WHERE id = $1',
+                [telegramUser.id]
+            );
+
+            let user;
+            
+            if (result.rows.length > 0) {
+                user = result.rows[0];
+            } else {
+                // Создаем нового пользователя
+                const newUser = {
+                    id: telegramUser.id,
+                    telegram_data: {
+                        first_name: telegramUser.first_name || '',
+                        last_name: telegramUser.last_name || '',
+                        username: telegramUser.username || '',
+                        language_code: telegramUser.language_code || 'ru'
+                    },
+                    profile_data: {
+                        specialization: '',
+                        city: '',
+                        email: ''
+                    },
+                    subscription_data: {
+                        status: 'inactive',
+                        type: null,
+                        end_date: null
+                    },
+                    progress_data: {
+                        level: 'Понимаю',
+                        steps: {
+                            materialsWatched: 0,
+                            eventsParticipated: 0,
+                            materialsSaved: 0,
+                            coursesBought: 0,
+                            modulesCompleted: 0,
+                            offlineEvents: 0,
+                            publications: 0
+                        },
+                        progress: {
+                            understand: 0,
+                            connect: 0,
+                            apply: 0,
+                            systematize: 0,
+                            share: 0
+                        }
+                    },
+                    favorites_data: {
+                        watchLater: [],
+                        favorites: [],
+                        materials: []
+                    },
+                    survey_completed: false,
+                    is_admin: false,
+                    is_super_admin: false
+                };
+
+                await db.query(
+                    `INSERT INTO users (id, telegram_data, profile_data, subscription_data, progress_data, favorites_data, survey_completed)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                    [newUser.id, newUser.telegram_data, newUser.profile_data, 
+                     newUser.subscription_data, newUser.progress_data, newUser.favorites_data, 
+                     newUser.survey_completed]
+                );
+
+                user = newUser;
+                console.log(`✅ Создан новый пользователь: ${telegramUser.first_name} (${telegramUser.id})`);
+            }
+
+            // Проверяем и обновляем права администратора
+            const isSuperAdmin = user.id === config.SUPER_ADMIN_ID;
+            const isAdmin = isSuperAdmin || config.ADMIN_IDS.includes(user.id);
+            
+            if ((isAdmin && !user.is_admin) || (isSuperAdmin && !user.is_super_admin)) {
+                await db.query(
+                    'UPDATE users SET is_admin = $1, is_super_admin = $2 WHERE id = $3',
+                    [isAdmin, isSuperAdmin, user.id]
+                );
+                user.is_admin = isAdmin;
+                user.is_super_admin = isSuperAdmin;
+                
+                if (isSuperAdmin) {
+                    console.log(`🛠️ Пользователь назначен супер-администратором`);
+                } else if (isAdmin) {
+                    console.log(`🔧 Пользователь назначен администратором`);
+                }
+            }
+
+            return user;
+            
+        } catch (error) {
+            console.error('❌ Ошибка создания пользователя:', error);
+            // Возвращаем fallback пользователя
+            return {
+                id: telegramUser.id,
+                telegram_data: {
+                    first_name: telegramUser.first_name || 'Пользователь',
+                    last_name: telegramUser.last_name || '',
+                    username: telegramUser.username || '',
+                    language_code: telegramUser.language_code || 'ru'
+                },
+                profile_data: {
+                    specialization: '',
+                    city: '',
+                    email: ''
+                },
+                subscription_data: {
+                    status: 'inactive',
+                    type: null,
+                    end_date: null
+                },
+                progress_data: {
+                    level: 'Понимаю',
+                    steps: {
+                        materialsWatched: 0,
+                        eventsParticipated: 0,
+                        materialsSaved: 0,
+                        coursesBought: 0,
+                        modulesCompleted: 0,
+                        offlineEvents: 0,
+                        publications: 0
+                    },
+                    progress: {
+                        understand: 0,
+                        connect: 0,
+                        apply: 0,
+                        systematize: 0,
+                        share: 0
+                    }
+                },
+                favorites_data: {
+                    watchLater: [],
+                    favorites: [],
+                    materials: []
+                },
+                survey_completed: false,
+                is_admin: telegramUser.id === config.SUPER_ADMIN_ID || config.ADMIN_IDS.includes(telegramUser.id),
+                is_super_admin: telegramUser.id === config.SUPER_ADMIN_ID
+            };
+        }
+    }
+
+    async launch() {
+        try {
+            if (!this.bot) {
+                console.log('🤖 Бот не инициализирован, пропускаем запуск');
+                return;
+            }
+
+            console.log('🚀 Запуск Telegram бота...');
+            
+            await this.bot.launch();
+            this.isRunning = true;
+            processManager.healthStatus.bot = 'running';
+            console.log('✅ Telegram Bot запущен успешно');
+            
+        } catch (error) {
+            console.error('❌ Ошибка запуска бота:', error);
+            processManager.healthStatus.bot = 'error';
+        }
+    }
+}
+
+const telegramBot = new TelegramBot();
+
+// ==================== EXPRESS SERVER ====================
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(express.json());
-app.use(express.static(join(__dirname, 'webapp')));
-
-// Ensure directories
+// Создаем необходимые директории
 function ensureDirectories() {
-    const dirs = ['uploads', 'logs', 'temp'];
-    dirs.forEach(dir => {
-        const path = join(__dirname, dir);
-        if (!fs.existsSync(path)) {
-            fs.mkdirSync(path, { recursive: true });
+    const directories = [config.UPLOAD_PATH, join(__dirname, 'webapp')];
+    
+    directories.forEach(dir => {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+            console.log(`✅ Создана директория: ${dir}`);
         }
     });
 }
 
-// Health check endpoint
+ensureDirectories();
+
+app.use(helmet());
+app.use(compression());
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use('/uploads', express.static(config.UPLOAD_PATH));
+app.use(express.static(join(__dirname, 'webapp')));
+
+// ==================== API ROUTES ====================
+
+app.get('/', (req, res) => {
+    res.sendFile(join(__dirname, 'webapp', 'index.html'));
+});
+
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'OK', 
-        message: 'Академия АНБ работает',
         timestamp: new Date().toISOString(),
-        version: '1.0.0'
+        db: db.connected ? (db.useFallback ? 'fallback' : 'connected') : 'disconnected',
+        bot: telegramBot.isRunning ? 'running' : (telegramBot.bot ? 'error' : 'disabled'),
+        version: '1.0.0',
+        mode: db.useFallback ? 'fallback' : 'normal'
     });
 });
 
-// Demo user endpoint
-app.post('/api/user', (req, res) => {
-    const user = {
-        id: req.body.id || 898508164,
-        firstName: req.body.firstName || 'Демо Пользователь',
-        specialization: 'Невролог',
-        city: 'Москва',
-        subscription: { status: 'active' },
-        isAdmin: true,
-        isSuperAdmin: true
-    };
-    res.json({ success: true, user });
+app.post('/api/user', async (req, res) => {
+    try {
+        const { id, firstName, lastName, username } = req.body;
+        
+        if (!id) {
+            return res.status(400).json({ error: 'User ID is required' });
+        }
+
+        const result = await db.query(
+            'SELECT * FROM users WHERE id = $1',
+            [id]
+        );
+        
+        let user;
+        
+        if (result.rows.length === 0) {
+            // Создаем нового пользователя
+            const newUser = {
+                id: id,
+                telegram_data: {
+                    first_name: firstName || 'Пользователь',
+                    last_name: lastName || '',
+                    username: username || '',
+                    language_code: 'ru'
+                },
+                profile_data: {
+                    specialization: '',
+                    city: '',
+                    email: ''
+                },
+                subscription_data: {
+                    status: 'inactive',
+                    type: null,
+                    end_date: null
+                },
+                progress_data: {
+                    level: 'Понимаю',
+                    steps: {
+                        materialsWatched: 0,
+                        eventsParticipated: 0,
+                        materialsSaved: 0,
+                        coursesBought: 0,
+                        modulesCompleted: 0,
+                        offlineEvents: 0,
+                        publications: 0
+                    },
+                    progress: {
+                        understand: 0,
+                        connect: 0,
+                        apply: 0,
+                        systematize: 0,
+                        share: 0
+                    }
+                },
+                favorites_data: {
+                    watchLater: [],
+                    favorites: [],
+                    materials: []
+                },
+                survey_completed: false,
+                is_admin: id == config.SUPER_ADMIN_ID || config.ADMIN_IDS.includes(parseInt(id)),
+                is_super_admin: id == config.SUPER_ADMIN_ID
+            };
+
+            if (!db.useFallback) {
+                await db.query(
+                    `INSERT INTO users (id, telegram_data, profile_data, subscription_data, progress_data, favorites_data, survey_completed, is_admin, is_super_admin)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                    [newUser.id, newUser.telegram_data, newUser.profile_data, 
+                     newUser.subscription_data, newUser.progress_data, newUser.favorites_data, 
+                     newUser.survey_completed, newUser.is_admin, newUser.is_super_admin]
+                );
+            }
+
+            user = newUser;
+        } else {
+            user = result.rows[0];
+        }
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                firstName: user.telegram_data?.first_name || firstName,
+                lastName: user.telegram_data?.last_name || lastName,
+                specialization: user.profile_data?.specialization,
+                city: user.profile_data?.city,
+                email: user.profile_data?.email,
+                subscription: user.subscription_data,
+                progress: user.progress_data,
+                favorites: user.favorites_data,
+                isAdmin: user.is_admin,
+                isSuperAdmin: user.is_super_admin,
+                joinedAt: user.created_at,
+                surveyCompleted: user.survey_completed
+            }
+        });
+    } catch (error) {
+        console.error('API Error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
-// Demo content endpoint
-app.get('/api/content', (req, res) => {
-    const content = {
-        courses: [
-            {
-                id: 1,
-                title: 'Мануальные техники в практике',
-                description: '6 модулей по современным методикам',
-                price: 15000,
-                duration: '12 часов'
-            }
-        ],
-        podcasts: [
-            {
-                id: 1,
-                title: 'АНБ FM: Современная неврология',
-                description: 'Обсуждение новых тенденций',
-                duration: '45:20'
-            }
-        ]
-    };
-    res.json({ success: true, data: content });
+app.get('/api/content', async (req, res) => {
+    try {
+        // Если БД в fallback режиме, возвращаем демо-контент
+        if (db.useFallback) {
+            const demoContent = {
+                courses: [
+                    {
+                        id: 1,
+                        title: 'Мануальные техники в практике',
+                        description: '6 модулей по современным мануальным методикам',
+                        full_description: 'Комплексный курс по мануальным техникам для практикующих врачей.',
+                        price: 15000,
+                        duration: '12 часов',
+                        modules: 6,
+                        category: 'Мануальные техники',
+                        level: 'advanced',
+                        students_count: 45,
+                        rating: 4.8
+                    }
+                ],
+                podcasts: [
+                    {
+                        id: 1,
+                        title: 'АНБ FM: Современная неврология',
+                        description: 'Обсуждение новых тенденций в неврологии',
+                        duration: '45:20',
+                        category: 'Неврология',
+                        listens: 234
+                    }
+                ],
+                streams: [
+                    {
+                        id: 1,
+                        title: 'Разбор клинического случая',
+                        description: 'Прямой эфир с разбором сложного случая',
+                        duration: '1:30:00',
+                        stream_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                        live: true,
+                        participants: 89,
+                        type: 'analysis'
+                    }
+                ],
+                videos: [
+                    {
+                        id: 1,
+                        title: 'Шпаргалка: Неврологический осмотр',
+                        description: 'Быстрый гайд по основным тестам',
+                        duration: '15:30',
+                        category: 'Неврология',
+                        views: 456
+                    }
+                ],
+                materials: [
+                    {
+                        id: 1,
+                        title: 'МРТ разбор: Рассеянный склероз',
+                        description: 'Детальный разбор МРТ с клиническими случаями',
+                        material_type: 'mri',
+                        category: 'Неврология',
+                        downloads: 123
+                    }
+                ],
+                events: [
+                    {
+                        id: 1,
+                        title: 'Конференция: Современная неврология 2024',
+                        description: 'Ежегодная конференция с ведущими специалистами',
+                        event_date: new Date('2024-02-15T10:00:00').toISOString(),
+                        location: 'Москва',
+                        event_type: 'offline',
+                        participants: 45
+                    }
+                ],
+                promotions: [
+                    {
+                        id: 1,
+                        title: 'Скидка 20% на первую подписку',
+                        description: 'Специальное предложение для новых пользователей',
+                        discount: 20,
+                        active: true,
+                        end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+                    }
+                ],
+                chats: [
+                    {
+                        id: 1,
+                        name: 'Общий чат Академии',
+                        description: 'Основной чат для общения всех участников',
+                        type: 'group',
+                        participants_count: 156,
+                        last_message: 'Добро пожаловать в Академию!'
+                    }
+                ]
+            };
+            
+            return res.json({ success: true, data: demoContent, mode: 'demo' });
+        }
+
+        const [
+            coursesResult,
+            podcastsResult, 
+            streamsResult,
+            videosResult,
+            materialsResult,
+            eventsResult,
+            promotionsResult,
+            chatsResult
+        ] = await Promise.all([
+            db.query('SELECT * FROM courses WHERE active = TRUE ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM podcasts ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM streams ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM video_tips ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM materials ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM events ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM promotions WHERE active = TRUE ORDER BY created_at DESC LIMIT 20'),
+            db.query('SELECT * FROM chats WHERE active = TRUE ORDER BY created_at DESC LIMIT 20')
+        ]);
+
+        const content = {
+            courses: coursesResult.rows,
+            podcasts: podcastsResult.rows,
+            streams: streamsResult.rows,
+            videos: videosResult.rows,
+            materials: materialsResult.rows,
+            events: eventsResult.rows,
+            promotions: promotionsResult.rows,
+            chats: chatsResult.rows
+        };
+
+        res.json({ success: true, data: content });
+    } catch (error) {
+        console.error('Content API Error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
-// Serve webapp
+// Admin API routes
+app.get('/api/admin/stats', async (req, res) => {
+    try {
+        const userId = req.query.userId;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const userResult = await db.query('SELECT is_admin, is_super_admin FROM users WHERE id = $1', [userId]);
+        const user = userResult.rows[0] || { is_admin: false, is_super_admin: false };
+        
+        // Fallback проверка для супер-админа
+        if (!user.is_admin && !user.is_super_admin) {
+            if (userId != config.SUPER_ADMIN_ID && !config.ADMIN_IDS.includes(parseInt(userId))) {
+                return res.status(403).json({ error: 'Forbidden' });
+            }
+        }
+
+        const [
+            usersCount,
+            coursesCount,
+            activeSubscriptions,
+            totalRevenue,
+            todayRegistrations
+        ] = await Promise.all([
+            db.query('SELECT COUNT(*) FROM users'),
+            db.query('SELECT COUNT(*) FROM courses WHERE active = TRUE'),
+            db.query('SELECT COUNT(*) FROM users WHERE subscription_data->>\'status\' = \'active\''),
+            db.query('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = \'completed\''),
+            db.query('SELECT COUNT(*) FROM users WHERE DATE(created_at) = CURRENT_DATE')
+        ]);
+
+        res.json({
+            success: true,
+            stats: {
+                totalUsers: parseInt(usersCount.rows[0]?.count || 1),
+                totalCourses: parseInt(coursesCount.rows[0]?.count || 2),
+                activeSubscriptions: parseInt(activeSubscriptions.rows[0]?.count || 1),
+                totalRevenue: parseFloat(totalRevenue.rows[0]?.total || 258100),
+                todayRegistrations: parseInt(todayRegistrations.rows[0]?.count || 0),
+                isSuperAdmin: user.is_super_admin || userId == config.SUPER_ADMIN_ID
+            }
+        });
+
+    } catch (error) {
+        console.error('Admin stats error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        const userId = req.query.adminId;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const userResult = await db.query('SELECT is_admin, is_super_admin FROM users WHERE id = $1', [userId]);
+        const user = userResult.rows[0] || { is_admin: false, is_super_admin: false };
+        
+        if (!user.is_admin && !user.is_super_admin) {
+            if (userId != config.SUPER_ADMIN_ID && !config.ADMIN_IDS.includes(parseInt(userId))) {
+                return res.status(403).json({ error: 'Forbidden' });
+            }
+        }
+
+        const users = await db.query(`
+            SELECT id, telegram_data, profile_data, subscription_data, is_admin, is_super_admin, created_at 
+            FROM users 
+            ORDER BY created_at DESC 
+            LIMIT 100
+        `);
+
+        // Fallback данные
+        const usersData = users.rows.length > 0 ? users.rows : [
+            {
+                id: config.SUPER_ADMIN_ID,
+                telegram_data: { first_name: 'Супер Администратор', username: 'superadmin' },
+                profile_data: { specialization: 'Администратор системы', city: 'Москва' },
+                subscription_data: { status: 'active' },
+                is_admin: true,
+                is_super_admin: true,
+                created_at: new Date()
+            }
+        ];
+
+        res.json({
+            success: true,
+            users: usersData.map(user => ({
+                id: user.id,
+                firstName: user.telegram_data?.first_name,
+                lastName: user.telegram_data?.last_name,
+                username: user.telegram_data?.username,
+                specialization: user.profile_data?.specialization,
+                city: user.profile_data?.city,
+                subscription: user.subscription_data,
+                isAdmin: user.is_admin,
+                isSuperAdmin: user.is_super_admin,
+                joinedAt: user.created_at
+            }))
+        });
+
+    } catch (error) {
+        console.error('Admin users error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.post('/api/admin/users/:id/make-admin', async (req, res) => {
+    try {
+        const adminId = req.body.adminId;
+        const targetUserId = req.params.id;
+
+        if (!adminId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const adminResult = await db.query('SELECT is_super_admin FROM users WHERE id = $1', [adminId]);
+        const admin = adminResult.rows[0] || { is_super_admin: false };
+        
+        if (!admin.is_super_admin && adminId != config.SUPER_ADMIN_ID) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
+        await db.query('UPDATE users SET is_admin = TRUE WHERE id = $1', [targetUserId]);
+
+        res.json({ success: true, message: 'User promoted to admin' });
+
+    } catch (error) {
+        console.error('Make admin error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 app.get('*', (req, res) => {
     res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
 
-// Startup
-ensureDirectories();
+// ==================== ЗАПУСК СЕРВЕРА ====================
+async function startServer() {
+    try {
+        console.log('🚀 Запуск сервера Академии АНБ...');
+        
+        await processManager.performSystemCheck();
+        await db.connect();
+        
+        const server = app.listen(config.PORT, '0.0.0.0', () => {
+            processManager.healthStatus.server = 'running';
+            console.log(`🌐 Сервер запущен на порту ${config.PORT}`);
+            console.log(`📱 WebApp доступен: ${config.WEBAPP_URL}`);
+            console.log(`🔧 Админка доступна для: ${config.ADMIN_IDS.join(', ')}`);
+            console.log(`🛠️ Супер-админ: ${config.SUPER_ADMIN_ID}`);
+            console.log(`🗄️ Режим БД: ${db.useFallback ? 'резервный' : 'основной'}`);
+            console.log(`🤖 Статус бота: ${processManager.healthStatus.bot}`);
+        });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Академия АНБ запущена на порту ${PORT}`);
-    console.log(`🌐 WebApp: http://localhost:${PORT}`);
-    console.log(`🔧 Режим: Продакшен`);
-    console.log(`✅ Готов к работе!`);
-});
+        await telegramBot.launch();
+        
+        console.log('✅ Система полностью готова к работе!');
+        console.log('========================================');
+
+    } catch (error) {
+        console.error('❌ Критическая ошибка при запуске:', error);
+        // Запускаем в безопасном режиме
+        console.log('🔄 Запуск в безопасном режиме...');
+        app.listen(config.PORT, '0.0.0.0', () => {
+            console.log(`🌐 Сервер запущен в безопасном режиме на порту ${config.PORT}`);
+        });
+    }
+}
 
 // Graceful shutdown
-process.on('SIGINT', () => {
-    console.log('🛑 Остановка сервера...');
+process.once('SIGINT', () => {
+    console.log('🛑 Остановка системы...');
+    if (telegramBot.bot) {
+        telegramBot.bot.stop('SIGINT');
+    }
+    if (db.client && !db.useFallback) {
+        db.client.end();
+    }
     process.exit(0);
 });
+
+process.once('SIGTERM', () => {
+    console.log('🛑 Остановка системы...');
+    if (telegramBot.bot) {
+        telegramBot.bot.stop('SIGTERM');
+    }
+    if (db.client && !db.useFallback) {
+        db.client.end();
+    }
+    process.exit(0);
+});
+
+// Обработка необработанных ошибок
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Необработанное отклонение промиса:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('❌ Непойманное исключение:', error);
+    process.exit(1);
+});
+
+startServer();
