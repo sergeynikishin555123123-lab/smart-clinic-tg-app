@@ -454,74 +454,42 @@ const logger = new LoggerSystem();
 // ==================== СИСТЕМА КЭШИРОВАНИЯ ====================
 class CacheSystem {
     constructor() {
-        this.redis = new Redis(config.getRedisConfig());
+        // ВРЕМЕННО ОТКЛЮЧИТЕ REDIS:
+        // this.redis = new Redis(config.getRedisConfig());
+        this.redis = null; // ← ИСПОЛЬЗУЙТЕ ЭТО
         this.memoryCache = new Map();
         this.setupEventListeners();
         this.setupCleanup();
     }
 
     setupEventListeners() {
-        this.redis.on('connect', () => {
-            logger.info('Redis cache connected');
-        });
-
-        this.redis.on('error', (error) => {
-            logger.error('Redis cache error:', error);
-        });
-
-        this.redis.on('close', () => {
-            logger.warn('Redis cache connection closed');
-        });
-
-        this.redis.on('reconnecting', () => {
-            logger.info('Redis cache reconnecting...');
-        });
-    }
-
-    setupCleanup() {
-        // Очистка памяти каждые 5 минут
-        setInterval(() => {
-            const now = Date.now();
-            for (const [key, value] of this.memoryCache.entries()) {
-                if (value.expiry && value.expiry < now) {
-                    this.memoryCache.delete(key);
-                }
-            }
-        }, 5 * 60 * 1000);
-
-        // Очистка Redis по расписанию
-        cron.schedule(config.CACHE_CLEANUP_INTERVAL, async () => {
-            await this.cleanExpired();
-        });
+        // ЗАКОММЕНТИРУЙТЕ Redis listeners:
+        // this.redis.on('connect', () => {
+        //     logger.info('Redis cache connected');
+        // });
+        // ... остальные listeners
+        
+        console.log('⚠️ Redis temporarily disabled');
     }
 
     async get(key) {
-        try {
-            // Сначала пробуем Redis
-            const value = await this.redis.get(key);
-            if (value) {
-                return JSON.parse(value);
-            }
-
-            // Потом память
-            const memoryValue = this.memoryCache.get(key);
-            if (memoryValue && (!memoryValue.expiry || memoryValue.expiry > Date.now())) {
-                return memoryValue.data;
-            }
-
-            return null;
-        } catch (error) {
-            logger.error('Cache get error:', error);
-            return null;
+        // ИСПОЛЬЗУЙТЕ ТОЛЬКО MEMORY CACHE:
+        const memoryValue = this.memoryCache.get(key);
+        if (memoryValue && (!memoryValue.expiry || memoryValue.expiry > Date.now())) {
+            return memoryValue.data;
         }
+        return null;
     }
 
     async set(key, value, ttl = config.CACHE_TTL) {
-        try {
-            const cacheValue = {
-                data: value,
-                expiry: ttl ? Date.now() + ttl * 1000 : null
-            };
+        // ИСПОЛЬЗУЙТЕ ТОЛЬКО MEMORY CACHE:
+        const cacheValue = {
+            data: value,
+            expiry: ttl ? Date.now() + ttl * 1000 : null
+        };
+        this.memoryCache.set(key, cacheValue);
+        return true;
+    }
 
             // Сохраняем в Redis
             if (ttl) {
