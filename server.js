@@ -1,10 +1,10 @@
-// server.js - ПОЛНАЯ ВЕРСИЯ С БАЗОЙ ДАННЫХ И ВСЕМИ ФУНКЦИЯМИ
-import { Telegraf, session } from 'telegraf';
+// server.js - ПОЛНАЯ ВЕРСИЯ С ПОДКЛЮЧЕНИЕМ К БД
+import { Telegraf, session, Markup } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import multer from 'multer';
 import fs from 'fs';
+import os from 'os';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -17,40 +17,50 @@ const config = {
     BOT_TOKEN: process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4',
     PORT: process.env.PORT || 3000,
     WEBAPP_URL: process.env.WEBAPP_URL || 'https://your-domain.com',
-    DATABASE_URL: process.env.DATABASE_URL || 'postgresql://user:pass@localhost:5432/academy',
     ADMIN_IDS: [898508164, 123456789],
     UPLOAD_PATH: join(__dirname, 'uploads'),
     NODE_ENV: process.env.NODE_ENV || 'production'
 };
 
-// ==================== ИНИЦИАЛИЗАЦИЯ ====================
-const app = express();
-const bot = new Telegraf(config.BOT_TOKEN);
-
 // ==================== БАЗА ДАННЫХ ====================
 class Database {
     constructor() {
-        this.pool = null;
+        this.client = null;
         this.connected = false;
     }
 
     async connect() {
         try {
-            const { Pool } = await import('pg');
-            this.pool = new Pool({
-                connectionString: config.DATABASE_URL,
-                ssl: config.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-                max: 20,
-                idleTimeoutMillis: 30000,
+            const { Client } = await import('pg');
+            
+            // Чтение SSL сертификата
+            const certPath = join(os.homedir(), '.cloud-certs', 'root.crt');
+            let sslConfig = { rejectUnauthorized: false };
+            
+            if (fs.existsSync(certPath)) {
+                sslConfig = {
+                    rejectUnauthorized: true,
+                    ca: fs.readFileSync(certPath, 'utf-8')
+                };
+            }
+
+            this.client = new Client({
+                user: 'gen_user',
+                host: 'def46fb02c0eac8fefd6f734.twc1.net',
+                database: 'default_db',
+                password: '5-R;mKGYJ<88?1',
+                port: 5432,
+                ssl: sslConfig,
                 connectionTimeoutMillis: 10000,
+                idleTimeoutMillis: 30000
             });
 
-            await this.pool.query('SELECT 1');
+            await this.client.connect();
             this.connected = true;
             console.log('✅ База данных подключена');
             
             await this.createTables();
-            await this.seedInitialData();
+            console.log('✅ Таблицы созданы/проверены');
             
         } catch (error) {
             console.error('❌ Ошибка подключения к БД:', error);
@@ -64,7 +74,7 @@ class Database {
             `CREATE TABLE IF NOT EXISTS users (
                 id BIGINT PRIMARY KEY,
                 telegram_data JSONB,
-                profile_data JSONB DEFAULT '{}',
+                profile_data JSONB DEFAULT '{"specialization": "", "city": "", "email": ""}',
                 subscription_data JSONB DEFAULT '{"status": "inactive", "type": null, "end_date": null}',
                 progress_data JSONB DEFAULT '{
                     "level": "Понимаю",
@@ -230,28 +240,10 @@ class Database {
 
         for (const tableSQL of tables) {
             try {
-                await this.pool.query(tableSQL);
+                await this.client.query(tableSQL);
             } catch (error) {
                 console.error(`❌ Ошибка создания таблицы:`, error.message);
             }
-        }
-    }
-
-    async seedInitialData() {
-        try {
-            // Добавляем администратора
-            await this.pool.query(`
-                INSERT INTO users (id, telegram_data, is_admin, survey_completed) 
-                VALUES ($1, $2, TRUE, TRUE)
-                ON CONFLICT (id) DO NOTHING
-            `, [config.ADMIN_IDS[0], JSON.stringify({
-                first_name: 'Администратор',
-                username: 'admin'
-            })]);
-
-            console.log('✅ Демо данные добавлены в БД');
-        } catch (error) {
-            console.error('❌ Ошибка добавления демо данных:', error);
         }
     }
 
@@ -260,7 +252,12 @@ class Database {
             console.log('📊 Используем демо-данные (БД не подключена)');
             return { rows: [], rowCount: 0 };
         }
-        return await this.pool.query(text, params);
+        try {
+            return await this.client.query(text, params);
+        } catch (error) {
+            console.error('❌ Ошибка запроса к БД:', error);
+            return { rows: [], rowCount: 0 };
+        }
     }
 }
 
@@ -269,7 +266,8 @@ const db = new Database();
 // ==================== TELEGRAM BOT ====================
 class TelegramBot {
     constructor() {
-        this.bot = bot;
+        this.bot = new Telegraf(config.BOT_TOKEN);
+        this.userSessions = new Map();
         this.init();
     }
 
@@ -282,8 +280,6 @@ class TelegramBot {
         this.bot.command('help', this.handleHelp.bind(this));
         this.bot.command('status', this.handleStatus.bind(this));
         this.bot.on('text', this.handleText.bind(this));
-        
-        // Обработка callback-запросов
         this.bot.on('callback_query', this.handleCallbackQuery.bind(this));
     }
 
@@ -292,38 +288,210 @@ class TelegramBot {
         console.log(`🚀 Пользователь ${userId} запустил бота`);
 
         // Создаем/обновляем пользователя
-        await this.getOrCreateUser(ctx.from);
+        const user = await this.getOrCreateUser(ctx.from);
+        
+        if (!user.survey_completed) {
+            await this.startSurvey(ctx);
+        } else {
+            await this.showMainMenu(ctx);
+        }
+    }
+
+    async startSurvey(ctx) {
+        const userId = ctx.from.id;
+        this.userSessions.set(userId, { step: 'specialization' });
         
         await ctx.reply(
             `👋 Добро пожаловать в *Академию АНБ*, ${ctx.from.first_name}!\n\n` +
-            `🎯 *Ваш персональный помощник в обучении*\n\n` +
-            `Используйте кнопки ниже для навигации:`,
+            `🎯 Давайте познакомимся поближе!\n\n` +
+            `*1. Ваша специализация:*`,
             { 
                 parse_mode: 'Markdown',
                 reply_markup: {
-                    inline_keyboard: [
-                        [{ text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }],
-                        [{ text: '📚 Курсы', callback_data: 'show_courses' }, { text: '🎧 АНБ FM', callback_data: 'show_podcasts' }],
-                        [{ text: '📹 Эфиры', callback_data: 'show_streams' }, { text: '🎯 Видео-шпаргалки', callback_data: 'show_videos' }],
-                        [{ text: '👤 Мой профиль', callback_data: 'show_profile' }, { text: '💬 Поддержка', callback_data: 'show_support' }]
-                    ]
+                    keyboard: [
+                        ['Невролог', 'Реабилитолог'],
+                        ['Мануальный терапевт', 'Физиотерапевт'],
+                        ['Другая специализация']
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: true
                 }
             }
         );
     }
 
-    async handleMenu(ctx) {
+    async handleText(ctx) {
+        const userId = ctx.from.id;
+        const session = this.userSessions.get(userId);
+        const text = ctx.message.text;
+
+        if (session) {
+            await this.handleSurveyStep(ctx, session, text);
+            return;
+        }
+
+        // Основное меню
+        switch(text) {
+            case '📱 Навигация':
+                await ctx.reply('🎯 *Откройте наше приложение для полного доступа:*', {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { 
+                                text: '📱 Открыть Академию АНБ', 
+                                web_app: { url: config.WEBAPP_URL } 
+                            }
+                        ]]
+                    }
+                });
+                break;
+
+            case '🎁 Акции':
+                await ctx.reply('🎁 *Специальные предложения:*\n\nОткройте приложение для просмотра актуальных акций!', {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
+                        ]]
+                    }
+                });
+                break;
+
+            case '❓ Вопрос':
+                await ctx.reply(
+                    '💬 *Задайте вопрос по обучению*\n\n' +
+                    'Напишите ваш вопрос, и мы обязательно поможем!\n\n' +
+                    '📞 Координатор: @academy_anb\n' +
+                    '⏰ Время работы: ПН-ПТ 11:00-19:00',
+                    { parse_mode: 'Markdown' }
+                );
+                break;
+
+            case '🔄 Продлить':
+                await ctx.reply('💳 *Продление подписки*\n\nУправляйте подпиской в приложении:', {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
+                        ]]
+                    }
+                });
+                break;
+
+            case '📢 Анонсы':
+                await ctx.reply('📢 *Ближайшие мероприятия:*\n\nОткройте приложение для просмотра анонсов!', {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
+                        ]]
+                    }
+                });
+                break;
+
+            case '🆘 Поддержка':
+                await ctx.reply(
+                    '🆘 *Служба поддержки Академии АНБ*\n\n' +
+                    '📞 Координатор: @academy_anb\n' +
+                    '⏰ Время работы: ПН-ПТ 11:00-19:00\n' +
+                    '📧 Email: academy@anb.ru\n\n' +
+                    'Мы всегда готовы помочь!',
+                    { parse_mode: 'Markdown' }
+                );
+                break;
+
+            default:
+                await this.showMainMenu(ctx);
+        }
+    }
+
+    async handleSurveyStep(ctx, session, text) {
+        const userId = ctx.from.id;
+        
+        switch(session.step) {
+            case 'specialization':
+                session.specialization = text;
+                session.step = 'city';
+                this.userSessions.set(userId, session);
+                
+                await ctx.reply('*2. Ваш город:*', {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        keyboard: [
+                            ['Москва', 'Санкт-Петербург'],
+                            ['Новосибирск', 'Екатеринбург'],
+                            ['Другой город']
+                        ],
+                        resize_keyboard: true,
+                        one_time_keyboard: true
+                    }
+                });
+                break;
+
+            case 'city':
+                session.city = text;
+                session.step = 'email';
+                this.userSessions.set(userId, session);
+                
+                await ctx.reply('*3. Ваш email:*\n\n(для отправки материалов и уведомлений)', {
+                    parse_mode: 'Markdown',
+                    reply_markup: { remove_keyboard: true }
+                });
+                break;
+
+            case 'email':
+                session.email = text;
+                
+                // Сохраняем данные пользователя
+                await this.updateUserProfile(userId, {
+                    specialization: session.specialization,
+                    city: session.city,
+                    email: session.email
+                });
+                
+                this.userSessions.delete(userId);
+                
+                await ctx.reply(
+                    '✅ *Отлично! Анкета заполнена!*\n\n' +
+                    `🏷️ *Специализация:* ${session.specialization}\n` +
+                    `🏙️ *Город:* ${session.city}\n` +
+                    `📧 *Email:* ${session.email}\n\n` +
+                    'Теперь у вас есть полный доступ к Академии АНБ! 🎓',
+                    { parse_mode: 'Markdown' }
+                );
+                
+                await this.showMainMenu(ctx);
+                break;
+        }
+    }
+
+    async updateUserProfile(userId, profileData) {
+        try {
+            await db.query(
+                'UPDATE users SET profile_data = $1, survey_completed = TRUE WHERE id = $2',
+                [profileData, userId]
+            );
+        } catch (error) {
+            console.error('Ошибка обновления профиля:', error);
+        }
+    }
+
+    async showMainMenu(ctx) {
         await ctx.reply('🎯 *Главное меню Академии АНБ*', {
             parse_mode: 'Markdown',
             reply_markup: {
-                inline_keyboard: [
-                    [{ text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }],
-                    [{ text: '📚 Курсы', callback_data: 'show_courses' }, { text: '🎧 АНБ FM', callback_data: 'show_podcasts' }],
-                    [{ text: '📹 Эфиры', callback_data: 'show_streams' }, { text: '🎯 Видео-шпаргалки', callback_data: 'show_videos' }],
-                    [{ text: '👤 Мой профиль', callback_data: 'show_profile' }, { text: '💬 Поддержка', callback_data: 'show_support' }]
-                ]
+                keyboard: [
+                    ['📱 Навигация', '🎁 Акции'],
+                    ['❓ Вопрос', '🔄 Продлить'],
+                    ['📢 Анонсы', '🆘 Поддержка']
+                ],
+                resize_keyboard: true
             }
         });
+    }
+
+    async handleMenu(ctx) {
+        await this.showMainMenu(ctx);
     }
 
     async handleAdmin(ctx) {
@@ -338,8 +506,8 @@ class TelegramBot {
             reply_markup: {
                 inline_keyboard: [
                     [{ text: '📱 Открыть WebApp', web_app: { url: config.WEBAPP_URL } }],
-                    [{ text: '📊 Статистика', callback_data: 'admin_stats' }, { text: '👥 Пользователи', callback_data: 'admin_users' }],
-                    [{ text: '📝 Управление контентом', callback_data: 'admin_content' }]
+                    [{ text: '📊 Статистика', callback_data: 'admin_stats' }],
+                    [{ text: '👥 Пользователи', callback_data: 'admin_users' }]
                 ]
             }
         });
@@ -348,12 +516,12 @@ class TelegramBot {
     async handleHelp(ctx) {
         await ctx.reply(
             `💬 *Помощь по Академии АНБ*\n\n` +
-            `📱 *Открыть приложение* - полный доступ ко всем функциям\n` +
-            `📚 *Курсы* - системное обучение с сертификатами\n` +
-            `🎧 *АНБ FM* - аудио подкасты и интервью\n` +
-            `📹 *Эфиры* - прямые трансляции и разборы кейсов\n` +
-            `🎯 *Видео-шпаргалки* - короткие обучающие видео\n` +
-            `👤 *Мой профиль* - прогресс и статистика\n\n` +
+            `📱 *Навигация* - полный доступ ко всем функциям\n` +
+            `🎁 *Акции* - специальные предложения\n` +
+            `❓ *Вопрос* - задать вопрос по обучению\n` +
+            `🔄 *Продлить* - управление подпиской\n` +
+            `📢 *Анонсы* - ближайшие мероприятия\n` +
+            `🆘 *Поддержка* - помощь и консультации\n\n` +
             `По всем вопросам: @academy_anb`,
             { parse_mode: 'Markdown' }
         );
@@ -366,7 +534,6 @@ class TelegramBot {
         let statusMessage = `👤 *Ваш статус*\n\n`;
         statusMessage += `🏷️ Имя: ${user.telegram_data.first_name}\n`;
         statusMessage += `🎯 Уровень: ${user.progress_data.level}\n`;
-        statusMessage += `📊 Прогресс: ${this.calculateProgress(user.progress_data)}%\n\n`;
         
         if (subscription.status === 'active') {
             statusMessage += `✅ Подписка активна\n`;
@@ -382,73 +549,13 @@ class TelegramBot {
 
     async handleCallbackQuery(ctx) {
         const data = ctx.callbackQuery.data;
-        console.log('📨 Callback data:', data);
-
+        
         try {
             switch(data) {
-                case 'show_courses':
-                    await ctx.reply('📚 *Курсы Академии*\n\nОткройте приложение для просмотра всех курсов:', {
-                        parse_mode: 'Markdown',
-                        reply_markup: {
-                            inline_keyboard: [[
-                                { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
-                            ]]
-                        }
-                    });
-                    break;
-
-                case 'show_podcasts':
-                    await ctx.reply('🎧 *АНБ FM*\n\nАудио подкасты и интервью доступны в приложении:', {
-                        parse_mode: 'Markdown',
-                        reply_markup: {
-                            inline_keyboard: [[
-                                { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
-                            ]]
-                        }
-                    });
-                    break;
-
-                case 'show_streams':
-                    await ctx.reply('📹 *Эфиры и разборы*\n\nПрямые трансляции и разборы кейсов:', {
-                        parse_mode: 'Markdown',
-                        reply_markup: {
-                            inline_keyboard: [[
-                                { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
-                            ]]
-                        }
-                    });
-                    break;
-
-                case 'show_videos':
-                    await ctx.reply('🎯 *Видео-шпаргалки*\n\nКороткие обучающие видео:', {
-                        parse_mode: 'Markdown',
-                        reply_markup: {
-                            inline_keyboard: [[
-                                { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
-                            ]]
-                        }
-                    });
-                    break;
-
-                case 'show_profile':
-                    await this.showUserProfile(ctx);
-                    break;
-
-                case 'show_support':
-                    await ctx.reply(
-                        `💬 *Служба поддержки Академии АНБ*\n\n` +
-                        `📞 Координатор: @academy_anb\n` +
-                        `⏰ Время работы: ПН-ПТ 11:00-19:00\n` +
-                        `📧 Email: academy@anb.ru\n\n` +
-                        `Мы всегда готовы помочь!`,
-                        { parse_mode: 'Markdown' }
-                    );
-                    break;
-
                 case 'admin_stats':
                     const adminUser = await this.getOrCreateUser(ctx.from);
                     if (adminUser.is_admin) {
-                        await ctx.reply('📊 *Статистика системы*\n\nИспользуйте админ-панель в приложении для просмотра детальной статистики.', {
+                        await ctx.reply('📊 *Статистика системы*\n\nИспользуйте админ-панель в приложении.', {
                             parse_mode: 'Markdown',
                             reply_markup: {
                                 inline_keyboard: [[
@@ -470,69 +577,6 @@ class TelegramBot {
         }
     }
 
-    async handleText(ctx) {
-        const text = ctx.message.text;
-        console.log('📨 Получено сообщение:', text);
-
-        switch(text) {
-            case '/webapp':
-            case 'приложение':
-            case 'открыть':
-                await ctx.reply('🎯 *Откройте наше приложение для полного доступа:*', {
-                    parse_mode: 'Markdown',
-                    reply_markup: {
-                        inline_keyboard: [[
-                            { 
-                                text: '📱 Открыть Академию АНБ', 
-                                web_app: { url: config.WEBAPP_URL } 
-                            }
-                        ]]
-                    }
-                });
-                break;
-
-            default:
-                await ctx.reply('🤔 Используйте команды меню для навигации');
-                await this.showMainMenu(ctx);
-        }
-    }
-
-    async showMainMenu(ctx) {
-        await ctx.reply('🎯 *Главное меню Академии АНБ*', {
-            parse_mode: 'Markdown',
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }],
-                    [{ text: '📚 Курсы', callback_data: 'show_courses' }, { text: '🎧 АНБ FM', callback_data: 'show_podcasts' }],
-                    [{ text: '📹 Эфиры', callback_data: 'show_streams' }, { text: '🎯 Видео-шпаргалки', callback_data: 'show_videos' }],
-                    [{ text: '👤 Мой профиль', callback_data: 'show_profile' }, { text: '💬 Поддержка', callback_data: 'show_support' }]
-                ]
-            }
-        });
-    }
-
-    async showUserProfile(ctx) {
-        const user = await this.getOrCreateUser(ctx.from);
-        const progress = user.progress_data;
-        
-        await ctx.reply(
-            `👤 *Ваш профиль*\n\n` +
-            `🏷️ Имя: ${user.telegram_data.first_name}\n` +
-            `🎯 Уровень: ${progress.level}\n` +
-            `📚 Курсов: ${progress.steps.coursesBought}\n` +
-            `📖 Материалов: ${progress.steps.materialsWatched}\n` +
-            `👥 Мероприятий: ${progress.steps.eventsParticipated}\n\n` +
-            `Продолжайте в том же духе! 💪`,
-            { parse_mode: 'Markdown' }
-        );
-    }
-
-    calculateProgress(progressData) {
-        const steps = progressData.steps;
-        const total = steps.materialsWatched + steps.eventsParticipated + steps.coursesBought;
-        return Math.min(100, Math.round(total / 3));
-    }
-
     async getOrCreateUser(telegramUser) {
         try {
             const result = await db.query(
@@ -552,7 +596,11 @@ class TelegramBot {
                     username: telegramUser.username,
                     language_code: telegramUser.language_code
                 },
-                profile_data: {},
+                profile_data: {
+                    specialization: '',
+                    city: '',
+                    email: ''
+                },
                 subscription_data: {
                     status: 'inactive',
                     type: null,
@@ -605,7 +653,8 @@ class TelegramBot {
                     level: 'Понимаю',
                     steps: { materialsWatched: 0, eventsParticipated: 0, coursesBought: 0 }
                 },
-                subscription_data: { status: 'inactive' }
+                subscription_data: { status: 'inactive' },
+                survey_completed: false
             };
         }
     }
@@ -622,23 +671,23 @@ class TelegramBot {
 
 const telegramBot = new TelegramBot();
 
-// ==================== EXPRESS MIDDLEWARE ====================
+// ==================== EXPRESS SERVER ====================
+const app = express();
+
 app.use(helmet());
 app.use(compression());
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(config.UPLOAD_PATH));
 app.use(express.static(join(__dirname, 'webapp')));
 
 // ==================== API ROUTES ====================
 
-// Главная страница
 app.get('/', (req, res) => {
     res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
 
-// Health check
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'OK', 
@@ -647,7 +696,6 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Получение пользователя
 app.post('/api/user', async (req, res) => {
     try {
         const { id, firstName, lastName, username } = req.body;
@@ -665,7 +713,6 @@ app.post('/api/user', async (req, res) => {
         }
 
         if (!user) {
-            // Демо-пользователь
             user = {
                 id: id || 898508164,
                 telegram_data: {
@@ -736,7 +783,6 @@ app.post('/api/user', async (req, res) => {
     }
 });
 
-// Получение всего контента
 app.get('/api/content', async (req, res) => {
     try {
         let content = {};
@@ -752,14 +798,14 @@ app.get('/api/content', async (req, res) => {
                 promotionsResult,
                 chatsResult
             ] = await Promise.all([
-                db.query('SELECT * FROM courses WHERE is_active = TRUE ORDER BY created_at DESC'),
-                db.query('SELECT * FROM podcasts ORDER BY created_at DESC'),
-                db.query('SELECT * FROM streams ORDER BY created_at DESC'),
-                db.query('SELECT * FROM video_tips ORDER BY created_at DESC'),
-                db.query('SELECT * FROM materials ORDER BY created_at DESC'),
-                db.query('SELECT * FROM events ORDER BY created_at DESC'),
-                db.query('SELECT * FROM promotions WHERE is_active = TRUE ORDER BY created_at DESC'),
-                db.query('SELECT * FROM chats WHERE is_active = TRUE ORDER BY created_at DESC')
+                db.query('SELECT * FROM courses WHERE is_active = TRUE ORDER BY created_at DESC LIMIT 10'),
+                db.query('SELECT * FROM podcasts ORDER BY created_at DESC LIMIT 10'),
+                db.query('SELECT * FROM streams ORDER BY created_at DESC LIMIT 10'),
+                db.query('SELECT * FROM video_tips ORDER BY created_at DESC LIMIT 10'),
+                db.query('SELECT * FROM materials ORDER BY created_at DESC LIMIT 10'),
+                db.query('SELECT * FROM events ORDER BY created_at DESC LIMIT 10'),
+                db.query('SELECT * FROM promotions WHERE is_active = TRUE ORDER BY created_at DESC LIMIT 10'),
+                db.query('SELECT * FROM chats WHERE is_active = TRUE ORDER BY created_at DESC LIMIT 10')
             ]);
 
             content = {
@@ -773,113 +819,7 @@ app.get('/api/content', async (req, res) => {
                 chats: chatsResult.rows
             };
         } else {
-            // Демо-контент
-            content = {
-                courses: [
-                    {
-                        id: 1,
-                        title: 'Мануальные техники в практике',
-                        description: '6 модулей по современным мануальным методикам',
-                        price: 15000,
-                        duration: '12 часов',
-                        modules: 6,
-                        category: 'Мануальные техники',
-                        students_count: 45,
-                        rating: 4.8,
-                        image_url: '/images/course1.jpg'
-                    },
-                    {
-                        id: 2,
-                        title: 'Неврология для практикующих врачей',
-                        description: 'Основы неврологической диагностики',
-                        price: 12000,
-                        duration: '10 часов',
-                        modules: 5,
-                        category: 'Неврология',
-                        students_count: 67,
-                        rating: 4.6,
-                        image_url: '/images/course2.jpg'
-                    }
-                ],
-                podcasts: [
-                    {
-                        id: 1,
-                        title: 'АНБ FM: Современная неврология',
-                        description: 'Обсуждение новых тенденций в неврологии',
-                        duration: '45:20',
-                        category: 'Неврология',
-                        listens: 234,
-                        image_url: '/images/podcast1.jpg'
-                    }
-                ],
-                streams: [
-                    {
-                        id: 1,
-                        title: 'Разбор клинического случая: Болевой синдром',
-                        description: 'Прямой эфир с разбором сложного случая',
-                        duration: '1:30:00',
-                        stream_date: new Date().toISOString(),
-                        is_live: true,
-                        participants: 89,
-                        type: 'analysis',
-                        thumbnail_url: '/images/stream1.jpg'
-                    }
-                ],
-                videos: [
-                    {
-                        id: 1,
-                        title: 'Шпаргалка: Неврологический осмотр',
-                        description: 'Быстрый гайд по основным тестам',
-                        duration: '15:30',
-                        category: 'Неврология',
-                        views: 456,
-                        thumbnail_url: '/images/video1.jpg'
-                    }
-                ],
-                materials: [
-                    {
-                        id: 1,
-                        title: 'МРТ разбор: Рассеянный склероз',
-                        description: 'Детальный разбор МРТ с клиническими случаями',
-                        material_type: 'mri',
-                        category: 'Неврология',
-                        downloads: 123,
-                        image_url: '/images/material1.jpg'
-                    }
-                ],
-                events: [
-                    {
-                        id: 1,
-                        title: 'Конференция: Современная неврология 2024',
-                        description: 'Ежегодная конференция с ведущими специалистами',
-                        event_date: '2024-02-15T10:00:00',
-                        location: 'Москва',
-                        event_type: 'offline',
-                        participants: 45,
-                        image_url: '/images/event1.jpg'
-                    }
-                ],
-                promotions: [
-                    {
-                        id: 1,
-                        title: 'Специальное предложение для новых пользователей',
-                        description: 'Скидка 20% на первую подписку',
-                        discount: 20,
-                        is_active: true,
-                        image_url: '/images/promo1.jpg'
-                    }
-                ],
-                chats: [
-                    {
-                        id: 1,
-                        name: 'Общий чат Академии',
-                        description: 'Основной чат для общения всех участников',
-                        type: 'group',
-                        participants_count: 156,
-                        last_message: 'Добро пожаловать в Академию!'
-                    }
-                ]
-            };
+            content = this.createDemoContent();
         }
 
         res.json({ success: true, data: content });
@@ -889,26 +829,6 @@ app.get('/api/content', async (req, res) => {
     }
 });
 
-// Админ API для управления контентом
-app.post('/api/admin/content', async (req, res) => {
-    try {
-        const { type, data } = req.body;
-        
-        // В реальном приложении здесь будет логика сохранения в БД
-        const newContent = { 
-            id: Date.now(), 
-            ...data, 
-            created_at: new Date().toISOString()
-        };
-
-        res.json({ success: true, content: newContent });
-    } catch (error) {
-        console.error('Add Content Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// SPA поддержка
 app.get('*', (req, res) => {
     res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
@@ -922,7 +842,7 @@ async function startServer() {
         
         app.listen(config.PORT, '0.0.0.0', () => {
             console.log(`🌐 Сервер запущен на порту ${config.PORT}`);
-            console.log(`📱 WebApp доступен по адресу`);
+            console.log(`📱 WebApp доступен`);
             console.log(`🔧 Админка доступна для: ${config.ADMIN_IDS.join(', ')}`);
         });
 
@@ -936,12 +856,11 @@ async function startServer() {
     }
 }
 
-// Graceful shutdown
 process.once('SIGINT', () => {
     console.log('🛑 Остановка системы...');
     telegramBot.bot.stop('SIGINT');
-    if (db.pool) {
-        db.pool.end();
+    if (db.client) {
+        db.client.end();
     }
     process.exit(0);
 });
@@ -949,8 +868,8 @@ process.once('SIGINT', () => {
 process.once('SIGTERM', () => {
     console.log('🛑 Остановка системы...');
     telegramBot.bot.stop('SIGTERM');
-    if (db.pool) {
-        db.pool.end();
+    if (db.client) {
+        db.client.end();
     }
     process.exit(0);
 });
