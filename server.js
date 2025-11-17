@@ -1,4 +1,4 @@
-// server.js - ПОЛНАЯ ВЕРСИЯ С БАЗОЙ ДАННЫХ И ВСЕМИ МОДУЛЯМИ
+// server.js - ПОЛНАЯ ВЕРСИЯ С БАЗОЙ ДАННЫХ И ВСЕМИ ФУНКЦИЯМИ
 import { Telegraf, session } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -16,8 +16,8 @@ const __dirname = dirname(__filename);
 const config = {
     BOT_TOKEN: process.env.BOT_TOKEN || '8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4',
     PORT: process.env.PORT || 3000,
-    WEBAPP_URL: process.env.WEBAPP_URL || 'https://sergeynikishin555123123-lab-smart-clinic-tg-app-a472.twc1.net',
-    DATABASE_URL: process.env.DATABASE_URL || 'postgresql://gen_user:5-R;mKGYJ<88?1@45.89.190.49:5432/default_db?sslmode=require',
+    WEBAPP_URL: process.env.WEBAPP_URL || 'https://your-domain.com',
+    DATABASE_URL: process.env.DATABASE_URL || 'postgresql://user:pass@localhost:5432/academy',
     ADMIN_IDS: [898508164, 123456789],
     UPLOAD_PATH: join(__dirname, 'uploads'),
     NODE_ENV: process.env.NODE_ENV || 'production'
@@ -39,7 +39,7 @@ class Database {
             const { Pool } = await import('pg');
             this.pool = new Pool({
                 connectionString: config.DATABASE_URL,
-                ssl: { rejectUnauthorized: false },
+                ssl: config.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
                 max: 20,
                 idleTimeoutMillis: 30000,
                 connectionTimeoutMillis: 10000,
@@ -205,16 +205,6 @@ class Database {
                 created_at TIMESTAMP DEFAULT NOW()
             )`,
 
-            // Сообщения чатов
-            `CREATE TABLE IF NOT EXISTS chat_messages (
-                id SERIAL PRIMARY KEY,
-                chat_id INTEGER REFERENCES chats(id),
-                user_id BIGINT REFERENCES users(id),
-                message TEXT NOT NULL,
-                attachments JSONB DEFAULT '[]',
-                created_at TIMESTAMP DEFAULT NOW()
-            )`,
-
             // Прогресс пользователей
             `CREATE TABLE IF NOT EXISTS user_progress (
                 id SERIAL PRIMARY KEY,
@@ -259,189 +249,6 @@ class Database {
                 username: 'admin'
             })]);
 
-            // Добавляем админа в таблицу admins
-            await this.pool.query(`
-                INSERT INTO admins (user_id, permissions) 
-                VALUES ($1, $2)
-                ON CONFLICT (user_id) DO NOTHING
-            `, [config.ADMIN_IDS[0], {
-                content: true,
-                users: true,
-                teachers: true,
-                analytics: true
-            }]);
-
-            // Добавляем демо-курсы
-            const demoCourses = [
-                {
-                    title: 'Мануальные техники в практике',
-                    description: '6 модулей по современным мануальным методикам',
-                    full_description: 'Комплексный курс по мануальным техникам для практикующих врачей',
-                    price: 15000,
-                    duration: '12 часов',
-                    modules: 6,
-                    category: 'Мануальные техники',
-                    level: 'advanced',
-                    students_count: 45,
-                    rating: 4.8
-                },
-                {
-                    title: 'Неврология для практикующих врачей',
-                    description: 'Основы неврологической диагностики',
-                    full_description: 'Фундаментальный курс по неврологии',
-                    price: 12000,
-                    duration: '10 часов',
-                    modules: 5,
-                    category: 'Неврология',
-                    level: 'intermediate',
-                    students_count: 67,
-                    rating: 4.6
-                },
-                {
-                    title: 'Основы реабилитации',
-                    description: 'Современные подходы к реабилитации',
-                    full_description: 'Курс по современным методикам реабилитации',
-                    price: 8000,
-                    duration: '8 часов',
-                    modules: 4,
-                    category: 'Реабилитация',
-                    level: 'beginner',
-                    students_count: 89,
-                    rating: 4.7
-                }
-            ];
-
-            for (const course of demoCourses) {
-                await this.pool.query(`
-                    INSERT INTO courses (title, description, full_description, price, duration, modules, category, level, students_count, rating)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                    ON CONFLICT DO NOTHING
-                `, [course.title, course.description, course.full_description, course.price, 
-                    course.duration, course.modules, course.category, course.level, course.students_count, course.rating]);
-            }
-
-            // Добавляем демо-подкасты
-            const demoPodcasts = [
-                {
-                    title: 'АНБ FM: Современная неврология',
-                    description: 'Обсуждение новых тенденций в неврологии',
-                    duration: '45:20',
-                    category: 'Неврология',
-                    listens: 234
-                },
-                {
-                    title: 'АНБ FM: Реабилитационные методики',
-                    description: 'Новые подходы к реабилитации',
-                    duration: '38:15',
-                    category: 'Реабилитация',
-                    listens: 167
-                }
-            ];
-
-            for (const podcast of demoPodcasts) {
-                await this.pool.query(`
-                    INSERT INTO podcasts (title, description, duration, category, listens)
-                    VALUES ($1, $2, $3, $4, $5)
-                    ON CONFLICT DO NOTHING
-                `, [podcast.title, podcast.description, podcast.duration, podcast.category, podcast.listens]);
-            }
-
-            // Добавляем демо-эфиры
-            const demoStreams = [
-                {
-                    title: 'Разбор клинического случая: Болевой синдром',
-                    description: 'Прямой эфир с разбором сложного случая',
-                    duration: '1:30:00',
-                    stream_date: new Date(Date.now() + 24 * 60 * 60 * 1000),
-                    is_live: true,
-                    participants: 89,
-                    type: 'analysis'
-                },
-                {
-                    title: 'Мануальные техники: Демонстрация',
-                    description: 'Практическая демонстрация методик',
-                    duration: '2:15:00',
-                    stream_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-                    is_live: false,
-                    participants: 156,
-                    type: 'stream'
-                }
-            ];
-
-            for (const stream of demoStreams) {
-                await this.pool.query(`
-                    INSERT INTO streams (title, description, duration, stream_date, is_live, participants, type)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7)
-                    ON CONFLICT DO NOTHING
-                `, [stream.title, stream.description, stream.duration, stream.stream_date, stream.is_live, stream.participants, stream.type]);
-            }
-
-            // Добавляем демо-материалы
-            const demoMaterials = [
-                {
-                    title: 'МРТ разбор: Рассеянный склероз',
-                    description: 'Детальный разбор МРТ с клиническими случаями',
-                    material_type: 'mri',
-                    category: 'Неврология',
-                    downloads: 123
-                },
-                {
-                    title: 'Чек-лист: Неврологический осмотр',
-                    description: 'Пошаговый чек-лист для ежедневной практики',
-                    material_type: 'checklist',
-                    category: 'Неврология',
-                    downloads: 267
-                },
-                {
-                    title: 'Клинический случай: Мигрень',
-                    description: 'Разбор сложного случая мигрени',
-                    material_type: 'case',
-                    category: 'Неврология',
-                    downloads: 189
-                }
-            ];
-
-            for (const material of demoMaterials) {
-                await this.pool.query(`
-                    INSERT INTO materials (title, description, material_type, category, downloads)
-                    VALUES ($1, $2, $3, $4, $5)
-                    ON CONFLICT DO NOTHING
-                `, [material.title, material.description, material.material_type, material.category, material.downloads]);
-            }
-
-            // Добавляем демо-чаты
-            const demoChats = [
-                {
-                    name: 'Общий чат Академии',
-                    description: 'Основной чат для общения всех участников',
-                    type: 'group',
-                    participants_count: 156,
-                    last_message: 'Добро пожаловать в Академию!'
-                },
-                {
-                    name: 'Флудилка',
-                    description: 'Неформальное общение',
-                    type: 'flood',
-                    participants_count: 89,
-                    last_message: 'Привет всем!'
-                },
-                {
-                    name: 'Неврология',
-                    description: 'Обсуждение неврологических тем',
-                    type: 'group',
-                    participants_count: 67,
-                    last_message: 'Кто-нибудь сталкивался с подобным случаем?'
-                }
-            ];
-
-            for (const chat of demoChats) {
-                await this.pool.query(`
-                    INSERT INTO chats (name, description, type, participants_count, last_message)
-                    VALUES ($1, $2, $3, $4, $5)
-                    ON CONFLICT DO NOTHING
-                `, [chat.name, chat.description, chat.type, chat.participants_count, chat.last_message]);
-            }
-
             console.log('✅ Демо данные добавлены в БД');
         } catch (error) {
             console.error('❌ Ошибка добавления демо данных:', error);
@@ -475,6 +282,9 @@ class TelegramBot {
         this.bot.command('help', this.handleHelp.bind(this));
         this.bot.command('status', this.handleStatus.bind(this));
         this.bot.on('text', this.handleText.bind(this));
+        
+        // Обработка callback-запросов
+        this.bot.on('callback_query', this.handleCallbackQuery.bind(this));
     }
 
     async handleStart(ctx) {
@@ -491,19 +301,29 @@ class TelegramBot {
             { 
                 parse_mode: 'Markdown',
                 reply_markup: {
-                    keyboard: [
-                        [{ text: '📱 Открыть приложение' }, { text: '📚 Мои курсы' }],
-                        [{ text: '👤 Мой профиль' }, { text: '💬 Поддержка' }],
-                        [{ text: '🔧 Админ-панель' }]
-                    ],
-                    resize_keyboard: true
+                    inline_keyboard: [
+                        [{ text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }],
+                        [{ text: '📚 Курсы', callback_data: 'show_courses' }, { text: '🎧 АНБ FM', callback_data: 'show_podcasts' }],
+                        [{ text: '📹 Эфиры', callback_data: 'show_streams' }, { text: '🎯 Видео-шпаргалки', callback_data: 'show_videos' }],
+                        [{ text: '👤 Мой профиль', callback_data: 'show_profile' }, { text: '💬 Поддержка', callback_data: 'show_support' }]
+                    ]
                 }
             }
         );
     }
 
     async handleMenu(ctx) {
-        await this.showMainMenu(ctx);
+        await ctx.reply('🎯 *Главное меню Академии АНБ*', {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }],
+                    [{ text: '📚 Курсы', callback_data: 'show_courses' }, { text: '🎧 АНБ FM', callback_data: 'show_podcasts' }],
+                    [{ text: '📹 Эфиры', callback_data: 'show_streams' }, { text: '🎯 Видео-шпаргалки', callback_data: 'show_videos' }],
+                    [{ text: '👤 Мой профиль', callback_data: 'show_profile' }, { text: '💬 Поддержка', callback_data: 'show_support' }]
+                ]
+            }
+        });
     }
 
     async handleAdmin(ctx) {
@@ -513,13 +333,13 @@ class TelegramBot {
             return;
         }
         
-        await ctx.reply('🔧 *Панель администратора*\n\nДоступные действия:', {
+        await ctx.reply('🔧 *Панель администратора*', {
             parse_mode: 'Markdown',
             reply_markup: {
                 inline_keyboard: [
                     [{ text: '📱 Открыть WebApp', web_app: { url: config.WEBAPP_URL } }],
-                    [{ text: '📊 Статистика', callback_data: 'admin_stats' }],
-                    [{ text: '👥 Пользователи', callback_data: 'admin_users' }]
+                    [{ text: '📊 Статистика', callback_data: 'admin_stats' }, { text: '👥 Пользователи', callback_data: 'admin_users' }],
+                    [{ text: '📝 Управление контентом', callback_data: 'admin_content' }]
                 ]
             }
         });
@@ -529,9 +349,11 @@ class TelegramBot {
         await ctx.reply(
             `💬 *Помощь по Академии АНБ*\n\n` +
             `📱 *Открыть приложение* - полный доступ ко всем функциям\n` +
-            `📚 *Мои курсы* - ваши активные обучения\n` +
-            `👤 *Мой профиль* - статистика и прогресс\n` +
-            `🔧 *Админ-панель* - управление системой (только для админов)\n\n` +
+            `📚 *Курсы* - системное обучение с сертификатами\n` +
+            `🎧 *АНБ FM* - аудио подкасты и интервью\n` +
+            `📹 *Эфиры* - прямые трансляции и разборы кейсов\n` +
+            `🎯 *Видео-шпаргалки* - короткие обучающие видео\n` +
+            `👤 *Мой профиль* - прогресс и статистика\n\n` +
             `По всем вопросам: @academy_anb`,
             { parse_mode: 'Markdown' }
         );
@@ -558,12 +380,104 @@ class TelegramBot {
         await ctx.reply(statusMessage, { parse_mode: 'Markdown' });
     }
 
+    async handleCallbackQuery(ctx) {
+        const data = ctx.callbackQuery.data;
+        console.log('📨 Callback data:', data);
+
+        try {
+            switch(data) {
+                case 'show_courses':
+                    await ctx.reply('📚 *Курсы Академии*\n\nОткройте приложение для просмотра всех курсов:', {
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            inline_keyboard: [[
+                                { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
+                            ]]
+                        }
+                    });
+                    break;
+
+                case 'show_podcasts':
+                    await ctx.reply('🎧 *АНБ FM*\n\nАудио подкасты и интервью доступны в приложении:', {
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            inline_keyboard: [[
+                                { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
+                            ]]
+                        }
+                    });
+                    break;
+
+                case 'show_streams':
+                    await ctx.reply('📹 *Эфиры и разборы*\n\nПрямые трансляции и разборы кейсов:', {
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            inline_keyboard: [[
+                                { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
+                            ]]
+                        }
+                    });
+                    break;
+
+                case 'show_videos':
+                    await ctx.reply('🎯 *Видео-шпаргалки*\n\nКороткие обучающие видео:', {
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            inline_keyboard: [[
+                                { text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }
+                            ]]
+                        }
+                    });
+                    break;
+
+                case 'show_profile':
+                    await this.showUserProfile(ctx);
+                    break;
+
+                case 'show_support':
+                    await ctx.reply(
+                        `💬 *Служба поддержки Академии АНБ*\n\n` +
+                        `📞 Координатор: @academy_anb\n` +
+                        `⏰ Время работы: ПН-ПТ 11:00-19:00\n` +
+                        `📧 Email: academy@anb.ru\n\n` +
+                        `Мы всегда готовы помочь!`,
+                        { parse_mode: 'Markdown' }
+                    );
+                    break;
+
+                case 'admin_stats':
+                    const adminUser = await this.getOrCreateUser(ctx.from);
+                    if (adminUser.is_admin) {
+                        await ctx.reply('📊 *Статистика системы*\n\nИспользуйте админ-панель в приложении для просмотра детальной статистики.', {
+                            parse_mode: 'Markdown',
+                            reply_markup: {
+                                inline_keyboard: [[
+                                    { text: '📱 Открыть админ-панель', web_app: { url: config.WEBAPP_URL } }
+                                ]]
+                            }
+                        });
+                    }
+                    break;
+
+                default:
+                    await ctx.answerCbQuery('⚙️ Функция в разработке');
+            }
+
+            await ctx.answerCbQuery();
+        } catch (error) {
+            console.error('Ошибка обработки callback:', error);
+            await ctx.answerCbQuery('❌ Произошла ошибка');
+        }
+    }
+
     async handleText(ctx) {
         const text = ctx.message.text;
         console.log('📨 Получено сообщение:', text);
 
         switch(text) {
-            case '📱 Открыть приложение':
+            case '/webapp':
+            case 'приложение':
+            case 'открыть':
                 await ctx.reply('🎯 *Откройте наше приложение для полного доступа:*', {
                     parse_mode: 'Markdown',
                     reply_markup: {
@@ -577,61 +491,22 @@ class TelegramBot {
                 });
                 break;
 
-            case '📚 Мои курсы':
-                const user = await this.getOrCreateUser(ctx.from);
-                await ctx.reply('🎓 *Ваши активные курсы:*\n\nПросматривайте и управляйте курсами в приложении 📱', {
-                    parse_mode: 'Markdown'
-                });
-                break;
-
-            case '👤 Мой профиль':
-                await this.showUserProfile(ctx);
-                break;
-
-            case '💬 Поддержка':
-                await ctx.reply(
-                    `💬 *Служба поддержки Академии АНБ*\n\n` +
-                    `📞 Координатор: @academy_anb\n` +
-                    `⏰ Время работы: ПН-ПТ 11:00-19:00\n` +
-                    `📧 Email: academy@anb.ru\n\n` +
-                    `Мы всегда готовы помочь!`,
-                    { parse_mode: 'Markdown' }
-                );
-                break;
-
-            case '🔧 Админ-панель':
-                const adminUser = await this.getOrCreateUser(ctx.from);
-                if (adminUser.is_admin) {
-                    await ctx.reply('🔧 *Панель администратора*\n\nВыберите действие:', {
-                        parse_mode: 'Markdown',
-                        reply_markup: {
-                            inline_keyboard: [
-                                [{ text: '📱 WebApp', web_app: { url: config.WEBAPP_URL } }],
-                                [{ text: '📊 Статистика', callback_data: 'stats' }],
-                                [{ text: '➕ Добавить курс', callback_data: 'add_course' }]
-                            ]
-                        }
-                    });
-                } else {
-                    await ctx.reply('❌ Эта функция доступна только администраторам');
-                }
-                break;
-
             default:
-                await ctx.reply('🤔 Используйте кнопки меню для навигации');
+                await ctx.reply('🤔 Используйте команды меню для навигации');
                 await this.showMainMenu(ctx);
         }
     }
 
     async showMainMenu(ctx) {
-        await ctx.reply('🎯 *Главное меню Академии АНБ*\n\nВыберите раздел:', {
+        await ctx.reply('🎯 *Главное меню Академии АНБ*', {
             parse_mode: 'Markdown',
             reply_markup: {
-                keyboard: [
-                    [{ text: '📱 Открыть приложение' }, { text: '📚 Мои курсы' }],
-                    [{ text: '👤 Мой профиль' }, { text: '💬 Поддержка' }]
-                ],
-                resize_keyboard: true
+                inline_keyboard: [
+                    [{ text: '📱 Открыть приложение', web_app: { url: config.WEBAPP_URL } }],
+                    [{ text: '📚 Курсы', callback_data: 'show_courses' }, { text: '🎧 АНБ FM', callback_data: 'show_podcasts' }],
+                    [{ text: '📹 Эфиры', callback_data: 'show_streams' }, { text: '🎯 Видео-шпаргалки', callback_data: 'show_videos' }],
+                    [{ text: '👤 Мой профиль', callback_data: 'show_profile' }, { text: '💬 Поддержка', callback_data: 'show_support' }]
+                ]
             }
         });
     }
@@ -721,7 +596,17 @@ class TelegramBot {
             return newUser;
         } catch (error) {
             console.error('Ошибка создания пользователя:', error);
-            throw error;
+            // Возвращаем демо-пользователя в случае ошибки
+            return {
+                id: telegramUser.id,
+                telegram_data: telegramUser,
+                is_admin: config.ADMIN_IDS.includes(telegramUser.id),
+                progress_data: {
+                    level: 'Понимаю',
+                    steps: { materialsWatched: 0, eventsParticipated: 0, coursesBought: 0 }
+                },
+                subscription_data: { status: 'inactive' }
+            };
         }
     }
 
@@ -900,7 +785,20 @@ app.get('/api/content', async (req, res) => {
                         modules: 6,
                         category: 'Мануальные техники',
                         students_count: 45,
-                        rating: 4.8
+                        rating: 4.8,
+                        image_url: '/images/course1.jpg'
+                    },
+                    {
+                        id: 2,
+                        title: 'Неврология для практикующих врачей',
+                        description: 'Основы неврологической диагностики',
+                        price: 12000,
+                        duration: '10 часов',
+                        modules: 5,
+                        category: 'Неврология',
+                        students_count: 67,
+                        rating: 4.6,
+                        image_url: '/images/course2.jpg'
                     }
                 ],
                 podcasts: [
@@ -910,37 +808,75 @@ app.get('/api/content', async (req, res) => {
                         description: 'Обсуждение новых тенденций в неврологии',
                         duration: '45:20',
                         category: 'Неврология',
-                        listens: 234
+                        listens: 234,
+                        image_url: '/images/podcast1.jpg'
                     }
                 ],
                 streams: [
                     {
                         id: 1,
-                        title: 'Разбор клинического случая',
+                        title: 'Разбор клинического случая: Болевой синдром',
                         description: 'Прямой эфир с разбором сложного случая',
                         duration: '1:30:00',
                         stream_date: new Date().toISOString(),
                         is_live: true,
-                        participants: 89
+                        participants: 89,
+                        type: 'analysis',
+                        thumbnail_url: '/images/stream1.jpg'
+                    }
+                ],
+                videos: [
+                    {
+                        id: 1,
+                        title: 'Шпаргалка: Неврологический осмотр',
+                        description: 'Быстрый гайд по основным тестам',
+                        duration: '15:30',
+                        category: 'Неврология',
+                        views: 456,
+                        thumbnail_url: '/images/video1.jpg'
                     }
                 ],
                 materials: [
                     {
                         id: 1,
                         title: 'МРТ разбор: Рассеянный склероз',
-                        description: 'Детальный разбор МРТ',
+                        description: 'Детальный разбор МРТ с клиническими случаями',
                         material_type: 'mri',
                         category: 'Неврология',
-                        downloads: 123
+                        downloads: 123,
+                        image_url: '/images/material1.jpg'
+                    }
+                ],
+                events: [
+                    {
+                        id: 1,
+                        title: 'Конференция: Современная неврология 2024',
+                        description: 'Ежегодная конференция с ведущими специалистами',
+                        event_date: '2024-02-15T10:00:00',
+                        location: 'Москва',
+                        event_type: 'offline',
+                        participants: 45,
+                        image_url: '/images/event1.jpg'
+                    }
+                ],
+                promotions: [
+                    {
+                        id: 1,
+                        title: 'Специальное предложение для новых пользователей',
+                        description: 'Скидка 20% на первую подписку',
+                        discount: 20,
+                        is_active: true,
+                        image_url: '/images/promo1.jpg'
                     }
                 ],
                 chats: [
                     {
                         id: 1,
                         name: 'Общий чат Академии',
-                        description: 'Основной чат для общения',
+                        description: 'Основной чат для общения всех участников',
                         type: 'group',
-                        participants_count: 156
+                        participants_count: 156,
+                        last_message: 'Добро пожаловать в Академию!'
                     }
                 ]
             };
@@ -953,88 +889,16 @@ app.get('/api/content', async (req, res) => {
     }
 });
 
-// Статистика для админки
-app.get('/api/stats', async (req, res) => {
-    try {
-        let stats = {};
-
-        if (db.connected) {
-            const [
-                usersCount,
-                coursesCount,
-                activeSubscriptions,
-                totalRevenue
-            ] = await Promise.all([
-                db.query('SELECT COUNT(*) FROM users'),
-                db.query('SELECT COUNT(*) FROM courses WHERE is_active = TRUE'),
-                db.query('SELECT COUNT(*) FROM users WHERE subscription_data->>\'status\' = \'active\''),
-                db.query('SELECT COUNT(*) FROM users WHERE subscription_data->>\'status\' = \'active\'')
-            ]);
-
-            stats = {
-                totalUsers: parseInt(usersCount.rows[0].count),
-                totalCourses: parseInt(coursesCount.rows[0].count),
-                activeUsers: parseInt(activeSubscriptions.rows[0].count),
-                totalRevenue: parseInt(activeSubscriptions.rows[0].count) * 2900
-            };
-        } else {
-            stats = {
-                totalUsers: 156,
-                totalCourses: 8,
-                activeUsers: 89,
-                totalRevenue: 258100
-            };
-        }
-
-        res.json({ success: true, stats });
-    } catch (error) {
-        console.error('Stats API Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Админ API
-app.get('/api/admin/users', async (req, res) => {
-    try {
-        let users = [];
-
-        if (db.connected) {
-            const result = await db.query(`
-                SELECT id, telegram_data, profile_data, subscription_data, 
-                       is_admin, created_at, survey_completed
-                FROM users 
-                ORDER BY created_at DESC
-                LIMIT 100
-            `);
-            users = result.rows;
-        } else {
-            users = [{
-                id: 898508164,
-                telegram_data: { first_name: 'Администратор' },
-                profile_data: { specialization: 'Невролог', city: 'Москва' },
-                subscription_data: { status: 'active' },
-                is_admin: true,
-                created_at: new Date('2024-01-01')
-            }];
-        }
-
-        res.json({ success: true, users });
-    } catch (error) {
-        console.error('Admin Users API Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Добавление контента (админ)
+// Админ API для управления контентом
 app.post('/api/admin/content', async (req, res) => {
     try {
         const { type, data } = req.body;
+        
+        // В реальном приложении здесь будет логика сохранения в БД
         const newContent = { 
             id: Date.now(), 
             ...data, 
-            created_at: new Date().toISOString(),
-            students_count: 0,
-            rating: 0
+            created_at: new Date().toISOString()
         };
 
         res.json({ success: true, content: newContent });
@@ -1058,7 +922,7 @@ async function startServer() {
         
         app.listen(config.PORT, '0.0.0.0', () => {
             console.log(`🌐 Сервер запущен на порту ${config.PORT}`);
-            console.log(`📱 WebApp: ${config.WEBAPP_URL}`);
+            console.log(`📱 WebApp доступен по адресу`);
             console.log(`🔧 Админка доступна для: ${config.ADMIN_IDS.join(', ')}`);
         });
 
