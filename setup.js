@@ -1,4 +1,4 @@
-// setup.js
+// setup.js - упрощенная версия
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs/promises';
@@ -13,9 +13,7 @@ async function setup() {
     try {
         // Создаем директории
         const dirs = [
-            'uploads/courses', 'uploads/podcasts', 'uploads/streams',
-            'uploads/videos', 'uploads/materials', 'uploads/avatars', 
-            'uploads/documents', 'logs', 'backups', 'temp', 'webapp/assets'
+            'uploads', 'logs', 'backups', 'temp', 'webapp/assets'
         ];
         
         for (const dir of dirs) {
@@ -27,14 +25,11 @@ async function setup() {
         const envPath = join(__dirname, '.env');
         if (!existsSync(envPath)) {
             const envContent = `BOT_TOKEN=8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4
-DATABASE_URL=postgresql://gen_user:5-R;mKGYJ<88?1@45.89.190.49:5432/default_db?sslmode=require
-WEBAPP_URL=https://sergeynikishin555123123-lab-smart-clinic-tg-app-f84f.twc1.net
+WEBAPP_URL=https://anb-academy.timeweb.ru
 PORT=3000
 NODE_ENV=production
 ADMIN_IDS=898508164
-JWT_SECRET=anb-academy-super-secret-jwt-key-2024
-UPLOAD_PATH=./uploads
-MAX_FILE_SIZE=52428800`;
+JWT_SECRET=anb-academy-super-secret-jwt-key-2024`;
             
             await fs.writeFile(envPath, envContent);
             console.log('✓ Created: .env');
