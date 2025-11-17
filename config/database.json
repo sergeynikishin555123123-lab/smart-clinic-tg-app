@@ -1,0 +1,40 @@
+{
+  "postgresql": {
+    "host": "def46fb02c0eac8fefd6f734.twc1.net",
+    "port": 5432,
+    "database": "default_db",
+    "username": "gen_user",
+    "password": "5-R;mKGYJ<88?1",
+    "ssl": {
+      "rejectUnauthorized": false,
+      "require": true
+    },
+    "pool": {
+      "max": 20,
+      "min": 5,
+      "acquire": 30000,
+      "idle": 10000,
+      "evict": 1000
+    },
+    "retry": {
+      "max": 3,
+      "timeout": 5000
+    }
+  },
+  "backup": {
+    "enabled": true,
+    "schedule": "0 2 * * *",
+    "retention_days": 30,
+    "auto_cleanup": true
+  },
+  "performance": {
+    "slow_query_threshold": 1000,
+    "log_slow_queries": true,
+    "query_timeout": 30000
+  },
+  "health_check": {
+    "enabled": true,
+    "interval": 30000,
+    "timeout": 5000
+  }
+}
