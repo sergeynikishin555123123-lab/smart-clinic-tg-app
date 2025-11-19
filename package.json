@@ -1,66 +1,23 @@
 {
-  "name": "smart-clinic-academy",
+  "name": "anb-academy-minimal",
   "version": "2.0.0",
   "type": "module",
-  "description": "Академия АНБ - современная образовательная платформа для врачей",
+  "description": "Академия АНБ - минимальная версия для деплоя",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "setup": "node setup.js",
-    "build": "node setup.js"
+    "setup": "node setup.js"
   },
-  "keywords": [
-    "academy",
-    "education",
-    "medical",
-    "telegram",
-    "bot"
-  ],
-  "author": {
-    "name": "АНБ Академия",
-    "email": "admin@anb-academy.ru",
-    "url": "https://anb-academy.ru"
-  },
-  "license": "MIT",
   "dependencies": {
     "telegraf": "^4.16.3",
     "express": "^4.18.2",
     "pg": "^8.11.3",
     "cors": "^2.8.5",
     "helmet": "^7.1.0",
-    "compression": "^1.7.4",
-    "multer": "^1.4.5",
-    "sharp": "^0.33.0",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "uuid": "^9.0.1",
-    "axios": "^1.6.2",
-    "dotenv": "^16.3.1",
-    "moment": "^2.29.4",
-    "lodash": "^4.17.21",
-    "joi": "^17.11.0",
-    "express-rate-limit": "^7.1.5",
-    "morgan": "^1.10.0",
-    "winston": "^3.11.0",
-    "node-cron": "^3.0.3",
-    "nodemailer": "^6.9.7",
-    "qrcode": "^1.5.3",
-    "socket.io": "^4.7.4",
-    "redis": "^4.6.10",
-    "ioredis": "^5.3.2"
+    "compression": "^1.7.4"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/anb-academy/smart-clinic.git"
-  },
-  "bugs": {
-    "url": "https://github.com/anb-academy/smart-clinic/issues"
-  },
-  "homepage": "https://anb-academy.ru",
-  "private": true
+    "node": ">=18.0.0"
+  }
 }
