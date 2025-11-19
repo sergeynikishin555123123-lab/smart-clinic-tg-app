@@ -1,21 +1,18 @@
-build:
-  - npm install
-  - mkdir -p webapp/assets uploads logs
-  - node -e "
-      const fs = require('fs');
-      const images = ['course-manual.svg', 'course-diagnosis.svg'];
-      images.forEach(img => {
-        const name = img.replace('.svg', '').replace(/-/g, ' ');
-        const svg = \`<svg width='400' height='300' xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='#3b82f6'/><text x='50%' y='50%' text-anchor='middle' dy='.3em' font-family='Arial' font-size='16' fill='white'>\${name}</text></svg>\`;
-        fs.writeFileSync(\`webapp/assets/\${img}\`, svg);
-      });
-      console.log('✅ Placeholder images created');
-    "
+# timeweb.yml
+name: anb-academy
+platform: nodejs
+nodeVersion: 18
 
-start: npm start
+build:
+  command: |
+    npm install --production --no-optional --legacy-peer-deps --no-audit --no-fund
+    node setup.js
+
+start:
+  command: node server.js
 
 environment:
   NODE_ENV: production
-  PORT: 3000
-
-build_timeout: 300
+  NPM_CONFIG_LEGACY_PEER_DEPS: true
+  NPM_CONFIG_AUDIT: false
+  NPM_CONFIG_FUND: false
