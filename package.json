@@ -1,13 +1,15 @@
 {
-  "name": "anb-academy-minimal",
+  "name": "smart-clinic-academy",
   "version": "2.0.0",
   "type": "module",
-  "description": "Академия АНБ - минимальная версия для деплоя",
+  "description": "Академия АНБ - современная образовательная платформа для врачей",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "setup": "node setup.js"
+    "setup": "node setup.js",
+    "build": "echo 'No build needed'",
+    "postinstall": "echo 'Dependencies installed successfully'"
   },
   "dependencies": {
     "telegraf": "^4.16.3",
