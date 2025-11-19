@@ -27,10 +27,11 @@ const logger = {
     error: (message, error) => console.error(`[ERROR] ${message}`, error)
 };
 
-// База данных
+// В секции Database class добавляем улучшенную обработку ошибок
 class Database {
     constructor() {
         this.client = null;
+        this.isConnected = false;
     }
 
     async connect() {
@@ -38,9 +39,13 @@ class Database {
             const { Client } = await import('pg');
             this.client = new Client({
                 connectionString: config.DATABASE_URL,
-                ssl: { rejectUnauthorized: false }
+                ssl: { rejectUnauthorized: false },
+                connectionTimeoutMillis: 10000,
+                query_timeout: 10000
             });
+            
             await this.client.connect();
+            this.isConnected = true;
             logger.info('✅ PostgreSQL подключена');
             
             await this.createTables();
@@ -48,9 +53,25 @@ class Database {
             
         } catch (error) {
             logger.error('❌ Ошибка подключения к БД:', error);
-            // Продолжаем работу даже без БД
+            this.isConnected = false;
+            // Продолжаем работу в режиме без БД
+            logger.info('🔄 Работаем в режиме без базы данных');
         }
     }
+
+    async query(sql, params) {
+        if (!this.isConnected || !this.client) {
+            throw new Error('Database not connected');
+        }
+        
+        try {
+            return await this.client.query(sql, params);
+        } catch (error) {
+            logger.error('Database query error:', error);
+            throw error;
+        }
+    }
+}
 
     async createTables() {
         const tables = [
