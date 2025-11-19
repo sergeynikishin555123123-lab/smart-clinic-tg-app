@@ -1,14 +1,12 @@
-node_modules
-npm-debug.log
 .git
 .gitignore
 README.md
+*.log
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 .env
 .nyc_output
 coverage
-.DS_Store
-*.log
-logs
-backups
-uploads
-temp
+. DS_Store
