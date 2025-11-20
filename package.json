@@ -1,24 +1,24 @@
 {
   "name": "anb-academy",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "type": "module",
-  "description": "Академия АНБ - платформа для медицинского образования",
+  "description": "Академия АНБ - платформа для медицинского образования с админ-панелью",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
     "build": "echo 'No build step required'",
-    "deploy": "git push && echo 'Deploy to TimeWeb via Git'"
+    "deploy": "git push && echo 'Deploy to TimeWeb via Git'",
+    "db:reset": "node -e \"import { Pool } from 'pg'; const pool = new Pool({ connectionString: process.env.DATABASE_URL }); Promise.all(['users', 'content_courses', 'content_podcasts', 'content_streams', 'content_videos', 'content_materials', 'content_events', 'user_favorites', 'admin_actions'].map(table => pool.query('DROP TABLE IF EXISTS ' + table + ' CASCADE'))).then(() => { console.log('✅ База данных очищена'); process.exit(0); }).catch(console.error);\""
   },
   "dependencies": {
     "express": "^4.18.2",
-    "telegraf": "^4.16.3",
     "pg": "^8.11.3",
     "cors": "^2.8.5",
     "helmet": "^7.1.0",
     "compression": "^1.7.4",
     "dotenv": "^16.3.1",
-    "socket.io": "^4.7.5"
+    "multer": "^1.4.5"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -27,7 +27,8 @@
     "medical",
     "education",
     "telegram",
-    "webapp"
+    "webapp",
+    "admin"
   ],
   "author": "Академия АНБ",
   "license": "MIT"
