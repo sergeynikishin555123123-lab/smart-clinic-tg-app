@@ -8,7 +8,6 @@
     
     <!-- Telegram WebApp с резервной загрузкой -->
     <script>
-        // Резервная загрузка Telegram WebApp если основная не сработала
         if (!window.Telegram) {
             window.Telegram = {
                 WebApp: {
@@ -46,7 +45,6 @@
     <link rel="stylesheet" href="/webapp/style.css">
     
     <style>
-        /* Критически важные стили для предотвращения белого экрана */
         * {
             margin: 0;
             padding: 0;
@@ -145,7 +143,7 @@
                 <div class="nav-brand">
                     <span class="brand-icon">🎓</span>
                     <span class="brand-text">Академия АНБ</span>
-                    <sup class="version">v2.0</sup>
+                    <sup class="version">v2.1</sup>
                 </div>
                 
                 <div class="nav-menu">
@@ -159,9 +157,14 @@
                 </div>
                 
                 <div class="nav-actions">
-                    <button class="nav-action-btn" data-page="favorites" title="Избранное">
-                        <span class="action-icon">❤️</span>
-                        <span class="action-badge" id="favoritesCount">0</span>
+                    <button class="nav-action-btn" data-page="community" title="Сообщество">
+                        <span class="action-icon">👥</span>
+                    </button>
+                    <button class="nav-action-btn" data-page="chats" title="Чаты">
+                        <span class="action-icon">💬</span>
+                    </button>
+                    <button class="nav-action-btn" data-page="mymaterials" title="Мои материалы">
+                        <span class="action-icon">📁</span>
                     </button>
                     <button class="nav-action-btn" data-page="profile" title="Профиль">
                         <span class="action-icon">👤</span>
@@ -187,13 +190,14 @@
                     <h3>Ресурсы</h3>
                     <div class="footer-links">
                         <a href="javascript:void(0)" onclick="app.renderPage('courses')">Все курсы</a>
-                        <a href="javascript:void(0)" onclick="app.renderPage('materials')">Материалы</a>
+                        <a href="javascript:void(0)" onclick="app.renderPage('community')">Сообщество</a>
+                        <a href="javascript:void(0)" onclick="app.renderPage('support')">Поддержка</a>
                     </div>
                 </div>
                 <div class="footer-section">
-                    <h3>Помощь</h3>
+                    <h3>Администрация</h3>
                     <div class="footer-links">
-                        <a href="javascript:void(0)" onclick="app.showSupport()">Поддержка</a>
+                        <a href="javascript:void(0)" onclick="app.renderPage('admin')" id="adminLink" style="display: none;">Админ-панель</a>
                     </div>
                 </div>
             </div>
@@ -206,7 +210,6 @@
     <script src="/webapp/app.js"></script>
     
     <script>
-        // Глобальный обработчик ошибок
         window.addEventListener('error', function(event) {
             console.error('Global error:', event.error);
         });
@@ -215,7 +218,6 @@
             console.error('Unhandled promise rejection:', event.reason);
         });
 
-        // Инициализация приложения с максимальной устойчивостью
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 DOM загружен, запуск приложения...');
             
@@ -223,25 +225,24 @@
             const errorScreen = document.getElementById('errorScreen');
             const appContainer = document.getElementById('app');
             const retryButton = document.getElementById('retryButton');
+            const adminLink = document.getElementById('adminLink');
             
-            // Функция инициализации
             async function initializeApp() {
                 try {
-                    // Даем время на стабилизацию Telegram WebApp
                     await new Promise(resolve => setTimeout(resolve, 100));
                     
-                    // Проверяем и создаем AcademyApp
                     if (typeof AcademyApp === 'undefined') {
                         throw new Error('AcademyApp class not found');
                     }
                     
-                    // Создаем экземпляр приложения
                     window.app = new AcademyApp();
-                    
-                    // Инициализируем приложение
                     await window.app.init();
                     
-                    // Скрываем загрузку и показываем приложение
+                    // Показываем ссылку на админ-панель если пользователь админ
+                    if (window.app.isAdmin && adminLink) {
+                        adminLink.style.display = 'block';
+                    }
+                    
                     if (loadingScreen) loadingScreen.style.display = 'none';
                     if (errorScreen) errorScreen.style.display = 'none';
                     if (appContainer) appContainer.style.display = 'block';
@@ -251,7 +252,6 @@
                 } catch (error) {
                     console.error('❌ Ошибка инициализации:', error);
                     
-                    // Показываем экран ошибки
                     if (loadingScreen) loadingScreen.style.display = 'none';
                     if (errorScreen) {
                         errorScreen.style.display = 'flex';
@@ -263,7 +263,6 @@
                 }
             }
             
-            // Обработчик повторной попытки
             if (retryButton) {
                 retryButton.addEventListener('click', function() {
                     if (errorScreen) errorScreen.style.display = 'none';
@@ -272,7 +271,6 @@
                 });
             }
             
-            // Запускаем инициализацию
             initializeApp();
         });
     </script>
