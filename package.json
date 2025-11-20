@@ -1,0 +1,33 @@
+{
+  "name": "anb-academy",
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Академия АНБ - платформа для медицинского образования",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "build": "echo 'No build step required'",
+    "deploy": "git push && echo 'Deploy to TimeWeb via Git'"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "telegraf": "^4.16.3",
+    "pg": "^8.11.3",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "medical",
+    "education",
+    "telegram",
+    "webapp"
+  ],
+  "author": "Академия АНБ",
+  "license": "MIT"
+}
