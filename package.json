@@ -2,19 +2,15 @@
   "name": "anb-academy",
   "version": "2.1.0",
   "type": "module",
-  "description": "Академия АНБ - платформа для медицинского образования с админ-панелью",
+  "description": "Академия АНБ - платформа для медицинского образования",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "check-db": "node check-db.js",
     "build": "echo 'No build step required'"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "pg": "^8.11.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1"
+    "express": "^4.18.2"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -23,8 +19,7 @@
     "medical",
     "education",
     "telegram",
-    "webapp",
-    "admin"
+    "webapp"
   ],
   "author": "Академия АНБ",
   "license": "MIT"
