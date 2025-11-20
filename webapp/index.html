@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Академия АНБ - Современное образование для врачей</title>
+    <meta name="description" content="Академия АНБ - платформа для непрерывного медицинского образования. Курсы, подкасты, эфиры и материалы для врачей.">
+    <meta name="keywords" content="медицина, образование, врачи, курсы, неврология, АНБ">
+    
+    <!-- Telegram WebApp -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/webapp/style.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/webapp/assets/favicon.ico">
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/webapp/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    
+    <style>
+        /* Стили для предотвращения белого экрана */
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0f172a;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: #0f172a;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #374151;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+        
+        .loading-text {
+            color: #9ca3af;
+            font-size: 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: #0f172a;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .error-title {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: white;
+        }
+        
+        .error-description {
+            color: #9ca3af;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Загрузочный экран -->
+    <div id="loadingScreen" class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Загрузка Академии АНБ...</div>
+    </div>
+    
+    <!-- Экран ошибки -->
+    <div id="errorScreen" class="error-container">
+        <div class="error-icon">⚠️</div>
+        <div class="error-title">Ошибка загрузки</div>
+        <div class="error-description">Не удалось загрузить приложение</div>
+        <button id="retryButton" style="
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        ">Попробовать снова</button>
+    </div>
+
+    <!-- Основное приложение -->
+    <div id="app" style="display: none;">
+        <!-- Navigation -->
+        <nav class="main-nav">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <span class="brand-icon">🎓</span>
+                    <span class="brand-text">Академия АНБ</span>
+                    <sup class="version">v2.0</sup>
+                </div>
+                
+                <div class="nav-menu">
+                    <button class="nav-btn" data-page="home">🏠 Главная</button>
+                    <button class="nav-btn" data-page="courses">📚 Курсы</button>
+                    <button class="nav-btn" data-page="podcasts">🎧 АНБ FM</button>
+                    <button class="nav-btn" data-page="streams">📹 Эфиры</button>
+                    <button class="nav-btn" data-page="videos">🎯 Видео</button>
+                    <button class="nav-btn" data-page="materials">📋 Материалы</button>
+                    <button class="nav-btn" data-page="events">🗺️ Мероприятия</button>
+                </div>
+                
+                <div class="nav-actions">
+                    <button class="nav-action-btn" data-page="favorites" title="Избранное">
+                        <span class="action-icon">❤️</span>
+                        <span class="action-badge" id="favoritesCount">0</span>
+                    </button>
+                    <button class="nav-action-btn" data-page="profile" title="Профиль">
+                        <span class="action-icon">👤</span>
+                    </button>
+                    <div id="adminBadge" class="admin-badge" style="display: none;">🔧 Админ</div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main id="mainContent" class="main-content">
+            <!-- Контент будет загружен через JavaScript -->
+        </main>
+
+        <!-- Footer -->
+        <footer class="main-footer">
+            <div class="footer-container">
+                <div class="footer-section">
+                    <h3>Академия АНБ</h3>
+                    <p>Современное образование для врачей</p>
+                    <div class="footer-links">
+                        <a href="https://anb-academy.ru" target="_blank">Официальный сайт</a>
+                        <a href="mailto:support@anb-academy.ru">Поддержка</a>
+                        <a href="https://t.me/anb_academy_support" target="_blank">Telegram</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Ресурсы</h3>
+                    <div class="footer-links">
+                        <a href="javascript:void(0)" onclick="app.renderPage('courses')">Все курсы</a>
+                        <a href="javascript:void(0)" onclick="app.renderPage('materials')">Материалы</a>
+                        <a href="javascript:void(0)" onclick="app.renderPage('events')">Мероприятия</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Помощь</h3>
+                    <div class="footer-links">
+                        <a href="javascript:void(0)" onclick="app.showHelp()">Частые вопросы</a>
+                        <a href="javascript:void(0)" onclick="app.showSupport()">Техподдержка</a>
+                        <a href="javascript:void(0)" onclick="app.showFeedback()">Обратная связь</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Академия АНБ. Все права защищены.</p>
+                <p class="version-info">Версия 2.0.0 | TimeWeb Cloud</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/webapp/app.js"></script>
+    
+    <script>
+        // Инициализация приложения с обработкой ошибок
+        document.addEventListener('DOMContentLoaded', async function() {
+            const loadingScreen = document.getElementById('loadingScreen');
+            const errorScreen = document.getElementById('errorScreen');
+            const appContainer = document.getElementById('app');
+            const retryButton = document.getElementById('retryButton');
+            
+            async function initializeApp() {
+                try {
+                    console.log('🔄 Инициализация приложения...');
+                    
+                    // Ждем немного для стабильности Telegram WebApp
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // Проверяем, доступен ли Telegram WebApp
+                    if (window.Telegram && Telegram.WebApp) {
+                        console.log('✅ Telegram WebApp обнаружен');
+                        Telegram.WebApp.ready();
+                        Telegram.WebApp.expand();
+                    } else {
+                        console.log('ℹ️ Telegram WebApp не обнаружен, работаем в браузерном режиме');
+                    }
+                    
+                    // Инициализируем приложение
+                    if (typeof AcademyApp !== 'undefined') {
+                        window.app = new AcademyApp();
+                        
+                        // Скрываем загрузку и показываем приложение
+                        loadingScreen.style.display = 'none';
+                        appContainer.style.display = 'block';
+                        
+                        console.log('✅ Приложение успешно инициализировано');
+                    } else {
+                        throw new Error('AcademyApp class not found');
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Ошибка инициализации:', error);
+                    
+                    // Показываем экран ошибки
+                    loadingScreen.style.display = 'none';
+                    errorScreen.style.display = 'flex';
+                    
+                    throw error;
+                }
+            }
+            
+            // Обработчик повторной попытки
+            retryButton.addEventListener('click', function() {
+                errorScreen.style.display = 'none';
+                loadingScreen.style.display = 'flex';
+                setTimeout(initializeApp, 500);
+            });
+            
+            // Запускаем инициализацию
+            await initializeApp();
+        });
+        
+        // Глобальный обработчик ошибок
+        window.addEventListener('error', function(event) {
+            console.error('Global error:', event.error);
+        });
+        
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+        });
+    </script>
+</body>
+</html>
