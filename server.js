@@ -1,10 +1,8 @@
-// server.js - ПОЛНАЯ РАБОЧАЯ ВЕРСИЯ ДЛЯ TIMEWEB
+// server.js - ИСПРАВЛЕННАЯ ВЕРСИЯ
 import { Telegraf } from 'telegraf';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -44,13 +42,19 @@ class Database {
     async connect() {
         try {
             const { Client } = await import('pg');
+            
+            // Парсим connection string вручную для совместимости
+            const connectionString = config.DATABASE_URL;
+            if (!connectionString) {
+                throw new Error('DATABASE_URL is not defined');
+            }
+            
             this.client = new Client({
-                connectionString: config.DATABASE_URL,
-                ssl: { rejectUnauthorized: false },
+                connectionString: connectionString,
+                ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
                 connectionTimeoutMillis: 10000,
                 query_timeout: 10000,
-                idleTimeoutMillis: 30000,
-                max: 20
+                idleTimeoutMillis: 30000
             });
             
             await this.client.connect();
@@ -61,13 +65,15 @@ class Database {
             await this.createDemoData();
             
         } catch (error) {
-            logger.error('❌ Ошибка подключения к БД:', error);
+            logger.error('❌ Ошибка подключения к БД:', error.message);
             this.isConnected = false;
             logger.info('🔄 Работаем в режиме без базы данных');
         }
     }
 
     async createTables() {
+        if (!this.isConnected) return;
+        
         const tables = [
             `CREATE TABLE IF NOT EXISTS users (
                 id BIGINT PRIMARY KEY,
@@ -136,6 +142,8 @@ class Database {
     }
 
     async createDemoData() {
+        if (!this.isConnected) return;
+        
         try {
             // Создаем супер-администратора
             const adminCheck = await this.client.query('SELECT * FROM users WHERE id = $1', [config.SUPER_ADMIN_ID]);
@@ -158,7 +166,7 @@ class Database {
                     {
                         title: 'Мануальные техники в практике невролога',
                         description: '6 модулей по современным мануальным методикам',
-                        full_description: 'Комплексный курс по мануальным техникам для практикующих врачей-неврологов. Изучите современные подходы к диагностике и лечению заболеваний опорно-двигательного аппарата.',
+                        full_description: 'Комплексный курс по мануальным техникам для практикующих врачей-неврологов.',
                         price: 25000,
                         original_price: 30000,
                         discount: 16,
@@ -169,7 +177,7 @@ class Database {
                         subcategory: 'Неврология',
                         level: 'advanced',
                         difficulty: 'medium',
-                        image_url: '/webapp/assets/course-manual.jpg',
+                        image_url: '/webapp/assets/course-default.jpg',
                         featured: true,
                         popular: true,
                         new: true,
@@ -189,7 +197,7 @@ class Database {
                         category: 'Неврология',
                         subcategory: 'Диагностика',
                         level: 'intermediate',
-                        image_url: '/webapp/assets/course-diagnosis.jpg',
+                        image_url: '/webapp/assets/course-default.jpg',
                         featured: true,
                         students_count: 234,
                         rating: 4.6,
@@ -203,7 +211,7 @@ class Database {
                             title, description, full_description, price, original_price, discount,
                             duration, modules, lessons, category, subcategory, level, difficulty,
                             image_url, featured, popular, new, students_count, rating, reviews_count, created_by
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
                         [
                             course.title, course.description, course.full_description, course.price,
                             course.original_price, course.discount, course.duration, course.modules,
@@ -217,7 +225,7 @@ class Database {
                 logger.info('✅ Демо-курсы созданы');
             }
         } catch (error) {
-            logger.error('Ошибка создания демо-данных:', error);
+            logger.error('Ошибка создания демо-данных:', error.message);
         }
     }
 
@@ -237,13 +245,13 @@ class Database {
             
             return result;
         } catch (error) {
-            logger.error('Database query error:', error);
+            logger.error('Database query error:', error.message);
             throw error;
         }
     }
 
     async disconnect() {
-        if (this.client) {
+        if (this.client && this.isConnected) {
             await this.client.end();
             this.isConnected = false;
             logger.info('✅ PostgreSQL отключена');
@@ -257,6 +265,7 @@ const db = new Database();
 class TelegramBot {
     constructor() {
         this.bot = new Telegraf(config.BOT_TOKEN);
+        this.botInfo = null;
         this.setupHandlers();
     }
 
@@ -265,9 +274,6 @@ class TelegramBot {
         this.bot.command('courses', this.handleCourses.bind(this));
         this.bot.command('help', this.handleHelp.bind(this));
         this.bot.command('admin', this.handleAdmin.bind(this));
-        
-        // Обработчик для webapp данных
-        this.bot.on('web_app_data', this.handleWebAppData.bind(this));
     }
 
     async handleStart(ctx) {
@@ -302,15 +308,39 @@ class TelegramBot {
 
     async handleCourses(ctx) {
         try {
-            const courses = await db.query(
-                `SELECT title, description, price, discount, students_count, rating 
-                 FROM courses WHERE active = true 
-                 ORDER BY created_at DESC LIMIT 5`
-            );
+            let courses = [];
+            
+            if (db.isConnected) {
+                const result = await db.query(
+                    `SELECT title, description, price, discount, students_count, rating 
+                     FROM courses WHERE active = true 
+                     ORDER BY created_at DESC LIMIT 5`
+                );
+                courses = result.rows;
+            } else {
+                // Демо-данные если БД не доступна
+                courses = [
+                    {
+                        title: 'Мануальные техники в практике невролога',
+                        description: '6 модулей по современным мануальным методикам',
+                        price: 25000,
+                        discount: 16,
+                        students_count: 156,
+                        rating: 4.8
+                    },
+                    {
+                        title: 'Неврологическая диагностика',
+                        description: '5 модулей по современной диагностике',
+                        price: 18000,
+                        students_count: 234,
+                        rating: 4.6
+                    }
+                ];
+            }
             
             let message = '📚 *Доступные курсы:*\n\n';
-            if (courses.rows.length > 0) {
-                courses.rows.forEach((course, i) => {
+            if (courses.length > 0) {
+                courses.forEach((course, i) => {
                     const priceText = course.discount > 0 
                         ? `~~${course.original_price || course.price}~~ ${course.price} руб.` 
                         : `${course.price} руб.`;
@@ -358,7 +388,19 @@ class TelegramBot {
                 return;
             }
             
-            const stats = await this.getAdminStats();
+            let stats = { users: 0, courses: 0, activeUsers: 0 };
+            
+            if (db.isConnected) {
+                const usersCount = await db.query('SELECT COUNT(*) FROM users');
+                const coursesCount = await db.query('SELECT COUNT(*) FROM courses WHERE active = true');
+                const activeUsers = await db.query("SELECT COUNT(*) FROM users WHERE last_seen > NOW() - INTERVAL '1 day'");
+                
+                stats = {
+                    users: parseInt(usersCount.rows[0].count),
+                    courses: parseInt(coursesCount.rows[0].count),
+                    activeUsers: parseInt(activeUsers.rows[0].count)
+                };
+            }
             
             await ctx.reply(
                 `🔧 *Админ-панель Академии АНБ*\n\n` +
@@ -382,43 +424,39 @@ class TelegramBot {
         }
     }
 
-    async handleWebAppData(ctx) {
-        try {
-            const data = JSON.parse(ctx.webAppData.data);
-            logger.info('WebApp data received:', data);
-            
-            // Обработка данных из WebApp
-            if (data.type === 'purchase') {
-                await ctx.reply(`✅ Запрос на покупку курса "${data.courseTitle}" получен!`);
-            }
-        } catch (error) {
-            logger.error('Ошибка обработки WebApp данных:', error);
-        }
-    }
-
     async getOrCreateUser(telegramUser) {
         try {
-            const result = await db.query('SELECT * FROM users WHERE id = $1', [telegramUser.id]);
-            
-            if (result.rows.length === 0) {
-                // Создаем нового пользователя
-                const isAdmin = config.ADMIN_IDS.includes(telegramUser.id);
-                const isSuperAdmin = config.SUPER_ADMIN_ID === telegramUser.id;
+            if (db.isConnected) {
+                const result = await db.query('SELECT * FROM users WHERE id = $1', [telegramUser.id]);
                 
-                await db.query(
-                    'INSERT INTO users (id, telegram_data, is_admin, is_super_admin) VALUES ($1, $2, $3, $4)',
-                    [telegramUser.id, telegramUser, isAdmin, isSuperAdmin]
-                );
-                
-                logger.info(`✅ Новый пользователь создан: ${telegramUser.id}`);
-                return { id: telegramUser.id, telegram_data: telegramUser, is_admin: isAdmin, is_super_admin: isSuperAdmin };
+                if (result.rows.length === 0) {
+                    // Создаем нового пользователя
+                    const isAdmin = config.ADMIN_IDS.includes(telegramUser.id);
+                    const isSuperAdmin = config.SUPER_ADMIN_ID === telegramUser.id;
+                    
+                    await db.query(
+                        'INSERT INTO users (id, telegram_data, is_admin, is_super_admin) VALUES ($1, $2, $3, $4)',
+                        [telegramUser.id, telegramUser, isAdmin, isSuperAdmin]
+                    );
+                    
+                    logger.info(`✅ Новый пользователь создан: ${telegramUser.id}`);
+                    return { id: telegramUser.id, telegram_data: telegramUser, is_admin: isAdmin, is_super_admin: isSuperAdmin };
+                } else {
+                    // Обновляем последнюю активность
+                    await db.query(
+                        'UPDATE users SET last_seen = NOW(), telegram_data = $1 WHERE id = $2',
+                        [telegramUser, telegramUser.id]
+                    );
+                    return result.rows[0];
+                }
             } else {
-                // Обновляем последнюю активность
-                await db.query(
-                    'UPDATE users SET last_seen = NOW(), telegram_data = $1 WHERE id = $2',
-                    [telegramUser, telegramUser.id]
-                );
-                return result.rows[0];
+                // Возвращаем демо-пользователя если БД не доступна
+                return { 
+                    id: telegramUser.id, 
+                    telegram_data: telegramUser, 
+                    is_admin: config.ADMIN_IDS.includes(telegramUser.id),
+                    is_super_admin: config.SUPER_ADMIN_ID === telegramUser.id
+                };
             }
         } catch (error) {
             logger.error('Ошибка создания пользователя:', error);
@@ -432,53 +470,36 @@ class TelegramBot {
         }
     }
 
-    async getAdminStats() {
+    async launch() {
         try {
-            const usersCount = await db.query('SELECT COUNT(*) FROM users');
-            const coursesCount = await db.query('SELECT COUNT(*) FROM courses WHERE active = true');
-            const activeUsers = await db.query("SELECT COUNT(*) FROM users WHERE last_seen > NOW() - INTERVAL '1 day'");
+            await this.bot.launch();
             
-            return {
-                users: parseInt(usersCount.rows[0].count),
-                courses: parseInt(coursesCount.rows[0].count),
-                activeUsers: parseInt(activeUsers.rows[0].count)
-            };
+            // Получаем информацию о боте безопасно
+            try {
+                this.botInfo = await this.bot.telegram.getMe();
+                logger.info(`✅ Telegram Bot запущен: @${this.botInfo.username}`);
+            } catch (error) {
+                logger.info('✅ Telegram Bot запущен (информация о боте недоступна)');
+            }
+            
         } catch (error) {
-            logger.error('Ошибка получения статистики:', error);
-            return { users: 0, courses: 0, activeUsers: 0 };
+            logger.error('❌ Ошибка запуска бота:', error);
         }
     }
 
-    launch() {
-        this.bot.launch()
-            .then(() => {
-                logger.info('✅ Telegram Bot запущен');
-            })
-            .catch(error => {
-                logger.error('❌ Ошибка запуска бота:', error);
-            });
-
-        // Включить graceful stop
-        process.once('SIGINT', () => this.bot.stop('SIGINT'));
-        process.once('SIGTERM', () => this.bot.stop('SIGTERM'));
+    stop(reason) {
+        this.bot.stop(reason);
+        logger.info(`🛑 Telegram Bot остановлен: ${reason}`);
     }
 }
 
 const telegramBot = new TelegramBot();
 
-// Express Server с Socket.IO
+// Express Server
 class ExpressServer {
     constructor() {
         this.app = express();
-        this.httpServer = createServer(this.app);
-        this.io = new Server(this.httpServer, {
-            cors: {
-                origin: "*",
-                methods: ["GET", "POST"]
-            }
-        });
         this.setupServer();
-        this.setupSocketIO();
     }
 
     setupServer() {
@@ -505,20 +526,32 @@ class ExpressServer {
                 status: 'healthy', 
                 timestamp: new Date().toISOString(),
                 version: '2.0.0',
-                environment: config.NODE_ENV
+                environment: config.NODE_ENV,
+                database: db.isConnected ? 'connected' : 'disconnected',
+                bot: telegramBot.botInfo ? 'connected' : 'disconnected'
             });
         });
 
         this.app.get('/api/content', async (req, res) => {
             try {
-                const [courses, users] = await Promise.all([
-                    db.query('SELECT * FROM courses WHERE active = true ORDER BY created_at DESC'),
-                    db.query('SELECT COUNT(*) as total_users FROM users')
-                ]);
+                let courses = [];
+                let totalUsers = 0;
+                
+                if (db.isConnected) {
+                    const [coursesResult, usersResult] = await Promise.all([
+                        db.query('SELECT * FROM courses WHERE active = true ORDER BY created_at DESC'),
+                        db.query('SELECT COUNT(*) as total_users FROM users')
+                    ]);
+                    courses = coursesResult.rows;
+                    totalUsers = parseInt(usersResult.rows[0]?.total_users || 0);
+                } else {
+                    // Демо-данные если БД не доступна
+                    courses = this.getDemoCourses();
+                    totalUsers = 1567;
+                }
 
-                // Демо-данные для остального контента
                 const content = {
-                    courses: courses.rows,
+                    courses: courses,
                     podcasts: this.getDemoPodcasts(),
                     streams: this.getDemoStreams(),
                     videos: this.getDemoVideos(),
@@ -526,8 +559,8 @@ class ExpressServer {
                     events: this.getDemoEvents(),
                     promotions: this.getDemoPromotions(),
                     stats: {
-                        totalUsers: parseInt(users.rows[0]?.total_users || 0),
-                        totalCourses: courses.rows.length,
+                        totalUsers: totalUsers,
+                        totalCourses: courses.length,
                         totalMaterials: 25
                     }
                 };
@@ -544,28 +577,50 @@ class ExpressServer {
 
         this.app.get('/api/courses', async (req, res) => {
             try {
-                const courses = await db.query(
-                    'SELECT * FROM courses WHERE active = true ORDER BY created_at DESC'
-                );
-                res.json({ success: true, data: courses.rows });
+                let courses = [];
+                
+                if (db.isConnected) {
+                    const result = await db.query(
+                        'SELECT * FROM courses WHERE active = true ORDER BY created_at DESC'
+                    );
+                    courses = result.rows;
+                } else {
+                    courses = this.getDemoCourses();
+                }
+                
+                res.json({ success: true, data: courses });
             } catch (error) {
                 logger.error('API courses error:', error);
-                res.json({ success: true, data: [] });
+                res.json({ success: true, data: this.getDemoCourses() });
             }
         });
 
         this.app.get('/api/courses/:id', async (req, res) => {
             try {
-                const course = await db.query(
-                    'SELECT * FROM courses WHERE id = $1 AND active = true',
-                    [req.params.id]
-                );
+                let course = null;
                 
-                if (course.rows.length === 0) {
+                if (db.isConnected) {
+                    const result = await db.query(
+                        'SELECT * FROM courses WHERE id = $1 AND active = true',
+                        [req.params.id]
+                    );
+                    
+                    if (result.rows.length > 0) {
+                        course = result.rows[0];
+                    }
+                }
+                
+                if (!course) {
+                    // Ищем в демо-данных
+                    const demoCourses = this.getDemoCourses();
+                    course = demoCourses.find(c => c.id == req.params.id);
+                }
+                
+                if (!course) {
                     return res.status(404).json({ success: false, error: 'Course not found' });
                 }
                 
-                res.json({ success: true, data: course.rows[0] });
+                res.json({ success: true, data: course });
             } catch (error) {
                 logger.error('API course detail error:', error);
                 res.status(500).json({ success: false, error: 'Server error' });
@@ -574,38 +629,29 @@ class ExpressServer {
 
         this.app.post('/api/user', async (req, res) => {
             try {
-                const { initData, user: userData } = req.body;
+                const { user: userData } = req.body;
                 
-                // В реальном приложении нужно верифицировать initData
-                let userId;
-                let userFromTG = {};
-                
-                if (userData && userData.id) {
-                    userId = userData.id;
-                    userFromTG = userData;
-                } else {
+                let userToProcess = userData;
+                if (!userToProcess) {
                     // Для демо-режима
-                    userId = 898508164;
-                    userFromTG = {
+                    userToProcess = {
                         id: 898508164,
                         first_name: 'Демо',
                         username: 'demo_user'
                     };
                 }
 
-                const user = await telegramBot.getOrCreateUser(userFromTG);
+                const user = await telegramBot.getOrCreateUser(userToProcess);
                 
-                // Получаем избранное и прогресс пользователя
-                const [favorites, progress] = await Promise.all([
-                    db.query(
+                // Получаем избранное пользователя
+                let favorites = { courses: [], podcasts: [], streams: [], videos: [], materials: [], events: [] };
+                if (db.isConnected) {
+                    const favoritesResult = await db.query(
                         'SELECT content_type, content_id FROM user_favorites WHERE user_id = $1',
-                        [userId]
-                    ),
-                    db.query(
-                        'SELECT course_id, progress_data, completed FROM user_progress WHERE user_id = $1',
-                        [userId]
-                    )
-                ]);
+                        [user.id]
+                    );
+                    favorites = this.formatFavorites(favoritesResult.rows);
+                }
 
                 const userResponse = {
                     id: user.id,
@@ -613,8 +659,16 @@ class ExpressServer {
                     username: user.telegram_data?.username,
                     isAdmin: user.is_admin || false,
                     isSuperAdmin: user.is_super_admin || false,
-                    favorites: this.formatFavorites(favorites.rows),
-                    progress: this.formatProgress(progress.rows),
+                    favorites: favorites,
+                    progress: {
+                        level: 'Понимаю',
+                        experience: 1250,
+                        steps: {
+                            coursesBought: 3,
+                            modulesCompleted: 2,
+                            materialsWatched: 12
+                        }
+                    },
                     subscription: {
                         status: 'active',
                         type: 'premium',
@@ -636,6 +690,13 @@ class ExpressServer {
             try {
                 const { userId, contentId, contentType } = req.body;
                 
+                if (!db.isConnected) {
+                    return res.json({ 
+                        success: true, 
+                        favorites: this.getDemoFavorites() 
+                    });
+                }
+
                 // Проверяем, есть ли уже в избранном
                 const existing = await db.query(
                     'SELECT id FROM user_favorites WHERE user_id = $1 AND content_type = $2 AND content_id = $3',
@@ -672,29 +733,6 @@ class ExpressServer {
             }
         });
 
-        // Admin API routes
-        this.app.post('/api/admin/content', async (req, res) => {
-            try {
-                const { type, data, userId } = req.body;
-                
-                // Проверяем права администратора
-                const user = await db.query('SELECT is_admin, is_super_admin FROM users WHERE id = $1', [userId]);
-                if (user.rows.length === 0 || (!user.rows[0].is_admin && !user.rows[0].is_super_admin)) {
-                    return res.status(403).json({ success: false, error: 'Access denied' });
-                }
-
-                // В реальном приложении здесь будет логика создания контента
-                res.json({ 
-                    success: true, 
-                    message: 'Content created successfully',
-                    contentId: Date.now() // Временный ID
-                });
-            } catch (error) {
-                logger.error('Admin content creation error:', error);
-                res.status(500).json({ success: false, error: 'Server error' });
-            }
-        });
-
         // Webhook для Telegram
         this.app.post(`/bot${config.BOT_TOKEN}`, (req, res) => {
             telegramBot.bot.handleUpdate(req.body, res);
@@ -712,57 +750,10 @@ class ExpressServer {
         });
     }
 
-    setupSocketIO() {
-        this.io.on('connection', (socket) => {
-            logger.info('🔌 Новое Socket.IO подключение:', socket.id);
-
-            socket.on('authenticate', (data) => {
-                // Аутентификация пользователя
-                socket.userId = data.userId;
-                socket.join(`user:${data.userId}`);
-                logger.info(`✅ Пользователь ${data.userId} аутентифицирован`);
-            });
-
-            socket.on('user_online', (data) => {
-                // Обновление статуса онлайн пользователей
-                this.io.emit('user_online', { count: this.getOnlineUsersCount() });
-            });
-
-            socket.on('disconnect', () => {
-                logger.info('🔌 Socket.IO отключение:', socket.id);
-            });
-        });
-
-        // Периодическая отправка статистики
-        setInterval(() => {
-            this.io.emit('online_users', { count: this.getOnlineUsersCount() });
-        }, 30000);
-    }
-
-    getOnlineUsersCount() {
-        return Object.keys(this.io.sockets.sockets).length;
-    }
-
     // Вспомогательные методы для демо-данных
     getDemoContent() {
         return {
-            courses: [
-                {
-                    id: 1,
-                    title: 'Мануальные техники в практике невролога',
-                    description: '6 модулей по современным мануальным методикам',
-                    price: 25000,
-                    discount: 16,
-                    duration: '12 недель',
-                    modules: 6,
-                    category: 'Мануальные техники',
-                    level: 'advanced',
-                    students_count: 156,
-                    rating: 4.8,
-                    featured: true,
-                    image_url: '/webapp/assets/course-manual.jpg'
-                }
-            ],
+            courses: this.getDemoCourses(),
             podcasts: this.getDemoPodcasts(),
             streams: this.getDemoStreams(),
             videos: this.getDemoVideos(),
@@ -777,6 +768,55 @@ class ExpressServer {
         };
     }
 
+    getDemoCourses() {
+        return [
+            {
+                id: 1,
+                title: 'Мануальные техники в практике невролога',
+                description: '6 модулей по современным мануальным методикам',
+                full_description: 'Комплексный курс по мануальным техникам для практикующих врачей-неврологов.',
+                price: 25000,
+                original_price: 30000,
+                discount: 16,
+                duration: '12 недель',
+                modules: 6,
+                lessons: 24,
+                category: 'Мануальные техники',
+                subcategory: 'Неврология',
+                level: 'advanced',
+                difficulty: 'medium',
+                image_url: '/webapp/assets/course-default.jpg',
+                featured: true,
+                popular: true,
+                new: true,
+                students_count: 156,
+                rating: 4.8,
+                reviews_count: 89,
+                created_by: config.SUPER_ADMIN_ID,
+                created_at: new Date().toISOString()
+            },
+            {
+                id: 2,
+                title: 'Неврологическая диагностика: от основ к практике',
+                description: '5 модулей по современной неврологической диагностике',
+                full_description: 'Фундаментальный курс по неврологической диагностике с акцентом на практическое применение.',
+                price: 18000,
+                duration: '8 недель',
+                modules: 5,
+                lessons: 18,
+                category: 'Неврология',
+                subcategory: 'Диагностика',
+                level: 'intermediate',
+                image_url: '/webapp/assets/course-default.jpg',
+                featured: true,
+                students_count: 234,
+                rating: 4.6,
+                created_by: config.SUPER_ADMIN_ID,
+                created_at: new Date().toISOString()
+            }
+        ];
+    }
+
     getDemoPodcasts() {
         return [
             {
@@ -786,7 +826,7 @@ class ExpressServer {
                 duration: '45:20',
                 category: 'Неврология',
                 listens: 2345,
-                image_url: '/webapp/assets/podcast-neurology.jpg'
+                image_url: '/webapp/assets/podcast-default.jpg'
             }
         ];
     }
@@ -800,7 +840,7 @@ class ExpressServer {
                 duration: '1:30:00',
                 live: true,
                 participants: 89,
-                thumbnail_url: '/webapp/assets/stream-pain-syndrome.jpg'
+                thumbnail_url: '/webapp/assets/stream-default.jpg'
             }
         ];
     }
@@ -813,7 +853,7 @@ class ExpressServer {
                 description: 'Быстрый гайд по основным тестам и методикам',
                 duration: '15:30',
                 views: 4567,
-                thumbnail_url: '/webapp/assets/video-neurological-exam.jpg'
+                thumbnail_url: '/webapp/assets/video-default.jpg'
             }
         ];
     }
@@ -827,7 +867,7 @@ class ExpressServer {
                 material_type: 'mri_analysis',
                 category: 'Неврология',
                 downloads: 1234,
-                image_url: '/webapp/assets/material-ms-mri.jpg'
+                image_url: '/webapp/assets/material-default.jpg'
             }
         ];
     }
@@ -842,7 +882,7 @@ class ExpressServer {
                 location: 'Москва, ЦВК Экспоцентр',
                 event_type: 'offline_conference',
                 participants: 456,
-                image_url: '/webapp/assets/event-neurology-conf.jpg'
+                image_url: '/webapp/assets/event-default.jpg'
             }
         ];
     }
@@ -855,7 +895,7 @@ class ExpressServer {
                 description: 'Специальное предложение для новых пользователей',
                 discount: 25,
                 active: true,
-                image_url: '/webapp/assets/promo-welcome.jpg'
+                image_url: '/webapp/assets/promo-default.jpg'
             }
         ];
     }
@@ -866,14 +906,7 @@ class ExpressServer {
             firstName: 'Демо Пользователь',
             isAdmin: true,
             isSuperAdmin: true,
-            favorites: {
-                courses: [1],
-                podcasts: [],
-                streams: [],
-                videos: [],
-                materials: [],
-                events: []
-            },
+            favorites: this.getDemoFavorites(),
             progress: {
                 level: 'Понимаю',
                 experience: 1250,
@@ -883,6 +916,17 @@ class ExpressServer {
                     materialsWatched: 12
                 }
             }
+        };
+    }
+
+    getDemoFavorites() {
+        return {
+            courses: [1],
+            podcasts: [],
+            streams: [],
+            videos: [],
+            materials: [],
+            events: []
         };
     }
 
@@ -905,24 +949,19 @@ class ExpressServer {
         return favorites;
     }
 
-    formatProgress(progressRows) {
-        const progress = {
-            steps: {
-                coursesBought: progressRows.length,
-                modulesCompleted: progressRows.filter(p => p.completed).length,
-                materialsWatched: 12 // Демо значение
-            }
-        };
-        
-        return progress;
-    }
-
     start() {
-        this.httpServer.listen(config.PORT, '0.0.0.0', () => {
+        this.app.listen(config.PORT, '0.0.0.0', () => {
             logger.info(`🌐 Сервер запущен на порту ${config.PORT}`);
             logger.info(`📱 WebApp: ${config.WEBAPP_URL}`);
-            logger.info(`🤖 Bot: t.me/${telegramBot.bot.context.botInfo.username}`);
+            
+            if (telegramBot.botInfo) {
+                logger.info(`🤖 Bot: t.me/${telegramBot.botInfo.username}`);
+            } else {
+                logger.info(`🤖 Bot: запущен (токен: ${config.BOT_TOKEN.substring(0, 10)}...)`);
+            }
+            
             logger.info(`🚀 Environment: ${config.NODE_ENV}`);
+            logger.info(`🗄️ Database: ${db.isConnected ? 'connected' : 'disconnected'}`);
         });
     }
 }
@@ -933,7 +972,7 @@ async function start() {
     
     try {
         await db.connect();
-        telegramBot.launch();
+        await telegramBot.launch();
         
         const server = new ExpressServer();
         server.start();
@@ -942,12 +981,14 @@ async function start() {
         process.on('SIGTERM', async () => {
             logger.info('🛑 Получен SIGTERM, начинаем graceful shutdown...');
             await db.disconnect();
+            telegramBot.stop('SIGTERM');
             process.exit(0);
         });
         
         process.on('SIGINT', async () => {
             logger.info('🛑 Получен SIGINT, начинаем graceful shutdown...');
             await db.disconnect();
+            telegramBot.stop('SIGINT');
             process.exit(0);
         });
         
