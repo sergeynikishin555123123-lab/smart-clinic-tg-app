@@ -1,0 +1,40 @@
+{
+  "name": "Академия АНБ",
+  "short_name": "АНБ Академия",
+  "description": "Современное образование для врачей - курсы, подкасты, эфиры и материалы",
+  "version": "2.0.0",
+  "start_url": "/webapp/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "categories": ["education", "medical", "health"],
+  "icons": [
+    {
+      "src": "/webapp/assets/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/webapp/assets/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/webapp/assets/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/webapp/assets/screenshot-narrow.png",
+      "sizes": "375x812",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ]
+}
