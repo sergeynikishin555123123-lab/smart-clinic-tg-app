@@ -23,6 +23,19 @@ fi
 echo "📁 Создание директорий..."
 mkdir -p uploads
 mkdir -p logs
+mkdir -p webapp/assets
+
+# Создание демо-ассетов (если нет реальных)
+if [ ! -f webapp/assets/course-default.jpg ]; then
+    echo "📸 Создание демо-изображений..."
+    # Можно добавить создание placeholder изображений
+    touch webapp/assets/course-default.jpg
+    touch webapp/assets/podcast-default.jpg
+    touch webapp/assets/stream-default.jpg
+    touch webapp/assets/video-default.jpg
+    touch webapp/assets/material-default.jpg
+    touch webapp/assets/event-default.jpg
+fi
 
 # Проверка базы данных
 echo "🔍 Проверка подключения к базе данных..."
