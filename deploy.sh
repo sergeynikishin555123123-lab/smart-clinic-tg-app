@@ -1,11 +1,15 @@
 #!/bin/bash
 
-# Скрипт деплоя Академии АНБ на TimeWeb Cloud
 echo "🚀 Начало деплоя Академии АНБ..."
 
 # Проверка наличия .env
 if [ ! -f .env ]; then
-    echo "❌ Файл .env не найден. Создайте его из .env.example"
+    echo "❌ Файл .env не найден"
+    echo "Создайте .env файл с следующими переменными:"
+    echo "BOT_TOKEN=ваш_токен_бота"
+    echo "DATABASE_URL=ваша_строка_подключения"
+    echo "SUPER_ADMIN_ID=ваш_telegram_id"
+    echo "WEBAPP_URL=ваш_домен"
     exit 1
 fi
 
@@ -13,28 +17,26 @@ fi
 echo "📦 Установка зависимостей..."
 npm install
 
-# Проверка установки
 if [ $? -ne 0 ]; then
     echo "❌ Ошибка установки зависимостей"
     exit 1
 fi
 
-# Создание необходимых директорий
+# Создание директорий
 echo "📁 Создание директорий..."
-mkdir -p uploads
-mkdir -p logs
-mkdir -p webapp/assets
+mkdir -p uploads logs webapp/assets
 
-# Создание демо-ассетов (если нет реальных)
+# Создание демо-ассетов
 if [ ! -f webapp/assets/course-default.jpg ]; then
-    echo "📸 Создание демо-изображений..."
-    # Можно добавить создание placeholder изображений
+    echo "📸 Создание placeholder изображений..."
+    # Можно добавить base64 placeholder изображения
     touch webapp/assets/course-default.jpg
     touch webapp/assets/podcast-default.jpg
     touch webapp/assets/stream-default.jpg
     touch webapp/assets/video-default.jpg
     touch webapp/assets/material-default.jpg
     touch webapp/assets/event-default.jpg
+    touch webapp/assets/offer-default.jpg
 fi
 
 # Проверка базы данных
@@ -67,6 +69,6 @@ if [ $? -ne 0 ]; then
     echo "⚠️ Продолжаем без проверки БД..."
 fi
 
-# Запуск приложения
+echo "✅ Деплой завершен"
 echo "🎯 Запуск приложения..."
 npm start
