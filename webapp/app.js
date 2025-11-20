@@ -1,4 +1,4 @@
-// webapp/app.js - ИСПРАВЛЕННАЯ ВЕРСИЯ ДЛЯ РАБОТЫ С СЕРВЕРОМ
+// webapp/app.js - ИСПРАВЛЕННАЯ ВЕРСИЯ
 class AcademyApp {
     constructor() {
         this.currentUser = null;
@@ -9,7 +9,6 @@ class AcademyApp {
         this.isSuperAdmin = false;
         this.isInitialized = false;
         this.isLoading = false;
-        this.socket = null;
         
         this.state = {
             currentCourse: null,
@@ -25,19 +24,12 @@ class AcademyApp {
                 materials: [],
                 events: []
             },
-            theme: 'dark',
-            notifications: [],
-            unreadNotifications: 0,
-            systemStatus: 'loading'
+            theme: 'dark'
         };
         
         this.config = {
             API_BASE_URL: window.location.origin,
-            SOCKET_URL: window.location.origin,
-            CACHE_DURATION: 5 * 60 * 1000,
-            RETRY_ATTEMPTS: 3,
-            RETRY_DELAY: 1000,
-            DEBOUNCE_DELAY: 300
+            CACHE_DURATION: 5 * 60 * 1000
         };
         
         this.init();
@@ -46,7 +38,7 @@ class AcademyApp {
     async init() {
         if (this.isInitialized) return;
         
-        console.log('🚀 Инициализация Академии АНБ версии 2.0...');
+        console.log('🚀 Инициализация Академии АНБ...');
         this.showSkeletonLoading();
         
         try {
@@ -58,14 +50,13 @@ class AcademyApp {
             this.setupEventListeners();
             
             this.isInitialized = true;
-            this.state.systemStatus = 'ready';
             
-            console.log('✅ Приложение полностью готово');
+            console.log('✅ Приложение готово');
             this.showNotification('✅ Приложение готово к работе', 'success');
             
         } catch (error) {
             console.error('❌ Ошибка инициализации:', error);
-            this.showError('Ошибка загрузки приложения. Пожалуйста, обновите страницу.');
+            this.showError('Ошибка загрузки приложения');
         } finally {
             this.hideSkeletonLoading();
         }
@@ -78,7 +69,6 @@ class AcademyApp {
                     Telegram.WebApp.ready();
                     Telegram.WebApp.expand();
                     
-                    // Настройка кнопок Telegram
                     Telegram.WebApp.BackButton.onClick(() => this.handleBackButton());
                     
                     console.log('✅ Telegram WebApp инициализирован');
@@ -88,7 +78,7 @@ class AcademyApp {
                     resolve();
                 }
             } else {
-                console.log('ℹ️ Telegram WebApp не обнаружен, работаем в браузерном режиме');
+                console.log('ℹ️ Работаем в браузерном режиме');
                 resolve();
             }
         });
@@ -113,8 +103,7 @@ class AcademyApp {
             const response = await this.apiCall('/api/user', {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ 
                     user: userToSend
@@ -129,9 +118,9 @@ class AcademyApp {
                 
                 this.updateAdminBadge();
                 
-                console.log('✅ Данные пользователя загружены:', this.currentUser.firstName);
+                console.log('✅ Данные пользователя загружены');
             } else {
-                throw new Error('Invalid user data response');
+                throw new Error('Invalid user data');
             }
         } catch (error) {
             console.error('Ошибка загрузки пользователя:', error);
@@ -162,8 +151,6 @@ class AcademyApp {
     }
 
     async apiCall(url, options = {}) {
-        const startTime = performance.now();
-        
         try {
             const response = await fetch(`${this.config.API_BASE_URL}${url}`, {
                 ...options,
@@ -174,11 +161,10 @@ class AcademyApp {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(`HTTP ${response.status}`);
             }
 
-            const data = await response.json();
-            return data;
+            return await response.json();
 
         } catch (error) {
             console.error(`API Call failed: ${url}`, error);
@@ -215,7 +201,6 @@ class AcademyApp {
 
         try {
             mainContent.innerHTML = this.getPageHTML(page, subPage);
-            this.initializePage(page);
             
         } catch (error) {
             console.error('Ошибка рендера страницы:', error);
@@ -226,7 +211,7 @@ class AcademyApp {
     getPageHTML(page, subPage = '') {
         const pages = {
             home: this.createHomePage(),
-            courses: subPage ? this.createCourseDetailPage(subPage) : this.createCoursesPage(),
+            courses: this.createCoursesPage(),
             podcasts: this.createPodcastsPage(),
             streams: this.createStreamsPage(),
             videos: this.createVideosPage(),
@@ -238,18 +223,6 @@ class AcademyApp {
         };
 
         return pages[page] || this.createNotFoundPage();
-    }
-
-    initializePage(page) {
-        const initializers = {
-            admin: () => this.initAdminPage(),
-            courses: () => this.initCoursesPage(),
-            home: () => this.initHomePage()
-        };
-
-        if (initializers[page]) {
-            initializers[page]();
-        }
     }
 
     // HOME PAGE
@@ -320,14 +293,14 @@ class AcademyApp {
                 ` : ''}
 
                 <div class="navigation-grid">
-                    ${this.createNavCard('courses', '📚', 'Курсы', this.allContent.courses?.length || 0, 'Доступные обучающие программы')}
-                    ${this.createNavCard('podcasts', '🎧', 'АНБ FM', this.allContent.podcasts?.length || 0, 'Аудио подкасты и интервью')}
-                    ${this.createNavCard('streams', '📹', 'Эфиры', this.allContent.streams?.length || 0, 'Прямые трансляции и разборы')}
-                    ${this.createNavCard('videos', '🎯', 'Видео-шпаргалки', this.allContent.videos?.length || 0, 'Короткие обучающие видео')}
-                    ${this.createNavCard('materials', '📋', 'Материалы', this.allContent.materials?.length || 0, 'Практические руководства и схемы')}
-                    ${this.createNavCard('events', '🗺️', 'Мероприятия', this.allContent.events?.length || 0, 'Конференции и воркшопы')}
-                    ${this.createNavCard('favorites', '❤️', 'Избранное', Object.values(this.state.favorites).flat().length, 'Сохраненный контент')}
-                    ${this.createNavCard('profile', '👤', 'Профиль', '', 'Личный кабинет')}
+                    ${this.createNavCard('courses', '📚', 'Курсы', this.allContent.courses?.length || 0)}
+                    ${this.createNavCard('podcasts', '🎧', 'АНБ FM', this.allContent.podcasts?.length || 0)}
+                    ${this.createNavCard('streams', '📹', 'Эфиры', this.allContent.streams?.length || 0)}
+                    ${this.createNavCard('videos', '🎯', 'Видео', this.allContent.videos?.length || 0)}
+                    ${this.createNavCard('materials', '📋', 'Материалы', this.allContent.materials?.length || 0)}
+                    ${this.createNavCard('events', '🗺️', 'Мероприятия', this.allContent.events?.length || 0)}
+                    ${this.createNavCard('favorites', '❤️', 'Избранное', Object.values(this.state.favorites).flat().length)}
+                    ${this.createNavCard('profile', '👤', 'Профиль', '')}
                 </div>
 
                 ${recommendedCourses.length > 0 ? `
@@ -341,11 +314,9 @@ class AcademyApp {
                             <div class="course-card featured" onclick="app.openCourseDetail(${course.id})">
                                 <div class="card-badge">Рекомендуем</div>
                                 <div class="card-image">
-                                    <img src="${course.image_url || '/webapp/assets/course-default.jpg'}" alt="${course.title}">
+                                    <img src="${course.image_url || '/webapp/assets/course-default.jpg'}" alt="${course.title}" onerror="this.src='/webapp/assets/course-default.jpg'">
                                     <div class="card-overlay">
                                         <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
-                                                data-id="${course.id}" 
-                                                data-type="courses"
                                                 onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
                                             ❤️
                                         </button>
@@ -398,13 +369,12 @@ class AcademyApp {
         `;
     }
 
-    createNavCard(section, icon, title, count, description = '') {
+    createNavCard(section, icon, title, count) {
         return `
             <div class="nav-card" onclick="app.renderPage('${section}')">
                 <div class="nav-icon">${icon}</div>
                 <div class="nav-content">
                     <div class="nav-title">${title}</div>
-                    ${description ? `<div class="nav-description">${description}</div>` : ''}
                 </div>
                 ${count ? `<div class="nav-badge">${count}</div>` : ''}
             </div>
@@ -415,7 +385,6 @@ class AcademyApp {
         return {
             courses: this.allContent.stats?.totalCourses || this.allContent.courses?.length || 0,
             students: this.allContent.stats?.totalUsers || 0,
-            materials: this.allContent.stats?.totalMaterials || 0,
             experts: 25
         };
     }
@@ -423,15 +392,12 @@ class AcademyApp {
     getRecommendedCourses() {
         return this.allContent.courses
             ?.filter(course => course.featured || course.popular)
-            .sort((a, b) => (b.rating || 0) - (a.rating || 0))
             .slice(0, 6) || [];
     }
 
     // COURSES PAGE
     createCoursesPage() {
         const courses = this.allContent.courses || [];
-        const filteredCourses = this.filterContent(courses, 'courses');
-        const categories = this.getUniqueCategories(courses);
         
         return `
             <div class="page courses-page">
@@ -448,46 +414,12 @@ class AcademyApp {
                                 ☰
                             </button>
                         </div>
-                        ${this.isAdmin ? `
-                        <button class="btn btn-primary" onclick="app.showAddContentForm('courses')">
-                            ➕ Добавить курс
-                        </button>
-                        ` : ''}
-                    </div>
-                </div>
-                
-                <div class="page-controls">
-                    <div class="filter-section">
-                        <div class="filter-group">
-                            <label>Категория:</label>
-                            <select class="filter-select" onchange="app.filterContent(this.value, 'courses')">
-                                <option value="all">Все категории</option>
-                                ${categories.map(cat => `
-                                    <option value="${cat}">${cat}</option>
-                                `).join('')}
-                            </select>
-                        </div>
-                        
-                        <div class="filter-group">
-                            <label>Сортировка:</label>
-                            <select class="filter-select" onchange="app.sortContent(this.value, 'courses')">
-                                <option value="newest">Сначала новые</option>
-                                <option value="popular">По популярности</option>
-                                <option value="rating">По рейтингу</option>
-                                <option value="price_low">Сначала дешевые</option>
-                                <option value="price_high">Сначала дорогие</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="results-info">
-                        <span class="results-count">Найдено: ${filteredCourses.length} курсов</span>
                     </div>
                 </div>
                 
                 <div class="content-container ${this.state.viewMode}">
-                    ${filteredCourses.length > 0 ? 
-                        this.renderCoursesGrid(filteredCourses) : 
+                    ${courses.length > 0 ? 
+                        this.renderCoursesGrid(courses) : 
                         this.createEmptyState('courses')
                     }
                 </div>
@@ -496,10 +428,6 @@ class AcademyApp {
     }
 
     renderCoursesGrid(courses) {
-        if (this.state.viewMode === 'list') {
-            return this.renderCoursesList(courses);
-        }
-
         return `
             <div class="content-grid">
                 ${courses.map(course => `
@@ -512,11 +440,9 @@ class AcademyApp {
                         ` : ''}
                         
                         <div class="card-image">
-                            <img src="${course.image_url || '/webapp/assets/course-default.jpg'}" alt="${course.title}">
+                            <img src="${course.image_url || '/webapp/assets/course-default.jpg'}" alt="${course.title}" onerror="this.src='/webapp/assets/course-default.jpg'">
                             <div class="card-overlay">
                                 <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
-                                        data-id="${course.id}" 
-                                        data-type="courses"
                                         onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
                                     ❤️
                                 </button>
@@ -558,120 +484,7 @@ class AcademyApp {
         `;
     }
 
-    // COURSE DETAIL PAGE
-    createCourseDetailPage(courseId) {
-        const course = this.allContent.courses?.find(c => c.id == courseId);
-        if (!course) return this.createNotFoundPage('Курс не найден');
-
-        return `
-            <div class="page course-detail-page">
-                <div class="page-header">
-                    <button class="back-btn" onclick="app.renderPage('courses')">
-                        ← Назад к курсам
-                    </button>
-                    <div class="header-actions">
-                        <button class="btn btn-outline" onclick="app.toggleFavorite(${course.id}, 'courses')">
-                            ${this.isFavorite(course.id, 'courses') ? '❤️ В избранном' : '🤍 В избранное'}
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="detail-container">
-                    <div class="detail-hero">
-                        <div class="hero-image">
-                            <img src="${course.image_url || '/webapp/assets/course-default.jpg'}" alt="${course.title}">
-                            ${course.discount > 0 ? `
-                                <div class="discount-badge large">-${course.discount}%</div>
-                            ` : ''}
-                        </div>
-                        
-                        <div class="hero-content">
-                            <div class="course-category">${course.category}</div>
-                            <h1>${course.title}</h1>
-                            <p class="course-description">${course.full_description || course.description}</p>
-                            
-                            <div class="course-meta-grid">
-                                <div class="meta-item">
-                                    <div class="meta-icon">⏱️</div>
-                                    <div class="meta-content">
-                                        <div class="meta-value">${course.duration}</div>
-                                        <div class="meta-label">Длительность</div>
-                                    </div>
-                                </div>
-                                <div class="meta-item">
-                                    <div class="meta-icon">📦</div>
-                                    <div class="meta-content">
-                                        <div class="meta-value">${course.modules}</div>
-                                        <div class="meta-label">Модулей</div>
-                                    </div>
-                                </div>
-                                <div class="meta-item">
-                                    <div class="meta-icon">⭐</div>
-                                    <div class="meta-content">
-                                        <div class="meta-value">${course.rating}</div>
-                                        <div class="meta-label">Рейтинг</div>
-                                    </div>
-                                </div>
-                                <div class="meta-item">
-                                    <div class="meta-icon">👥</div>
-                                    <div class="meta-content">
-                                        <div class="meta-value">${course.students_count}</div>
-                                        <div class="meta-label">Студентов</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="course-level">
-                                <span class="level-badge level-${course.level}">${this.getLevelName(course.level)}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="purchase-section">
-                        <div class="pricing-card">
-                            <div class="pricing-header">
-                                <h3>Приобрести курс</h3>
-                                ${course.discount > 0 ? `
-                                    <div class="discount-timer">
-                                        ⏰ Скидка действует ограниченное время
-                                    </div>
-                                ` : ''}
-                            </div>
-                            
-                            <div class="price-display">
-                                ${course.discount > 0 ? `
-                                    <div class="original-price">${this.formatPrice(course.original_price || course.price * 1.2)}</div>
-                                ` : ''}
-                                <div class="current-price">${this.formatPrice(course.price)}</div>
-                            </div>
-                            
-                            <div class="features-list">
-                                <div class="feature-item">✓ Доступ ко всем материалам курса</div>
-                                <div class="feature-item">✓ Сертификат о завершении</div>
-                                <div class="feature-item">✓ Поддержка преподавателя</div>
-                                <div class="feature-item">✓ Пожизненный доступ</div>
-                            </div>
-                            
-                            <div class="purchase-actions">
-                                <button class="btn btn-primary btn-large" onclick="app.purchaseCourse(${course.id})">
-                                    💳 Купить курс
-                                </button>
-                                <button class="btn btn-outline" onclick="app.addToCart(${course.id})">
-                                    🛒 В корзину
-                                </button>
-                            </div>
-                            
-                            <div class="guarantee-badge">
-                                ✅ 14-дневная гарантия возврата
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    // Другие страницы (кратко)
+    // Другие страницы (упрощенные)
     createPodcastsPage() {
         const podcasts = this.allContent.podcasts || [];
         return `
@@ -681,14 +494,9 @@ class AcademyApp {
                 </div>
                 <div class="content-grid">
                     ${podcasts.map(podcast => `
-                        <div class="content-card podcast-card">
+                        <div class="content-card">
                             <div class="card-image">
-                                <img src="${podcast.image_url || '/webapp/assets/podcast-default.jpg'}" alt="${podcast.title}">
-                                <div class="card-overlay">
-                                    <button class="play-btn" onclick="app.playPodcast(${podcast.id})">
-                                        ▶
-                                    </button>
-                                </div>
+                                <img src="${podcast.image_url || '/webapp/assets/podcast-default.jpg'}" alt="${podcast.title}" onerror="this.src='/webapp/assets/podcast-default.jpg'">
                             </div>
                             <div class="card-content">
                                 <h3>${podcast.title}</h3>
@@ -708,21 +516,16 @@ class AcademyApp {
     createStreamsPage() {
         const streams = this.allContent.streams || [];
         return `
-            <div class="page streams-page">
+            <div class="page">
                 <div class="page-header">
-                    <h2>📹 Эфиры и разборы</h2>
+                    <h2>📹 Эфиры</h2>
                 </div>
                 <div class="content-grid">
                     ${streams.map(stream => `
-                        <div class="content-card stream-card ${stream.live ? 'live' : ''}">
+                        <div class="content-card">
                             <div class="card-image">
-                                <img src="${stream.thumbnail_url || '/webapp/assets/stream-default.jpg'}" alt="${stream.title}">
+                                <img src="${stream.thumbnail_url || '/webapp/assets/stream-default.jpg'}" alt="${stream.title}" onerror="this.src='/webapp/assets/stream-default.jpg'">
                                 ${stream.live ? '<div class="live-badge">LIVE</div>' : ''}
-                                <div class="card-overlay">
-                                    <button class="play-btn" onclick="app.watchStream(${stream.id})">
-                                        ${stream.live ? '▶ Смотреть' : '▶ Смотреть запись'}
-                                    </button>
-                                </div>
                             </div>
                             <div class="card-content">
                                 <h3>${stream.title}</h3>
@@ -744,18 +547,13 @@ class AcademyApp {
         return `
             <div class="page">
                 <div class="page-header">
-                    <h2>🎯 Видео-шпаргалки</h2>
+                    <h2>🎯 Видео</h2>
                 </div>
                 <div class="content-grid">
                     ${videos.map(video => `
-                        <div class="content-card video-card">
+                        <div class="content-card">
                             <div class="card-image">
-                                <img src="${video.thumbnail_url || '/webapp/assets/video-default.jpg'}" alt="${video.title}">
-                                <div class="card-overlay">
-                                    <button class="play-btn" onclick="app.watchVideo(${video.id})">
-                                        ▶
-                                    </button>
-                                </div>
+                                <img src="${video.thumbnail_url || '/webapp/assets/video-default.jpg'}" alt="${video.title}" onerror="this.src='/webapp/assets/video-default.jpg'">
                             </div>
                             <div class="card-content">
                                 <h3>${video.title}</h3>
@@ -781,21 +579,15 @@ class AcademyApp {
                 </div>
                 <div class="content-grid">
                     ${materials.map(material => `
-                        <div class="content-card material-card">
+                        <div class="content-card">
                             <div class="card-image">
-                                <img src="${material.image_url || '/webapp/assets/material-default.jpg'}" alt="${material.title}">
+                                <img src="${material.image_url || '/webapp/assets/material-default.jpg'}" alt="${material.title}" onerror="this.src='/webapp/assets/material-default.jpg'">
                             </div>
                             <div class="card-content">
                                 <h3>${material.title}</h3>
                                 <p>${material.description}</p>
                                 <div class="card-meta">
                                     <span>📥 ${material.downloads}</span>
-                                    <span>📄 ${material.material_type}</span>
-                                </div>
-                                <div class="card-actions">
-                                    <button class="btn btn-primary" onclick="app.downloadMaterial(${material.id})">
-                                        Скачать
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -814,9 +606,9 @@ class AcademyApp {
                 </div>
                 <div class="content-grid">
                     ${events.map(event => `
-                        <div class="content-card event-card">
+                        <div class="content-card">
                             <div class="card-image">
-                                <img src="${event.image_url || '/webapp/assets/event-default.jpg'}" alt="${event.title}">
+                                <img src="${event.image_url || '/webapp/assets/event-default.jpg'}" alt="${event.title}" onerror="this.src='/webapp/assets/event-default.jpg'">
                             </div>
                             <div class="card-content">
                                 <h3>${event.title}</h3>
@@ -824,12 +616,6 @@ class AcademyApp {
                                 <div class="card-meta">
                                     <span>📅 ${this.formatDate(event.event_date)}</span>
                                     <span>📍 ${event.location}</span>
-                                    <span>👥 ${event.participants}</span>
-                                </div>
-                                <div class="card-actions">
-                                    <button class="btn btn-primary" onclick="app.registerForEvent(${event.id})">
-                                        Зарегистрироваться
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -851,15 +637,9 @@ class AcademyApp {
                 ${favoriteCourses.length > 0 ? `
                     <div class="content-grid">
                         ${favoriteCourses.map(course => `
-                            <div class="content-card course-card">
+                            <div class="content-card">
                                 <div class="card-image">
-                                    <img src="${course.image_url || '/webapp/assets/course-default.jpg'}" alt="${course.title}">
-                                    <div class="card-overlay">
-                                        <button class="favorite-btn active" 
-                                                onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
-                                            ❤️
-                                        </button>
-                                    </div>
+                                    <img src="${course.image_url || '/webapp/assets/course-default.jpg'}" alt="${course.title}" onerror="this.src='/webapp/assets/course-default.jpg'">
                                 </div>
                                 <div class="card-content">
                                     <h3>${course.title}</h3>
@@ -876,7 +656,6 @@ class AcademyApp {
                     <div class="empty-state">
                         <div class="empty-icon">❤️</div>
                         <div class="empty-title">В избранном пока пусто</div>
-                        <div class="empty-description">Добавляйте курсы, материалы и другие элементы в избранное</div>
                         <button class="btn btn-primary" onclick="app.renderPage('courses')">
                             Перейти к курсам
                         </button>
@@ -912,17 +691,6 @@ class AcademyApp {
                         </div>
                     </div>
                 </div>
-
-                <div class="profile-actions">
-                    <button class="btn btn-primary" onclick="app.showSettings()">
-                        ⚙️ Настройки
-                    </button>
-                    ${this.isAdmin ? `
-                    <button class="btn btn-secondary" onclick="app.renderPage('admin')">
-                        🔧 Админ-панель
-                    </button>
-                    ` : ''}
-                </div>
             </div>
         `;
     }
@@ -943,9 +711,6 @@ class AcademyApp {
                     <div class="admin-actions">
                         <button class="btn btn-primary" onclick="app.showAddContentForm('courses')">
                             ➕ Добавить курс
-                        </button>
-                        <button class="btn btn-primary" onclick="app.showAddContentForm('materials')">
-                            ➕ Добавить материал
                         </button>
                     </div>
                 </div>
@@ -983,66 +748,21 @@ class AcademyApp {
             <div class="empty-state">
                 <div class="empty-icon">📚</div>
                 <div class="empty-title">${type === 'courses' ? 'Курсы не найдены' : 'Контент не найден'}</div>
-                <div class="empty-description">Попробуйте изменить параметры поиска или фильтрации</div>
             </div>
         `;
     }
 
-    createNotFoundPage(message = 'Страница не найдена') {
+    createNotFoundPage() {
         return `
             <div class="error-state">
                 <div class="error-icon">🔍</div>
-                <h3>${message}</h3>
+                <h3>Страница не найдена</h3>
                 <button class="btn btn-primary" onclick="app.renderPage('home')">На главную</button>
             </div>
         `;
     }
 
     // Вспомогательные методы
-    filterContent(items, type) {
-        let filtered = items;
-        
-        if (this.state.searchQuery) {
-            const query = this.state.searchQuery.toLowerCase();
-            filtered = filtered.filter(item => 
-                item.title.toLowerCase().includes(query) ||
-                item.description.toLowerCase().includes(query)
-            );
-        }
-
-        filtered = this.sortItems(filtered, this.state.sortBy);
-        return filtered;
-    }
-
-    sortItems(items, sortBy) {
-        const sorted = [...items];
-        
-        switch (sortBy) {
-            case 'newest':
-                return sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            case 'popular':
-                return sorted.sort((a, b) => (b.students_count || 0) - (a.students_count || 0));
-            case 'rating':
-                return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-            case 'price_low':
-                return sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
-            case 'price_high':
-                return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
-            default:
-                return sorted;
-        }
-    }
-
-    getUniqueCategories(items) {
-        const categories = new Set();
-        items.forEach(item => {
-            if (item.category) {
-                categories.add(item.category);
-            }
-        });
-        return Array.from(categories);
-    }
-
     getLevelName(level) {
         const levels = {
             'beginner': 'Начинающий',
@@ -1060,7 +780,6 @@ class AcademyApp {
         try {
             const response = await this.apiCall('/api/favorites/toggle', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     userId: this.currentUser.id,
                     contentId: contentId,
@@ -1084,44 +803,13 @@ class AcademyApp {
 
     // Методы навигации
     openCourseDetail(courseId) {
-        this.renderPage('courses', courseId);
+        this.showNotification('📚 Детальная страница курса в разработке', 'info');
     }
 
     // Методы для работы с UI
     toggleViewMode(mode) {
         this.state.viewMode = mode;
         this.renderPage(this.currentPage, this.currentSubPage);
-    }
-
-    filterContent(filter, type) {
-        this.state.activeFilters[type] = filter === 'all' ? null : filter;
-        this.renderPage(this.currentPage);
-    }
-
-    sortContent(sortBy, type) {
-        this.state.sortBy = sortBy;
-        this.renderPage(this.currentPage);
-    }
-
-    // Инициализация конкретных страниц
-    initAdminPage() {
-        console.log('🔧 Инициализация админ-панели');
-    }
-
-    initCoursesPage() {
-        console.log('📚 Инициализация страницы курсов');
-    }
-
-    initHomePage() {
-        console.log('🏠 Инициализация домашней страницы');
-        this.setupNavigationHandlers();
-    }
-
-    setupNavigationHandlers() {
-        const navCards = document.querySelectorAll('.nav-card');
-        navCards.forEach(card => {
-            // Обработчики уже установлены через onclick
-        });
     }
 
     setupEventListeners() {
@@ -1187,7 +875,6 @@ class AcademyApp {
                     id: 1,
                     title: 'Мануальные техники в практике невролога',
                     description: '6 модулей по современным мануальным методикам',
-                    full_description: 'Комплексный курс по мануальным техникам для практикующих врачей-неврологов.',
                     price: 25000,
                     discount: 16,
                     duration: '12 недель',
@@ -1197,7 +884,21 @@ class AcademyApp {
                     students_count: 156,
                     rating: 4.8,
                     featured: true,
-                    image_url: '/webapp/assets/course-manual.jpg'
+                    image_url: '/webapp/assets/course-default.jpg'
+                },
+                {
+                    id: 2,
+                    title: 'Неврологическая диагностика',
+                    description: '5 модулей по современной диагностике',
+                    price: 18000,
+                    duration: '8 недель',
+                    modules: 5,
+                    category: 'Неврология',
+                    level: 'intermediate',
+                    students_count: 234,
+                    rating: 4.6,
+                    featured: true,
+                    image_url: '/webapp/assets/course-default.jpg'
                 }
             ],
             podcasts: [
@@ -1208,7 +909,7 @@ class AcademyApp {
                     duration: '45:20',
                     category: 'Неврология',
                     listens: 2345,
-                    image_url: '/webapp/assets/podcast-neurology.jpg'
+                    image_url: '/webapp/assets/podcast-default.jpg'
                 }
             ],
             streams: [
@@ -1219,7 +920,7 @@ class AcademyApp {
                     duration: '1:30:00',
                     live: true,
                     participants: 89,
-                    thumbnail_url: '/webapp/assets/stream-pain-syndrome.jpg'
+                    thumbnail_url: '/webapp/assets/stream-default.jpg'
                 }
             ],
             videos: [
@@ -1229,7 +930,7 @@ class AcademyApp {
                     description: 'Быстрый гайд по основным тестам',
                     duration: '15:30',
                     views: 4567,
-                    thumbnail_url: '/webapp/assets/video-neurological-exam.jpg'
+                    thumbnail_url: '/webapp/assets/video-default.jpg'
                 }
             ],
             materials: [
@@ -1240,7 +941,7 @@ class AcademyApp {
                     material_type: 'mri_analysis',
                     category: 'Неврология',
                     downloads: 1234,
-                    image_url: '/webapp/assets/material-ms-mri.jpg'
+                    image_url: '/webapp/assets/material-default.jpg'
                 }
             ],
             events: [
@@ -1250,9 +951,8 @@ class AcademyApp {
                     description: 'Ежегодная конференция с ведущими специалистами',
                     event_date: new Date('2024-02-15T10:00:00').toISOString(),
                     location: 'Москва',
-                    event_type: 'offline_conference',
                     participants: 456,
-                    image_url: '/webapp/assets/event-neurology-conf.jpg'
+                    image_url: '/webapp/assets/event-default.jpg'
                 }
             ],
             stats: {
@@ -1285,47 +985,33 @@ class AcademyApp {
 
     formatDate(dateString) {
         const date = new Date(dateString);
-        return date.toLocaleDateString('ru-RU', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-        });
+        return date.toLocaleDateString('ru-RU');
     }
 
     // Методы для работы с уведомлениями
     showNotification(message, type = 'info') {
+        console.log(`Notification [${type}]: ${message}`);
+        // Простая реализация уведомлений
         const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        
-        const icon = {
-            'success': '✅',
-            'error': '❌',
-            'warning': '⚠️',
-            'info': 'ℹ️'
-        }[type] || 'ℹ️';
-
-        notification.innerHTML = `
-            <div class="notification-content">
-                <div class="notification-icon">${icon}</div>
-                <div class="notification-message">${message}</div>
-                <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#3b82f6'};
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            z-index: 1000;
+            max-width: 300px;
         `;
-
+        notification.textContent = message;
         document.body.appendChild(notification);
         
         setTimeout(() => {
-            notification.classList.add('show');
-        }, 100);
-        
-        setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => {
-                if (notification.parentElement) {
-                    notification.remove();
-                }
-            }, 300);
-        }, 5000);
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 3000);
     }
 
     showError(message) {
@@ -1334,24 +1020,11 @@ class AcademyApp {
 
     showLoading(message = 'Загрузка...') {
         this.isLoading = true;
-        
-        const loading = document.createElement('div');
-        loading.className = 'loading-overlay';
-        loading.id = 'loadingOverlay';
-        loading.innerHTML = `
-            <div class="loading-spinner"></div>
-            <div class="loading-text">${message}</div>
-        `;
-        
-        document.body.appendChild(loading);
+        console.log(`Loading: ${message}`);
     }
 
     hideLoading() {
         this.isLoading = false;
-        const loading = document.getElementById('loadingOverlay');
-        if (loading) {
-            loading.remove();
-        }
     }
 
     showSkeletonLoading() {
@@ -1359,27 +1032,11 @@ class AcademyApp {
         if (!mainContent) return;
         
         mainContent.innerHTML = `
-            <div class="skeleton-loading">
-                <div class="skeleton-hero">
-                    <div class="skeleton-hero-content">
-                        <div class="skeleton-title"></div>
-                        <div class="skeleton-text"></div>
-                        <div class="skeleton-stats">
-                            <div class="skeleton-stat"></div>
-                            <div class="skeleton-stat"></div>
-                            <div class="skeleton-stat"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="skeleton-nav-grid">
+            <div style="padding: 20px;">
+                <div style="background: #374151; height: 200px; border-radius: 12px; margin-bottom: 20px;"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     ${Array(8).fill(0).map(() => `
-                        <div class="skeleton-nav-card">
-                            <div class="skeleton-icon"></div>
-                            <div class="skeleton-nav-content">
-                                <div class="skeleton-nav-title"></div>
-                                <div class="skeleton-nav-description"></div>
-                            </div>
-                        </div>
+                        <div style="background: #374151; height: 100px; border-radius: 8px;"></div>
                     `).join('')}
                 </div>
             </div>
@@ -1387,56 +1044,16 @@ class AcademyApp {
     }
 
     hideSkeletonLoading() {
-        const skeleton = document.querySelector('.skeleton-loading');
-        if (skeleton) {
-            skeleton.style.opacity = '0';
-            setTimeout(() => {
-                if (skeleton.parentElement) {
-                    skeleton.remove();
-                }
-            }, 300);
-        }
+        // Автоматически скрывается при рендере контента
     }
 
-    // Заглушки для будущей функциональности
+    // Заглушки для функциональности
     showAddContentForm(type) {
         this.showNotification(`📝 Добавление ${type} в разработке`, 'info');
     }
 
-    purchaseCourse(courseId) {
-        this.showNotification('💳 Функция покупки в разработке', 'info');
-    }
-
-    addToCart(courseId) {
-        this.showNotification('🛒 Курс добавлен в корзину', 'success');
-    }
-
-    playPodcast(podcastId) {
-        this.showNotification('🎧 Воспроизведение подкаста в разработке', 'info');
-    }
-
-    watchStream(streamId) {
-        this.showNotification('📹 Просмотр эфира в разработке', 'info');
-    }
-
-    watchVideo(videoId) {
-        this.showNotification('🎬 Просмотр видео в разработке', 'info');
-    }
-
-    downloadMaterial(materialId) {
-        this.showNotification('📥 Загрузка материала в разработке', 'info');
-    }
-
-    registerForEvent(eventId) {
-        this.showNotification('🎫 Регистрация на мероприятие в разработке', 'info');
-    }
-
     showSupport() {
-        this.showNotification('💬 Поддержка: @anb_academy_support\n📧 support@anb-academy.ru', 'info');
-    }
-
-    showSettings() {
-        this.showNotification('⚙️ Настройки в разработке', 'info');
+        this.showNotification('💬 Поддержка: @anb_academy_support', 'info');
     }
 }
 
