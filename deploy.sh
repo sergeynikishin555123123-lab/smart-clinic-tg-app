@@ -14,7 +14,7 @@ NODE_ENV=production
 APP_NAME=Академия АНБ
 APP_VERSION=2.0.0
 PORT=3000
-WEBAPP_URL=https://your-domain.com
+WEBAPP_URL=https://sergeynikishin555123123-lab-smart-clinic-tg-app-b25c.twc1.net
 
 # Telegram Bot
 BOT_TOKEN=your_telegram_bot_token_here
