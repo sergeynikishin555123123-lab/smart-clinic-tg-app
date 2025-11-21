@@ -18,53 +18,68 @@ const PORT = process.env.PORT || 3000;
 // База данных - исправленная конфигурация
 function createPool() {
   try {
-    const connectionString = process.env.DATABASE_URL;
-    
     console.log('🔧 Настройка подключения к БД...');
     
-    // Если URL невалидный, используем альтернативные параметры
-    if (!connectionString || !connectionString.includes('://')) {
-      console.log('⚠️ Используем параметры подключения из переменных окружения');
-      return new Pool({
-        user: process.env.DB_USER || 'gen_user',
-        host: process.env.DB_HOST || 'def46fb02c0eac8fefd6f734.twc1.net',
-        database: process.env.DB_NAME || 'default_db',
-        password: process.env.DB_PASSWORD,
-        port: process.env.DB_PORT || 5432,
-        ssl: {
-          rejectUnauthorized: false
-        },
-        // Таймауты для стабильности
-        connectionTimeoutMillis: 10000,
-        idleTimeoutMillis: 30000,
-        max: 20
-      });
-    }
-    
-    console.log('✅ Используем DATABASE_URL для подключения');
-    return new Pool({
-      connectionString: connectionString,
-      ssl: { 
-        rejectUnauthorized: false 
-      },
+    // Используем параметры из .env
+    const poolConfig = {
+      user: process.env.DB_USER || 'gen_user',
+      host: process.env.DB_HOST || '45.89.190.49',
+      database: process.env.DB_NAME || 'default_db',
+      password: process.env.DB_PASSWORD,
+      port: parseInt(process.env.DB_PORT) || 5432,
       // Таймауты для стабильности
       connectionTimeoutMillis: 10000,
       idleTimeoutMillis: 30000,
       max: 20
-    });
+    };
+
+    console.log('📊 Параметры подключения:');
+    console.log(`   Host: ${poolConfig.host}`);
+    console.log(`   Database: ${poolConfig.database}`);
+    console.log(`   User: ${poolConfig.user}`);
+    console.log(`   Port: ${poolConfig.port}`);
+
+    // Тестируем подключение
+    const testClient = new Pool(poolConfig);
+    const testResult = await testClient.query('SELECT NOW() as time');
+    console.log('✅ Тест подключения к БД успешен:', testResult.rows[0].time);
+    await testClient.end();
+
+    return new Pool(poolConfig);
+
   } catch (error) {
-    console.error('❌ Ошибка создания пула подключений:', error);
-    throw error;
+    console.error('❌ Ошибка создания пула подключений:', error.message);
+    
+    // Создаем пул без тестирования (на случай если тест не проходит)
+    console.log('⚠️ Создаем пул без предварительного тестирования');
+    return new Pool({
+      user: process.env.DB_USER || 'gen_user',
+      host: process.env.DB_HOST || '45.89.190.49',
+      database: process.env.DB_NAME || 'default_db',
+      password: process.env.DB_PASSWORD,
+      port: parseInt(process.env.DB_PORT) || 5432,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: 20
+    });
   }
 }
 
-const pool = createPool();
+let pool;
 
-// Инициализация бота
-let bot;
-if (process.env.BOT_TOKEN) {
-  bot = new Telegraf(process.env.BOT_TOKEN);
+// Асинхронная инициализация пула
+async function initializePool() {
+  try {
+    pool = await createPool();
+    console.log('✅ Пул подключений к БД инициализирован');
+  } catch (error) {
+    console.error('❌ Критическая ошибка инициализации пула БД:', error);
+    process.exit(1);
+  }
 }
+
+// Запускаем инициализацию
+initializePool();
 
 // Middleware
 app.use(express.json());
@@ -979,6 +994,11 @@ app.get('*', (req, res) => {
 
 async function startServer() {
   try {
+    // Ждем инициализации пула БД
+    if (!pool) {
+      await initializePool();
+    }
+    
     await initDatabase();
     if (bot) setupBot();
     
@@ -987,8 +1007,7 @@ async function startServer() {
       console.log(`📱 WebApp: ${process.env.WEBAPP_URL || `http://localhost:${PORT}/webapp/`}`);
       console.log(`🤖 Bot: ${bot ? 'активен' : 'не настроен'}`);
       console.log(`🔄 Cron: задачи настроены`);
-      console.log(`📊 API Health: http://localhost:${PORT}/api/health`);
-      console.log(`🗄️ DB Health: http://localhost:${PORT}/api/db-health`);
+      console.log(`🗄️ База данных: подключена`);
     });
   } catch (error) {
     console.error('❌ Ошибка запуска сервера:', error);
