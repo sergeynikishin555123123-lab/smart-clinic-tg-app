@@ -1080,6 +1080,157 @@ app.post('/api/purchase/course', async (req, res) => {
   }
 });
 
+// Получение статистики пользователя
+app.get('/api/user/:id/stats', async (req, res) => {
+    try {
+        const userId = req.params.id;
+        
+        const { rows: progress } = await pool.query(
+            `SELECT up.*, u.first_name, u.subscription_end
+             FROM user_progress up 
+             JOIN users u ON up.user_id = u.id 
+             WHERE u.id = $1`,
+            [userId]
+        );
+
+        const { rows: activities } = await pool.query(
+            `SELECT activity_type, COUNT(*) as count 
+             FROM activities 
+             WHERE user_id = $1 
+             GROUP BY activity_type`,
+            [userId]
+        );
+
+        const { rows: favorites } = await pool.query(
+            `SELECT content_type, COUNT(*) as count 
+             FROM favorites 
+             WHERE user_id = $1 
+             GROUP BY content_type`,
+            [userId]
+        );
+
+        const stats = {
+            progress: progress[0] || {},
+            activities: activities.reduce((acc, item) => {
+                acc[item.activity_type] = parseInt(item.count);
+                return acc;
+            }, {}),
+            favorites: favorites.reduce((acc, item) => {
+                acc[item.content_type] = parseInt(item.count);
+                return acc;
+            }, {}),
+            totalXP: progress[0]?.experience || 0,
+            level: progress[0]?.level || 'Понимаю'
+        };
+
+        res.json({ success: true, stats });
+    } catch (error) {
+        console.error('API User Stats error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки статистики' });
+    }
+});
+
+// Управление подпиской
+app.post('/api/subscription/manage', async (req, res) => {
+    try {
+        const { userId, action, period } = req.body;
+        
+        // Здесь должна быть интеграция с платежной системой
+        // Пока возвращаем демо-ответ
+        
+        let message = '';
+        let paymentUrl = '';
+        
+        switch(action) {
+            case 'renew':
+                message = `Подписка продлена на ${period} месяцев`;
+                paymentUrl = `https://payment.example.com/subscription?user=${userId}&period=${period}`;
+                break;
+            case 'cancel':
+                message = 'Подписка отменена';
+                break;
+            case 'change':
+                message = 'Тарифный план изменен';
+                paymentUrl = `https://payment.example.com/change-plan?user=${userId}`;
+                break;
+        }
+
+        res.json({ 
+            success: true, 
+            message,
+            paymentUrl: paymentUrl || null
+        });
+    } catch (error) {
+        console.error('API Subscription error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка управления подпиской' });
+    }
+});
+
+// Отправка сообщения в поддержку
+app.post('/api/support/contact', async (req, res) => {
+    try {
+        const { userId, topic, courseId, message, attachments } = req.body;
+        
+        // Здесь должна быть логика отправки email/уведомления
+        console.log('Support request:', {
+            userId,
+            topic,
+            courseId,
+            message,
+            attachments: attachments?.length || 0
+        });
+
+        // Сохраняем обращение в базу
+        await pool.query(
+            `INSERT INTO support_requests (user_id, topic, course_id, message, attachments) 
+             VALUES ($1, $2, $3, $4, $5)`,
+            [userId, topic, courseId, message, JSON.stringify(attachments)]
+        );
+
+        res.json({ 
+            success: true, 
+            message: 'Сообщение отправлено в поддержку. Ответим в течение 24 часов.' 
+        });
+    } catch (error) {
+        console.error('API Support error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка отправки сообщения' });
+    }
+});
+
+// Получение уведомлений пользователя
+app.get('/api/user/:id/notifications', async (req, res) => {
+    try {
+        const userId = req.params.id;
+        
+        // Демо-уведомления
+        const notifications = [
+            {
+                id: 1,
+                type: 'course',
+                title: 'Новый курс доступен',
+                message: 'Курс "Мануальные техники" теперь в вашем распоряжении',
+                date: new Date().toISOString(),
+                read: false,
+                actionUrl: '/webapp/#courses'
+            },
+            {
+                id: 2,
+                type: 'event',
+                title: 'Напоминание о эфире',
+                message: 'Завтра в 19:00 прямой эфир с разбором клинического случая',
+                date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+                read: true,
+                actionUrl: '/webapp/#streams'
+            }
+        ];
+
+        res.json({ success: true, notifications });
+    } catch (error) {
+        console.error('API Notifications error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки уведомлений' });
+    }
+});
+
 // SPA fallback
 app.get('/webapp*', (req, res) => {
   res.sendFile(join(__dirname, 'webapp', 'index.html'));
