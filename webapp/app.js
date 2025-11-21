@@ -9,7 +9,6 @@ class AcademyApp {
         this.isSuperAdmin = false;
         this.isInitialized = false;
         
-        // === ВСТАВИТЬ ЗДЕСЬ ===
         this.podcastPlayer = null;
         this.videoPlayer = null;
         this.currentPlaying = null;
@@ -780,7 +779,6 @@ class AcademyApp {
         `;
     }
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     createPodcastsPage() {
         const podcasts = this.allContent.podcasts || [];
         const categories = [...new Set(podcasts.map(p => p.category))];
@@ -868,9 +866,7 @@ class AcademyApp {
             </div>
         `;
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     createStreamsPage() {
         const streams = this.allContent.streams || [];
         const liveStreams = streams.filter(s => s.is_live);
@@ -964,9 +960,7 @@ class AcademyApp {
             </div>
         `;
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     createVideosPage() {
         const videos = this.allContent.videos || [];
         const categories = [...new Set(videos.map(v => v.category))];
@@ -1047,9 +1041,7 @@ class AcademyApp {
             </div>
         `;
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     createMaterialsPage() {
         const materials = this.allContent.materials || [];
         const categories = [...new Set(materials.map(m => m.category))];
@@ -1124,9 +1116,7 @@ class AcademyApp {
             </div>
         `;
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     createEventsPage() {
         const events = this.allContent.events || [];
         const onlineEvents = events.filter(e => e.event_type === 'online');
@@ -1229,9 +1219,7 @@ class AcademyApp {
             </div>
         `;
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     createCommunityPage() {
         return `
             <div class="page community-page">
@@ -1306,7 +1294,7 @@ class AcademyApp {
                             )}
                             ${this.createFAQItem(
                                 'Как начать обучение или выбрать первый модуль?',
-                                'С выбором поможет координатор Академии. Также можно оплатить любой модуль в разделе «Курсы» и сразу получить доступ ко всем урокам.'
+                                'С выбором поможет координатор Академии. Также можно оплачить любой модуль в разделе «Курсы» и сразу получить доступ ко всем урокам.'
                             )}
                             ${this.createFAQItem(
                                 'Можно ли смотреть эфиры или разборы в записи?',
@@ -1359,9 +1347,7 @@ class AcademyApp {
             </div>
         `;
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     createChatsPage() {
         return `
             <div class="page chats-page">
@@ -1410,9 +1396,7 @@ class AcademyApp {
             </div>
         `;
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     createMyMaterialsPage() {
         const watchLater = this.allContent.courses?.slice(0, 2) || [];
         const favoriteCourses = this.allContent.courses?.filter(c => this.isFavorite(c.id, 'courses')) || [];
@@ -1614,9 +1598,7 @@ class AcademyApp {
             </div>
         `;
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     createProfilePage() {
         const user = this.currentUser;
         const progress = user?.progress || {};
@@ -1756,9 +1738,7 @@ class AcademyApp {
             </div>
         `;
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     createSupportPage() {
         return `
             <div class="page support-page">
@@ -1870,9 +1850,7 @@ class AcademyApp {
             </div>
         `;
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     createAdminPage() {
         if (!this.isAdmin) {
             return this.createAccessDeniedPage();
@@ -2026,9 +2004,7 @@ class AcademyApp {
             </div>
         `;
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     createNotFoundPage() {
         return `
             <div class="page not-found-page">
@@ -2196,9 +2172,7 @@ class AcademyApp {
             </div>
         `;
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ ФИЛЬТРАЦИИ И СОРТИРОВКИ
     filterPodcasts(category) {
         this.state.activeFilters.podcastCategory = category;
@@ -2272,9 +2246,7 @@ class AcademyApp {
         this.state.viewMode = mode;
         this.renderPage(this.currentPage);
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     // МЕТОДЫ ДЛЯ РАБОТЫ С КОНТЕНТОМ
     async playPodcast(podcastId) {
         const podcast = this.allContent.podcasts?.find(p => p.id == podcastId);
@@ -2442,9 +2414,7 @@ class AcademyApp {
             modal.remove();
         }
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     // МЕТОДЫ ДЛЯ КУРСОВ И ОБУЧЕНИЯ
     openCourseDetail(courseId) {
         this.state.currentCourse = courseId;
@@ -2556,9 +2526,7 @@ class AcademyApp {
             </div>
         `).join('');
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     // МЕТОДЫ ДЛЯ РАБОТЫ С МАТЕРИАЛАМИ
     async downloadMaterial(materialId) {
         const material = this.allContent.materials?.find(m => m.id == materialId);
@@ -2648,9 +2616,7 @@ class AcademyApp {
             // Здесь можно добавить логику шеринга
         }
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ ЗДЕСЬ ===
     // МЕТОДЫ ДЛЯ СООБЩЕСТВА И ЧАТОВ
     joinChat(chatName) {
         this.showNotification(`Вход в чат "${chatName}"`, 'info');
@@ -2742,9 +2708,7 @@ class AcademyApp {
         };
         return names[type] || 'контент';
     }
-    // === КОНЕЦ ВСТАВКИ ===
 
-    // === ВСТАВИТЬ В САМЫЙ КОНЕЦ КЛАССА ===
     // УТИЛИТНЫЕ МЕТОДЫ
     getContentById(contentId, contentType) {
         return this.allContent[contentType]?.find(item => item.id == contentId);
@@ -2800,6 +2764,38 @@ class AcademyApp {
 
     isFavorite(contentId, contentType) {
         return this.state.favorites[contentType]?.includes(parseInt(contentId)) || false;
+    }
+
+    async toggleFavorite(contentId, contentType) {
+        try {
+            const response = await this.safeApiCall('/api/favorites/toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: this.currentUser.id,
+                    contentId: contentId,
+                    contentType: contentType
+                })
+            });
+
+            if (response.success) {
+                if (response.action === 'added') {
+                    if (!this.state.favorites[contentType].includes(contentId)) {
+                        this.state.favorites[contentType].push(contentId);
+                    }
+                    this.showNotification('Добавлено в избранное', 'success');
+                } else {
+                    this.state.favorites[contentType] = this.state.favorites[contentType].filter(id => id !== contentId);
+                    this.showNotification('Удалено из избранного', 'info');
+                }
+                this.updateFavoritesCount();
+                // Перерисовываем текущую страницу для обновления состояния кнопок
+                this.renderPage(this.currentPage, this.currentSubPage);
+            }
+        } catch (error) {
+            console.error('Ошибка переключения избранного:', error);
+            this.showNotification('Ошибка обновления избранного', 'error');
+        }
     }
 
     formatPrice(price) {
@@ -2944,8 +2940,23 @@ class AcademyApp {
                     featured: true,
                     image_url: '/webapp/assets/course-default.jpg',
                     video_url: 'https://example.com/video1'
+                },
+                {
+                    id: 2,
+                    title: 'Неврологическая диагностика',
+                    description: '5 модулей по современной диагностике',
+                    price: 18000,
+                    discount: 0,
+                    duration: '8 недель',
+                    modules: 5,
+                    category: 'Неврология',
+                    level: 'intermediate',
+                    students_count: 234,
+                    rating: 4.6,
+                    featured: true,
+                    image_url: '/webapp/assets/course-default.jpg',
+                    video_url: 'https://example.com/video2'
                 }
-                // ... другие курсы
             ],
             podcasts: [
                 {
@@ -2958,13 +2969,61 @@ class AcademyApp {
                     image_url: '/webapp/assets/podcast-default.jpg',
                     audio_url: 'https://example.com/audio1'
                 }
-                // ... другие подкасты
             ],
-            // ... остальной контент
+            streams: [
+                {
+                    id: 1,
+                    title: 'LIVE: Ответы на вопросы по мануальной терапии',
+                    description: 'Прямой эфир с ответами на вопросы',
+                    duration: '2:15:00',
+                    category: 'Мануальные техники',
+                    participants: 156,
+                    is_live: true,
+                    thumbnail_url: '/webapp/assets/stream-default.jpg',
+                    video_url: 'https://example.com/stream2'
+                }
+            ],
+            videos: [
+                {
+                    id: 1,
+                    title: 'Техника мобилизации шейного отдела',
+                    description: 'Практическая демонстрация техники',
+                    duration: '8:30',
+                    category: 'Мануальные техники',
+                    views: 567,
+                    thumbnail_url: '/webapp/assets/video-default.jpg',
+                    video_url: 'https://example.com/video5'
+                }
+            ],
+            materials: [
+                {
+                    id: 1,
+                    title: 'Чек-лист неврологического осмотра',
+                    description: 'Полный чек-лист для стандартного осмотра',
+                    category: 'Неврология',
+                    material_type: 'checklist',
+                    downloads: 234,
+                    image_url: '/webapp/assets/material-default.jpg',
+                    file_url: 'https://example.com/material1.pdf'
+                }
+            ],
+            events: [
+                {
+                    id: 1,
+                    title: 'Конференция по современной неврологии',
+                    description: 'Ежегодная конференция с ведущими специалистами',
+                    event_type: 'offline',
+                    event_date: '2024-12-15T10:00:00.000Z',
+                    location: 'Москва, ул. Профессиональная, 15',
+                    participants: 250,
+                    image_url: '/webapp/assets/event-default.jpg',
+                    registration_url: 'https://example.com/register1'
+                }
+            ],
             stats: {
                 totalUsers: 1567,
-                totalCourses: 5,
-                totalMaterials: 8,
+                totalCourses: 4,
+                totalMaterials: 3,
                 totalEvents: 3
             }
         };
@@ -3539,7 +3598,6 @@ class AcademyApp {
         return icons[type] || '📝';
     }
 }
-// === КОНЕЦ КЛАССА AcademyApp ===
 
 // Глобальная инициализация
 window.AcademyApp = AcademyApp;
