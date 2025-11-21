@@ -67,8 +67,6 @@ async function createPool() {
 
 let pool;
 
-let pool;
-
 // Асинхронная инициализация пула
 async function initializePool() {
   try {
