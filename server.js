@@ -1008,8 +1008,14 @@ async function startServer() {
       await initializePool();
     }
     
-    await initDatabase();
-    if (bot) setupBot();
+await initDatabase();
+
+// Запускаем бота если он настроен
+if (bot) {
+  setupBot();
+} else {
+  console.log('🤖 Бот отключен - отсутствует BOT_TOKEN');
+}
     
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Сервер запущен на порту ${PORT}`);
