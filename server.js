@@ -16,7 +16,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // База данных - исправленная конфигурация
-function createPool() {
+async function createPool() {
   try {
     console.log('🔧 Настройка подключения к БД...');
     
@@ -67,6 +67,8 @@ function createPool() {
 
 let pool;
 
+let pool;
+
 // Асинхронная инициализация пула
 async function initializePool() {
   try {
@@ -74,13 +76,22 @@ async function initializePool() {
     console.log('✅ Пул подключений к БД инициализирован');
   } catch (error) {
     console.error('❌ Критическая ошибка инициализации пула БД:', error);
-    process.exit(1);
+    // Создаем пул в любом случае для продолжения работы
+    pool = new Pool({
+      user: process.env.DB_USER || 'gen_user',
+      host: process.env.DB_HOST || '45.89.190.49',
+      database: process.env.DB_NAME || 'default_db',
+      password: process.env.DB_PASSWORD,
+      port: parseInt(process.env.DB_PORT) || 5432,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: 20
+    });
   }
 }
 
 // Запускаем инициализацию
 initializePool();
-
 // Middleware
 app.use(express.json());
 app.use(express.static(join(__dirname)));
