@@ -117,165 +117,33 @@ app.use((req, res, next) => {
 
 // ==================== БАЗА ДАННЫХ ====================
 
-async function initDatabase() {
-    try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                telegram_id BIGINT UNIQUE,
-                first_name VARCHAR(255),
-                username VARCHAR(255),
-                email VARCHAR(255),
-                specialization VARCHAR(255),
-                city VARCHAR(255),
-                subscription_end DATE,
-                is_admin BOOLEAN DEFAULT false,
-                is_super_admin BOOLEAN DEFAULT false,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS user_progress (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id),
-                level VARCHAR(50) DEFAULT 'Понимаю',
-                experience INTEGER DEFAULT 1250,
-                courses_bought INTEGER DEFAULT 3,
-                modules_completed INTEGER DEFAULT 2,
-                materials_watched INTEGER DEFAULT 12,
-                events_attended INTEGER DEFAULT 1,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS favorites (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id),
-                content_id INTEGER,
-                content_type VARCHAR(50),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS courses (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(500),
-                description TEXT,
-                price INTEGER,
-                discount INTEGER DEFAULT 0,
-                duration VARCHAR(100),
-                modules INTEGER,
-                category VARCHAR(255),
-                level VARCHAR(50),
-                students_count INTEGER DEFAULT 0,
-                rating DECIMAL(3,2) DEFAULT 4.5,
-                featured BOOLEAN DEFAULT false,
-                image_url VARCHAR(500),
-                video_url VARCHAR(500),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS podcasts (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(500),
-                description TEXT,
-                duration VARCHAR(100),
-                category VARCHAR(255),
-                listens INTEGER DEFAULT 0,
-                image_url VARCHAR(500),
-                audio_url VARCHAR(500)
-            );
-
-            CREATE TABLE IF NOT EXISTS streams (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(500),
-                description TEXT,
-                duration VARCHAR(100),
-                category VARCHAR(255),
-                participants INTEGER DEFAULT 0,
-                is_live BOOLEAN DEFAULT false,
-                thumbnail_url VARCHAR(500),
-                video_url VARCHAR(500),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS videos (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(500),
-                description TEXT,
-                duration VARCHAR(100),
-                category VARCHAR(255),
-                views INTEGER DEFAULT 0,
-                thumbnail_url VARCHAR(500),
-                video_url VARCHAR(500)
-            );
-
-            CREATE TABLE IF NOT EXISTS materials (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(500),
-                description TEXT,
-                material_type VARCHAR(50),
-                category VARCHAR(255),
-                downloads INTEGER DEFAULT 0,
-                file_url VARCHAR(500),
-                image_url VARCHAR(500)
-            );
-
-            CREATE TABLE IF NOT EXISTS events (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(500),
-                description TEXT,
-                event_date TIMESTAMP,
-                location VARCHAR(255),
-                participants INTEGER DEFAULT 0,
-                event_type VARCHAR(50),
-                image_url VARCHAR(500),
-                registration_url VARCHAR(500)
-            );
-
-            CREATE TABLE IF NOT EXISTS activities (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id),
-                activity_type VARCHAR(100),
-                content_id INTEGER,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS user_subscriptions (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id),
-                start_date DATE,
-                end_date DATE,
-                status VARCHAR(50) DEFAULT 'active',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-        console.log('✅ База данных инициализирована');
-        await seedDemoData();
-    } catch (error) {
-        console.error('❌ Ошибка инициализации БД:', error);
-    }
-}
-
 async function seedDemoData() {
     try {
+        // Проверяем и добавляем демо-курсы
         const { rows: courseCount } = await pool.query('SELECT COUNT(*) FROM courses');
         if (parseInt(courseCount[0].count) === 0) {
+            console.log('📚 Добавляем демо-курсы...');
             await pool.query(`
                 INSERT INTO courses (title, description, price, discount, duration, modules, category, level, students_count, rating, featured, image_url, video_url) VALUES
                 ('Мануальные техники в практике невролога', '6 модулей по современным мануальным методикам', 25000, 16, '12 недель', 6, 'Мануальные техники', 'advanced', 156, 4.8, true, '/webapp/assets/course-default.jpg', 'https://example.com/video1'),
                 ('Неврологическая диагностика', '5 модулей по современной диагностике', 18000, 0, '8 недель', 5, 'Неврология', 'intermediate', 234, 4.6, true, '/webapp/assets/course-default.jpg', 'https://example.com/video2'),
                 ('Реабилитация после инсульта', 'Комплексный подход к восстановлению', 22000, 10, '10 недель', 4, 'Реабилитация', 'intermediate', 189, 4.7, false, '/webapp/assets/course-default.jpg', 'https://example.com/video3')
             `);
+            console.log('✅ Демо-курсы добавлены');
         }
 
+        // Проверяем и добавляем демо-подкасты
         const { rows: podcastCount } = await pool.query('SELECT COUNT(*) FROM podcasts');
         if (parseInt(podcastCount[0].count) === 0) {
+            console.log('🎧 Добавляем демо-подкасты...');
             await pool.query(`
                 INSERT INTO podcasts (title, description, duration, category, listens, image_url, audio_url) VALUES
                 ('АНБ FM: Современная неврология', 'Обсуждение новых тенденций в неврологии', '45:20', 'Неврология', 2345, '/webapp/assets/podcast-default.jpg', 'https://example.com/audio1'),
                 ('Мануальная терапия: мифы и реальность', 'Разбор популярных заблуждений', '38:15', 'Мануальные техники', 1876, '/webapp/assets/podcast-default.jpg', 'https://example.com/audio2')
             `);
+            console.log('✅ Демо-подкасты добавлены');
         }
 
-        console.log('✅ Демо-данные добавлены');
     } catch (error) {
         console.error('❌ Ошибка добавления демо-данных:', error);
     }
@@ -301,33 +169,66 @@ function setupBot() {
 
     bot.use(session());
 
-    bot.start(async (ctx) => {
-        const userId = ctx.from.id;
-        const userName = ctx.from.first_name;
+bot.start(async (ctx) => {
+    const userId = ctx.from.id;
+    const userName = ctx.from.first_name;
+    
+    try {
+        // Сначала проверяем существование пользователя
+        const { rows: existingUser } = await pool.query(
+            'SELECT * FROM users WHERE telegram_id = $1',
+            [userId]
+        );
         
-        try {
+        if (existingUser.length === 0) {
+            // Создаем нового пользователя
             await pool.query(
                 `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin) 
-                 VALUES ($1, $2, $3, $4, $5) 
-                 ON CONFLICT (telegram_id) 
-                 DO UPDATE SET first_name = $2, username = $3`,
+                 VALUES ($1, $2, $3, $4, $5)`,
                 [userId, userName, ctx.from.username, 
                  userId == process.env.SUPER_ADMIN_ID, 
                  userId == process.env.SUPER_ADMIN_ID]
             );
+            console.log(`✅ Создан новый пользователь: ${userName}`);
+        } else {
+            // Обновляем существующего пользователя
+            await pool.query(
+                `UPDATE users SET first_name = $1, username = $2 WHERE telegram_id = $3`,
+                [userName, ctx.from.username, userId]
+            );
+            console.log(`✅ Обновлен пользователь: ${userName}`);
+        }
 
-            const welcomeText = `👋 Добро пожаловать в Академию АНБ, ${userName}!`;
+        const welcomeText = `👋 Добро пожаловать в Академию АНБ, ${userName}!`;
 
-            await ctx.reply(welcomeText, {
-                reply_markup: {
-                    keyboard: [
-                        ['📱 Открыть Академию', '📚 Курсы'],
-                        ['🎧 АНБ FM', '📹 Эфиры и разборы'],
-                        ['👤 Мой профиль', '🆘 Поддержка']
-                    ],
-                    resize_keyboard: true
-                }
-            });
+        await ctx.reply(welcomeText, {
+            reply_markup: {
+                keyboard: [
+                    ['📱 Открыть Академию', '📚 Курсы'],
+                    ['🎧 АНБ FM', '📹 Эфиры и разборы'],
+                    ['👤 Мой профиль', '🆘 Поддержка']
+                ],
+                resize_keyboard: true
+            }
+        });
+
+    } catch (error) {
+        console.error('Ошибка при старте бота:', error);
+        // Отправляем сообщение даже при ошибке БД
+        await ctx.reply(`👋 Привет, ${userName}! Добро пожаловать в Академию АНБ! 🎓
+        
+Используйте кнопки ниже для навигации:`, {
+            reply_markup: {
+                keyboard: [
+                    ['📱 Открыть Академию', '📚 Курсы'],
+                    ['🎧 АНБ FM', '📹 Эфиры и разборы'],
+                    ['👤 Мой профиль', '🆘 Поддержка']
+                ],
+                resize_keyboard: true
+            }
+        });
+    }
+});
 
         } catch (error) {
             console.error('Ошибка при старте бота:', error);
