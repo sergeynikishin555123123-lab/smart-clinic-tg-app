@@ -667,6 +667,127 @@ ${user.subscription_end ? `✅ *Подписка активна до:* ${new Dat
     });
   }
 
+    // Обработка покупки курса
+    bot.action('buy_course', async (ctx) => {
+        await ctx.answerCbQuery();
+        await ctx.reply('💳 *Выберите курс для покупки:*', {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [
+                    [{
+                        text: '📚 Мануальные техники - 25 000 ₽',
+                        callback_data: 'purchase_course_1'
+                    }],
+                    [{
+                        text: '🧠 Неврологическая диагностика - 18 000 ₽',
+                        callback_data: 'purchase_course_2'
+                    }],
+                    [{
+                        text: '🔄 Реабилитация после инсульта - 22 000 ₽',
+                        callback_data: 'purchase_course_3'
+                    }],
+                    [{
+                        text: '📱 Открыть все курсы',
+                        web_app: { url: `${process.env.WEBAPP_URL}/webapp/#courses` }
+                    }]
+                ]
+            }
+        });
+    });
+
+    // Обработка выбора курса для покупки
+    bot.action(/purchase_course_(.+)/, async (ctx) => {
+        const courseId = ctx.match[1];
+        await ctx.answerCbQuery();
+        await ctx.reply(`✅ *Курс выбран!*\n\nДля завершения покупки откройте Академию:`, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[{
+                    text: '💳 Перейти к оплате',
+                    web_app: { url: `${process.env.WEBAPP_URL}/webapp/#course-${courseId}` }
+                }]]
+            }
+        });
+    });
+
+    // Обработка продления подписки
+    bot.action('renew_subscription', async (ctx) => {
+        await ctx.answerCbQuery();
+        await ctx.reply('🔄 *Продление подписки*\n\nВыберите период:', {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [
+                    [{
+                        text: '1 месяц - 2 900 ₽',
+                        callback_data: 'renew_1'
+                    }],
+                    [{
+                        text: '3 месяца - 7 500 ₽ (скидка 15%)',
+                        callback_data: 'renew_3'
+                    }],
+                    [{
+                        text: '12 месяцев - 24 000 ₽ (скидка 30%)',
+                        callback_data: 'renew_12'
+                    }],
+                    [{
+                        text: '📱 Управление подпиской',
+                        web_app: { url: `${process.env.WEBAPP_URL}/webapp/#subscription` }
+                    }]
+                ]
+            }
+        });
+    });
+
+    // Обработка информации о тарифах
+    bot.action('tariff_info', async (ctx) => {
+        await ctx.answerCbQuery();
+        await ctx.reply(`📋 *Подробнее о тарифах*
+
+*🔹 Базовый (1 месяц)*
+• Доступ ко всем курсам
+• Участие в эфирах  
+• Закрытое сообщество
+• Базовая поддержка
+
+*🔹 Стандарт (3 месяца)*
+• Всё из Базового +
+• Практические материалы
+• Участие в разборах
+• Приоритетная поддержка
+
+*🔹 Премиум (12 месяцев)* 
+• Всё из Стандартного +
+• Персональный куратор
+• Ранний доступ к новым курсам
+• Участие в офлайн мероприятиях
+• Сертификаты о прохождении
+
+*💎 Самый выгодный - Премиум на 12 месяцев!*`, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[{
+                    text: '💳 Выбрать тариф',
+                    web_app: { url: `${process.env.WEBAPP_URL}/webapp/#subscription` }
+                }]]
+            }
+        });
+    });
+
+    // Обработка продления подписки
+    bot.action(/renew_(\d+)/, async (ctx) => {
+        const months = ctx.match[1];
+        await ctx.answerCbQuery();
+        await ctx.reply(`✅ *Подписка на ${months} месяц(ев) выбрана!*\n\nДля завершения оплаты:`, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[{
+                    text: '💳 Перейти к оплате',
+                    web_app: { url: `${process.env.WEBAPP_URL}/webapp/#subscription` }
+                }]]
+            }
+        });
+    });
+  
   function formatPrice(price) {
     return new Intl.NumberFormat('ru-RU').format(price) + ' ₽';
   }
