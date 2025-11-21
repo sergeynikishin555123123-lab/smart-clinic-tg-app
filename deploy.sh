@@ -9,7 +9,7 @@ if [ ! -f .env ]; then
     echo "❌ Файл .env не найден"
     echo "Создаю шаблон .env файла..."
     cat > .env.example << EOL
-# Конфигурация Академии АНБ
+# Конфигурация Академии АНБ - ПРОДАКШЕН
 NODE_ENV=production
 APP_NAME=Академия АНБ
 APP_VERSION=2.0.0
@@ -17,19 +17,23 @@ PORT=3000
 WEBAPP_URL=https://sergeynikishin555123123-lab-smart-clinic-tg-app-b25c.twc1.net
 
 # Telegram Bot
-BOT_TOKEN=your_telegram_bot_token_here
+BOT_TOKEN=8413397142:AAEKoz_BdUvDI8apfpRDivWoNgu6JOHh8Y4
 
-# База данных
-DATABASE_URL=postgresql://username:password@host:port/database
+# База данных (TimeWeb PostgreSQL)
+DATABASE_URL=postgresql://gen_user:your_password@your_host.twc1.net:5432/your_db
 
 # Администраторы
-SUPER_ADMIN_ID=your_telegram_id
-ADMIN_IDS=your_telegram_id
+SUPER_ADMIN_ID=898508164
+ADMIN_IDS=898508164
 
 # Безопасность
-JWT_SECRET=your-super-secret-jwt-key-here
+JWT_SECRET=anb-academy-super-secret-jwt-key-2024-timeweb
 
-# TimeWeb Cloud
+# Bitrix24 интеграция (опционально)
+BITRIX24_WEBHOOK=https://your-company.bitrix24.ru/rest/1/your-webhook/
+BITRIX24_DEAL_CATEGORY=Telegram
+
+# TimeWeb специфичные настройки
 TIMEWEB_DEPLOYMENT=true
 EOL
     echo "⚠️ Создан .env.example. Скопируйте его в .env и настройте переменные"
