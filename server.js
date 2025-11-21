@@ -117,6 +117,139 @@ app.use((req, res, next) => {
 
 // ==================== БАЗА ДАННЫХ ====================
 
+async function initDatabase() {
+    try {
+        console.log('🗄️ Проверка структуры базы данных...');
+        
+        // Проверяем существование таблицы users
+        const { rows: tableExists } = await pool.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'users'
+            );
+        `);
+        
+        if (!tableExists[0].exists) {
+            console.log('📋 Создаем таблицы...');
+            await createTables();
+        } else {
+            console.log('✅ Таблицы уже существуют');
+            // Проверяем структуру таблицы users
+            await checkTableStructure();
+        }
+        
+        await seedDemoData();
+        console.log('✅ База данных готова к работе');
+    } catch (error) {
+        console.error('❌ Ошибка инициализации БД:', error);
+    }
+}
+
+async function createTables() {
+    await pool.query(`
+        CREATE TABLE users (
+            id SERIAL PRIMARY KEY,
+            telegram_id BIGINT UNIQUE,
+            first_name VARCHAR(255),
+            username VARCHAR(255),
+            email VARCHAR(255),
+            specialization VARCHAR(255),
+            city VARCHAR(255),
+            subscription_end DATE,
+            is_admin BOOLEAN DEFAULT false,
+            is_super_admin BOOLEAN DEFAULT false,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE user_progress (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            level VARCHAR(50) DEFAULT 'Понимаю',
+            experience INTEGER DEFAULT 1250,
+            courses_bought INTEGER DEFAULT 3,
+            modules_completed INTEGER DEFAULT 2,
+            materials_watched INTEGER DEFAULT 12,
+            events_attended INTEGER DEFAULT 1,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE favorites (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            content_id INTEGER,
+            content_type VARCHAR(50),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE courses (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(500),
+            description TEXT,
+            price INTEGER,
+            discount INTEGER DEFAULT 0,
+            duration VARCHAR(100),
+            modules INTEGER,
+            category VARCHAR(255),
+            level VARCHAR(50),
+            students_count INTEGER DEFAULT 0,
+            rating DECIMAL(3,2) DEFAULT 4.5,
+            featured BOOLEAN DEFAULT false,
+            image_url VARCHAR(500),
+            video_url VARCHAR(500),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE podcasts (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(500),
+            description TEXT,
+            duration VARCHAR(100),
+            category VARCHAR(255),
+            listens INTEGER DEFAULT 0,
+            image_url VARCHAR(500),
+            audio_url VARCHAR(500)
+        );
+
+        CREATE TABLE streams (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(500),
+            description TEXT,
+            duration VARCHAR(100),
+            category VARCHAR(255),
+            participants INTEGER DEFAULT 0,
+            is_live BOOLEAN DEFAULT false,
+            thumbnail_url VARCHAR(500),
+            video_url VARCHAR(500),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
+    console.log('✅ Таблицы созданы');
+}
+
+async function checkTableStructure() {
+    try {
+        // Проверяем наличие колонки telegram_id в таблице users
+        const { rows: columnExists } = await pool.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.columns 
+                WHERE table_schema = 'public' 
+                AND table_name = 'users' 
+                AND column_name = 'telegram_id'
+            );
+        `);
+        
+        if (!columnExists[0].exists) {
+            console.log('🔄 Добавляем колонку telegram_id в таблицу users...');
+            await pool.query('ALTER TABLE users ADD COLUMN telegram_id BIGINT UNIQUE');
+            console.log('✅ Колонка telegram_id добавлена');
+        }
+        
+    } catch (error) {
+        console.error('❌ Ошибка проверки структуры таблиц:', error);
+    }
+}
+
 async function seedDemoData() {
     try {
         // Проверяем и добавляем демо-курсы
@@ -126,8 +259,7 @@ async function seedDemoData() {
             await pool.query(`
                 INSERT INTO courses (title, description, price, discount, duration, modules, category, level, students_count, rating, featured, image_url, video_url) VALUES
                 ('Мануальные техники в практике невролога', '6 модулей по современным мануальным методикам', 25000, 16, '12 недель', 6, 'Мануальные техники', 'advanced', 156, 4.8, true, '/webapp/assets/course-default.jpg', 'https://example.com/video1'),
-                ('Неврологическая диагностика', '5 модулей по современной диагностике', 18000, 0, '8 недель', 5, 'Неврология', 'intermediate', 234, 4.6, true, '/webapp/assets/course-default.jpg', 'https://example.com/video2'),
-                ('Реабилитация после инсульта', 'Комплексный подход к восстановлению', 22000, 10, '10 недель', 4, 'Реабилитация', 'intermediate', 189, 4.7, false, '/webapp/assets/course-default.jpg', 'https://example.com/video3')
+                ('Неврологическая диагностика', '5 модулей по современной диагностике', 18000, 0, '8 недель', 5, 'Неврология', 'intermediate', 234, 4.6, true, '/webapp/assets/course-default.jpg', 'https://example.com/video2')
             `);
             console.log('✅ Демо-курсы добавлены');
         }
@@ -169,70 +301,62 @@ function setupBot() {
 
     bot.use(session());
 
-bot.start(async (ctx) => {
-    const userId = ctx.from.id;
-    const userName = ctx.from.first_name;
-    
-    try {
-        // Сначала проверяем существование пользователя
-        const { rows: existingUser } = await pool.query(
-            'SELECT * FROM users WHERE telegram_id = $1',
-            [userId]
-        );
+    bot.start(async (ctx) => {
+        const userId = ctx.from.id;
+        const userName = ctx.from.first_name;
         
-        if (existingUser.length === 0) {
-            // Создаем нового пользователя
-            await pool.query(
-                `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin) 
-                 VALUES ($1, $2, $3, $4, $5)`,
-                [userId, userName, ctx.from.username, 
-                 userId == process.env.SUPER_ADMIN_ID, 
-                 userId == process.env.SUPER_ADMIN_ID]
+        try {
+            // Сначала проверяем существование пользователя
+            const { rows: existingUser } = await pool.query(
+                'SELECT * FROM users WHERE telegram_id = $1',
+                [userId]
             );
-            console.log(`✅ Создан новый пользователь: ${userName}`);
-        } else {
-            // Обновляем существующего пользователя
-            await pool.query(
-                `UPDATE users SET first_name = $1, username = $2 WHERE telegram_id = $3`,
-                [userName, ctx.from.username, userId]
-            );
-            console.log(`✅ Обновлен пользователь: ${userName}`);
-        }
-
-        const welcomeText = `👋 Добро пожаловать в Академию АНБ, ${userName}!`;
-
-        await ctx.reply(welcomeText, {
-            reply_markup: {
-                keyboard: [
-                    ['📱 Открыть Академию', '📚 Курсы'],
-                    ['🎧 АНБ FM', '📹 Эфиры и разборы'],
-                    ['👤 Мой профиль', '🆘 Поддержка']
-                ],
-                resize_keyboard: true
+            
+            if (existingUser.length === 0) {
+                // Создаем нового пользователя
+                await pool.query(
+                    `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin) 
+                     VALUES ($1, $2, $3, $4, $5)`,
+                    [userId, userName, ctx.from.username, 
+                     userId == process.env.SUPER_ADMIN_ID, 
+                     userId == process.env.SUPER_ADMIN_ID]
+                );
+                console.log(`✅ Создан новый пользователь: ${userName}`);
+            } else {
+                // Обновляем существующего пользователя
+                await pool.query(
+                    `UPDATE users SET first_name = $1, username = $2 WHERE telegram_id = $3`,
+                    [userName, ctx.from.username, userId]
+                );
+                console.log(`✅ Обновлен пользователь: ${userName}`);
             }
-        });
 
-    } catch (error) {
-        console.error('Ошибка при старте бота:', error);
-        // Отправляем сообщение даже при ошибке БД
-        await ctx.reply(`👋 Привет, ${userName}! Добро пожаловать в Академию АНБ! 🎓
-        
-Используйте кнопки ниже для навигации:`, {
-            reply_markup: {
-                keyboard: [
-                    ['📱 Открыть Академию', '📚 Курсы'],
-                    ['🎧 АНБ FM', '📹 Эфиры и разборы'],
-                    ['👤 Мой профиль', '🆘 Поддержка']
-                ],
-                resize_keyboard: true
-            }
-        });
-    }
-});
+            const welcomeText = `👋 Добро пожаловать в Академию АНБ, ${userName}!`;
+
+            await ctx.reply(welcomeText, {
+                reply_markup: {
+                    keyboard: [
+                        ['📱 Открыть Академию', '📚 Курсы'],
+                        ['🎧 АНБ FM', '📹 Эфиры и разборы'],
+                        ['👤 Мой профиль', '🆘 Поддержка']
+                    ],
+                    resize_keyboard: true
+                }
+            });
 
         } catch (error) {
             console.error('Ошибка при старте бота:', error);
-            await ctx.reply('Привет! Добро пожаловать в Академию АНБ! 🎓');
+            // Отправляем сообщение даже при ошибке БД
+            await ctx.reply(`👋 Привет, ${userName}! Добро пожаловать в Академию АНБ! 🎓`, {
+                reply_markup: {
+                    keyboard: [
+                        ['📱 Открыть Академию', '📚 Курсы'],
+                        ['🎧 АНБ FM', '📹 Эфиры и разборы'],
+                        ['👤 Мой профиль', '🆘 Поддержка']
+                    ],
+                    resize_keyboard: true
+                }
+            });
         }
     });
 
@@ -316,45 +440,6 @@ bot.start(async (ctx) => {
     });
 }
 
-// ==================== CRON ЗАДАЧИ ====================
-
-function setupCronJobs() {
-    cron.schedule('0 9 * * *', async () => {
-        try {
-            const { rows: expiringSubscriptions } = await pool.query(
-                `SELECT u.telegram_id, u.first_name, us.end_date 
-                 FROM user_subscriptions us 
-                 JOIN users u ON us.user_id = u.id 
-                 WHERE us.end_date = CURRENT_DATE + INTERVAL '3 days' 
-                 AND us.status = 'active'`
-            );
-
-            for (const sub of expiringSubscriptions) {
-                try {
-                    await bot.telegram.sendMessage(
-                        sub.telegram_id,
-                        `🔔 Напоминание: Ваша подписка истекает через 3 дня (${new Date(sub.end_date).toLocaleDateString('ru-RU')})`,
-                        {
-                            reply_markup: {
-                                inline_keyboard: [[{
-                                    text: '🔄 Продлить подписку',
-                                    web_app: { url: `${process.env.WEBAPP_URL}/webapp/#subscription` }
-                                }]]
-                            }
-                        }
-                    );
-                } catch (error) {
-                    console.error(`Ошибка отправки уведомления пользователю ${sub.telegram_id}:`, error);
-                }
-            }
-        } catch (error) {
-            console.error('Ошибка проверки подписок:', error);
-        }
-    });
-
-    console.log('✅ Cron задачи настроены');
-}
-
 // ==================== API ROUTES ====================
 
 app.get('/api/health', (req, res) => {
@@ -386,12 +471,10 @@ app.get('/api/content', async (req, res) => {
     try {
         const { rows: courses } = await pool.query('SELECT * FROM courses');
         const { rows: podcasts } = await pool.query('SELECT * FROM podcasts');
-        const { rows: streams } = await pool.query('SELECT * FROM streams');
         
         const content = {
             courses: courses || [],
             podcasts: podcasts || [],
-            streams: streams || [],
             stats: {
                 totalUsers: 1567,
                 totalCourses: courses?.length || 0,
@@ -509,7 +592,6 @@ async function startServer() {
         // Запускаем бота если он настроен
         if (bot) {
             setupBot();
-            setupCronJobs();
         }
         
         // Запускаем сервер
