@@ -15,11 +15,50 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// База данных
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+// База данных - исправленная конфигурация
+function createPool() {
+  try {
+    const connectionString = process.env.DATABASE_URL;
+    
+    console.log('🔧 Настройка подключения к БД...');
+    
+    // Если URL невалидный, используем альтернативные параметры
+    if (!connectionString || !connectionString.includes('://')) {
+      console.log('⚠️ Используем параметры подключения из переменных окружения');
+      return new Pool({
+        user: process.env.DB_USER || 'gen_user',
+        host: process.env.DB_HOST || 'def46fb02c0eac8fefd6f734.twc1.net',
+        database: process.env.DB_NAME || 'default_db',
+        password: process.env.DB_PASSWORD,
+        port: process.env.DB_PORT || 5432,
+        ssl: {
+          rejectUnauthorized: false
+        },
+        // Таймауты для стабильности
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 30000,
+        max: 20
+      });
+    }
+    
+    console.log('✅ Используем DATABASE_URL для подключения');
+    return new Pool({
+      connectionString: connectionString,
+      ssl: { 
+        rejectUnauthorized: false 
+      },
+      // Таймауты для стабильности
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: 20
+    });
+  } catch (error) {
+    console.error('❌ Ошибка создания пула подключений:', error);
+    throw error;
+  }
+}
+
+const pool = createPool();
 
 // Инициализация бота
 let bot;
@@ -219,6 +258,24 @@ function setupBot() {
 
   bot.use(session());
 
+function setupBot() {
+  if (!bot) {
+    console.log('🤖 Бот не настроен (отсутствует BOT_TOKEN)');
+    return;
+  }
+
+  // Обработка graceful shutdown
+  const stopBot = () => {
+    console.log('🛑 Остановка бота...');
+    if (bot) {
+      bot.stop();
+    }
+    process.exit(0);
+  };
+
+  process.once('SIGINT', stopBot);
+  process.once('SIGTERM', stopBot);
+  
   // Команда /start с опросом
   bot.start(async (ctx) => {
     const userId = ctx.from.id;
@@ -792,15 +849,24 @@ ${user.subscription_end ? `✅ *Подписка активна до:* ${new Dat
     return new Intl.NumberFormat('ru-RU').format(price) + ' ₽';
   }
 
-  // Запуск бота
+  // Запуск бота с обработкой ошибок
   bot.launch().then(() => {
     console.log('✅ Telegram Bot запущен');
-    
-    // Запускаем cron-задачи
     setupCronJobs();
     
   }).catch(error => {
-    console.error('❌ Ошибка запуска бота:', error);
+    console.error('❌ Ошибка запуска бота:', error.message);
+    
+    // Перезапуск через 10 секунд при ошибке 409 (уже запущен)
+    if (error.message.includes('409') || error.message.includes('Conflict')) {
+      console.log('🔄 Обнаружен конфликт запуска. Перезапуск бота через 10 секунд...');
+      setTimeout(() => {
+        console.log('🔄 Перезапускаем бота...');
+        setupBot();
+      }, 10000);
+    } else {
+      console.log('⚠️ Бот будет работать без Telegram функций');
+    }
   });
 
   process.once('SIGINT', () => bot.stop('SIGINT'));
@@ -889,6 +955,36 @@ app.get('/api/content', async (req, res) => {
   }
 });
 
+// Middleware для обработки ошибок базы данных
+app.use((req, res, next) => {
+  // Проверяем подключение к БД перед основными обработчиками
+  if (!pool) {
+    return res.status(503).json({ 
+      success: false, 
+      error: 'База данных недоступна' 
+    });
+  }
+  next();
+});
+
+// Простой health check для БД
+app.get('/api/db-health', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW() as time');
+    res.json({ 
+      success: true, 
+      database: 'connected',
+      time: result.rows[0].time 
+    });
+  } catch (error) {
+    res.status(503).json({ 
+      success: false, 
+      database: 'disconnected',
+      error: error.message 
+    });
+  }
+});
+  
 // Получение/создание пользователя
 app.post('/api/user', async (req, res) => {
   try {
