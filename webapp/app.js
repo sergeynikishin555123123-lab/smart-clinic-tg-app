@@ -1098,6 +1098,323 @@ class AcademyApp {
         `;
     }
 
+    // ==================== МЕТОДЫ АДМИН-ПАНЕЛИ ====================
+
+    createAdminUsersTab() {
+        return `
+            <div class="admin-tab-content">
+                <div class="admin-section">
+                    <h3>👥 Управление пользователями</h3>
+                    <div class="users-stats">
+                        <div class="stat-card">
+                            <div class="stat-value">${this.allContent.stats?.totalUsers || 1567}</div>
+                            <div class="stat-label">Всего пользователей</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${Math.floor((this.allContent.stats?.totalUsers || 1567) * 0.7)}</div>
+                            <div class="stat-label">Активных подписок</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${Math.floor((this.allContent.stats?.totalUsers || 1567) * 0.3)}</div>
+                            <div class="stat-label">Новых за месяц</div>
+                        </div>
+                    </div>
+                    
+                    <div class="users-search">
+                        <input type="text" class="search-input" placeholder="Поиск пользователей..." id="userSearch">
+                        <button class="btn btn-primary" onclick="app.searchUsers()">🔍 Найти</button>
+                    </div>
+                    
+                    <div class="users-list">
+                        <div class="user-item">
+                            <div class="user-avatar">👤</div>
+                            <div class="user-info">
+                                <div class="user-name">Иван Петров</div>
+                                <div class="user-details">
+                                    <span>@ivanpetrov</span>
+                                    <span>Подписка до: 15.01.2025</span>
+                                </div>
+                            </div>
+                            <div class="user-actions">
+                                <button class="btn btn-small btn-outline">✉️ Написать</button>
+                                <button class="btn btn-small">👑 Админ</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createAdminAnalyticsTab() {
+        return `
+            <div class="admin-tab-content">
+                <div class="admin-section">
+                    <h3>📊 Аналитика и метрики</h3>
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <div class="analytics-title">DAU/WAU</div>
+                            <div class="analytics-value">64%</div>
+                            <div class="analytics-chart">📈</div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="analytics-title">Конверсия</div>
+                            <div class="analytics-value">23%</div>
+                            <div class="analytics-chart">📊</div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="analytics-title">Удержание</div>
+                            <div class="analytics-value">78%</div>
+                            <div class="analytics-chart">📅</div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="analytics-title">LTV</div>
+                            <div class="analytics-value">₽12,450</div>
+                            <div class="analytics-chart">💰</div>
+                        </div>
+                    </div>
+                    
+                    <div class="analytics-section">
+                        <h4>📈 Популярный контент</h4>
+                        <div class="popular-content">
+                            ${this.allContent.courses?.slice(0, 3).map(course => `
+                                <div class="popular-item">
+                                    <span class="popular-title">${course.title}</span>
+                                    <span class="popular-stats">${course.students_count} студентов</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createAdminSettingsTab() {
+        if (!this.isSuperAdmin) {
+            return '<div class="admin-message">🚫 Требуются права супер-администратора</div>';
+        }
+
+        return `
+            <div class="admin-tab-content">
+                <div class="admin-section">
+                    <h3>⚙️ Настройки системы</h3>
+                    
+                    <div class="settings-group">
+                        <h4>🔔 Уведомления</h4>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <input type="checkbox" checked> Email уведомления
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <input type="checkbox" checked> Telegram уведомления
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h4>🔄 Автоматизация</h4>
+                        <div class="setting-item">
+                            <label class="setting-label">Резервное копирование</label>
+                            <select class="setting-select">
+                                <option>Ежедневно</option>
+                                <option>Еженедельно</option>
+                                <option>Ежемесячно</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h4>🎨 Внешний вид</h4>
+                        <div class="setting-item">
+                            <label class="setting-label">Тема оформления</label>
+                            <select class="setting-select" onchange="app.changeTheme(this.value)">
+                                <option value="light">Светлая</option>
+                                <option value="dark">Темная</option>
+                                <option value="auto">Авто</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-actions">
+                        <button class="btn btn-primary" onclick="app.saveSettings()">💾 Сохранить настройки</button>
+                        <button class="btn btn-error" onclick="app.resetSettings()">🔄 Сбросить</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    switchAdminTab(tab) {
+        this.currentAdminTab = tab;
+        this.renderPage('admin');
+    }
+
+    getAdminTabIcon(tab) {
+        const icons = {
+            'content': '📚',
+            'users': '👥',
+            'analytics': '📊',
+            'settings': '⚙️'
+        };
+        return icons[tab] || '📁';
+    }
+
+    getAdminTabName(tab) {
+        const names = {
+            'content': 'Контент',
+            'users': 'Пользователи',
+            'analytics': 'Аналитика',
+            'settings': 'Настройки'
+        };
+        return names[tab] || tab;
+    }
+
+    showAddContentModal(contentType) {
+        const modal = document.createElement('div');
+        modal.className = 'media-modal admin-modal active';
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="this.parentElement.remove()">
+                <div class="modal-content admin-content" onclick="event.stopPropagation()">
+                    <div class="modal-header">
+                        <h3>➕ Добавить ${this.getContentTypeName(contentType)}</h3>
+                        <button class="modal-close" onclick="this.closest('.media-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addContentForm" onsubmit="app.submitContentForm(event, '${contentType}')">
+                            <div class="form-group">
+                                <label>Название</label>
+                                <input type="text" class="form-input" name="title" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Описание</label>
+                                <textarea class="form-textarea" name="description" rows="3" required></textarea>
+                            </div>
+                            ${this.getContentTypeFields(contentType)}
+                            <div class="form-group">
+                                <label>Загрузить файл</label>
+                                <input type="file" class="form-file" name="file" 
+                                       accept="${this.getFileAcceptType(contentType)}">
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">💾 Сохранить</button>
+                                <button type="button" class="btn btn-outline" onclick="this.closest('.media-modal').remove()">❌ Отмена</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    getContentTypeFields(contentType) {
+        const fields = {
+            'courses': `
+                <div class="form-group">
+                    <label>Цена (₽)</label>
+                    <input type="number" class="form-input" name="price" required>
+                </div>
+                <div class="form-group">
+                    <label>Скидка (%)</label>
+                    <input type="number" class="form-input" name="discount" min="0" max="100">
+                </div>
+                <div class="form-group">
+                    <label>Длительность</label>
+                    <input type="text" class="form-input" name="duration" placeholder="12 недель" required>
+                </div>
+                <div class="form-group">
+                    <label>Количество модулей</label>
+                    <input type="number" class="form-input" name="modules" required>
+                </div>
+            `,
+            'podcasts': `
+                <div class="form-group">
+                    <label>Длительность</label>
+                    <input type="text" class="form-input" name="duration" placeholder="45:20" required>
+                </div>
+                <div class="form-group">
+                    <label>Категория</label>
+                    <input type="text" class="form-input" name="category" required>
+                </div>
+            `,
+            'videos': `
+                <div class="form-group">
+                    <label>Длительность</label>
+                    <input type="text" class="form-input" name="duration" placeholder="8:30" required>
+                </div>
+                <div class="form-group">
+                    <label>Категория</label>
+                    <input type="text" class="form-input" name="category" required>
+                </div>
+            `
+        };
+        return fields[contentType] || '';
+    }
+
+    getFileAcceptType(contentType) {
+        const types = {
+            'podcasts': 'audio/*',
+            'videos': 'video/*',
+            'materials': '.pdf,.doc,.docx,.jpg,.jpeg,.png',
+            'courses': 'image/*,video/*'
+        };
+        return types[contentType] || '*/*';
+    }
+
+    async submitContentForm(event, contentType) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const data = Object.fromEntries(formData.entries());
+        
+        try {
+            const response = await this.safeApiCall('/api/admin/content', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.success) {
+                this.showNotification(`${this.getContentTypeName(contentType)} успешно создан`, 'success');
+                document.querySelector('.media-modal')?.remove();
+                this.loadContent(); // Перезагружаем контент
+            }
+        } catch (error) {
+            console.error('Error creating content:', error);
+            this.showNotification('Ошибка создания контента', 'error');
+        }
+    }
+
+    editContent(contentId, contentType) {
+        this.showNotification(`Редактирование ${this.getContentTypeName(contentType)} #${contentId}`, 'info');
+        // Здесь можно открыть модальное окно редактирования
+    }
+
+    deleteContent(contentId, contentType) {
+        if (confirm(`Вы уверены, что хотите удалить этот ${this.getContentTypeName(contentType)}?`)) {
+            this.showNotification(`${this.getContentTypeName(contentType)} удален`, 'success');
+            // Здесь будет вызов API для удаления
+        }
+    }
+
+    toggleContentVisibility(contentId, contentType) {
+        this.showNotification(`Видимость контента изменена`, 'info');
+        // Здесь будет вызов API для изменения видимости
+    }
+
+    getContentTypeName(type) {
+        const names = {
+            'courses': 'курс',
+            'podcasts': 'подкаст',
+            'streams': 'эфир',
+            'videos': 'видео',
+            'materials': 'материал',
+            'events': 'мероприятие'
+        };
+        return names[type] || 'контент';
+    }
+    
     // ==================== МЕДИА ОБРАБОТЧИКИ ====================
 
     createMediaHandler(type, url, options = {}) {
@@ -1196,6 +1513,184 @@ class AcademyApp {
         });
     }
 
+    // ==================== МЕДИА ОБРАБОТЧИКИ ====================
+
+    createMediaHandler(type, url, options = {}) {
+        switch(type) {
+            case 'image':
+                return this.handleImage(url, options);
+            case 'video':
+                return this.handleVideo(url, options);
+            case 'audio':
+                return this.handleAudio(url, options);
+            case 'html':
+                return this.handleHTML(url, options);
+            default:
+                return this.handleDefault(url, options);
+        }
+    }
+
+    handleImage(url, options) {
+        this.openImageViewer(url, options);
+    }
+
+    handleVideo(url, options) {
+        this.openVideoPlayer(url, options);
+    }
+
+    handleAudio(url, options) {
+        this.openAudioPlayer(url, options);
+    }
+
+    handleHTML(url, options) {
+        window.open(url, '_blank');
+    }
+
+    handleDefault(url, options) {
+        window.open(url, '_blank');
+    }
+
+    openImageViewer(imageUrl, options = {}) {
+        const modal = document.createElement('div');
+        modal.className = 'media-modal image-viewer active';
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="this.parentElement.remove()">
+                <div class="modal-content" onclick="event.stopPropagation()">
+                    <div class="modal-header">
+                        <h3>${options.title || 'Изображение'}</h3>
+                        <button class="modal-close" onclick="this.closest('.media-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <img src="${imageUrl}" alt="${options.alt || ''}" 
+                             style="max-width: 100%; max-height: 70vh; object-fit: contain;">
+                        ${options.caption ? `<div class="image-caption">${options.caption}</div>` : ''}
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-primary" onclick="app.downloadMedia('${imageUrl}', '${options.title || 'image'}')">
+                            📥 Скачать
+                        </button>
+                        <button class="btn btn-outline" onclick="app.shareMedia('${imageUrl}', '${options.title || ''}')">
+                            📤 Поделиться
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    openVideoPlayer(videoUrl, options = {}) {
+        const modal = document.createElement('div');
+        modal.className = 'media-modal video-player active';
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="this.parentElement.remove()">
+                <div class="modal-content video-content" onclick="event.stopPropagation()">
+                    <div class="modal-header">
+                        <h3>${options.title || 'Видео'}</h3>
+                        <button class="modal-close" onclick="this.closest('.media-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <video controls autoplay style="width: 100%; max-height: 60vh;">
+                            <source src="${videoUrl}" type="video/mp4">
+                            Ваш браузер не поддерживает видео.
+                        </video>
+                        ${options.description ? `<div class="video-description">${options.description}</div>` : ''}
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-primary" onclick="app.toggleFavorite(${options.id}, 'videos')">
+                            ${this.isFavorite(options.id, 'videos') ? '❤️' : '🤍'} В избранное
+                        </button>
+                        <button class="btn btn-outline" onclick="app.downloadMedia('${videoUrl}', '${options.title || 'video'}')">
+                            📥 Скачать
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        const video = modal.querySelector('video');
+        video.play().catch(e => {
+            console.log('Автовоспроизведение заблокировано');
+        });
+    }
+
+    openAudioPlayer(audioUrl, options = {}) {
+        const modal = document.createElement('div');
+        modal.className = 'media-modal audio-player active';
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="this.parentElement.remove()">
+                <div class="modal-content audio-content" onclick="event.stopPropagation()">
+                    <div class="modal-header">
+                        <h3>🎧 ${options.title || 'Аудио'}</h3>
+                        <button class="modal-close" onclick="this.closest('.media-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="audio-info">
+                            ${options.cover ? `<img src="${options.cover}" class="audio-cover">` : ''}
+                            <div class="audio-details">
+                                <div class="audio-title">${options.title}</div>
+                                ${options.artist ? `<div class="audio-artist">${options.artist}</div>` : ''}
+                            </div>
+                        </div>
+                        <audio controls autoplay style="width: 100%; margin: 20px 0;">
+                            <source src="${audioUrl}" type="audio/mpeg">
+                            Ваш браузер не поддерживает аудио.
+                        </audio>
+                        ${options.description ? `<div class="audio-description">${options.description}</div>` : ''}
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-primary" onclick="app.toggleFavorite(${options.id}, 'podcasts')">
+                            ${this.isFavorite(options.id, 'podcasts') ? '❤️' : '🤍'} В избранное
+                        </button>
+                        <button class="btn btn-outline" onclick="app.downloadMedia('${audioUrl}', '${options.title || 'audio'}')">
+                            📥 Скачать
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        const audio = modal.querySelector('audio');
+        audio.play().catch(e => {
+            console.log('Автовоспроизведение заблокировано');
+        });
+    }
+
+    downloadMedia(url, filename) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showNotification('Файл скачивается', 'success');
+    }
+
+    shareMedia(url, title = '') {
+        if (navigator.share) {
+            navigator.share({
+                title: title,
+                url: url
+            }).catch(error => {
+                console.log('Ошибка sharing:', error);
+                this.copyToClipboard(url);
+            });
+        } else {
+            this.copyToClipboard(url);
+        }
+    }
+
+    copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            this.showNotification('Ссылка скопирована в буфер', 'success');
+        }).catch(err => {
+            console.error('Ошибка копирования:', err);
+            this.showNotification('Ошибка копирования', 'error');
+        });
+    }
+    
     // ==================== СИСТЕМА ЛАЙКОВ/ИЗБРАННОГО ====================
 
     async toggleFavorite(contentId, contentType, event = null) {
@@ -1266,6 +1761,307 @@ class AcademyApp {
         return this.state.favorites[contentType]?.includes(parseInt(contentId)) || false;
     }
 
+    // ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ====================
+
+    initializePageComponents() {
+        // Инициализация видео плееров
+        this.initializeVideoPlayers();
+        
+        // Инициализация аудио плееров
+        this.initializeAudioPlayers();
+        
+        // Инициализация фильтров
+        this.initializeFilters();
+        
+        // Инициализация табов
+        this.initializeTabs();
+    }
+
+    initializeVideoPlayers() {
+        document.querySelectorAll('video').forEach(video => {
+            video.addEventListener('play', () => {
+                this.mediaPlayers.video = video;
+            });
+        });
+    }
+
+    initializeAudioPlayers() {
+        document.querySelectorAll('audio').forEach(audio => {
+            audio.addEventListener('play', () => {
+                if (this.mediaPlayers.audio && this.mediaPlayers.audio !== audio) {
+                    this.mediaPlayers.audio.pause();
+                }
+                this.mediaPlayers.audio = audio;
+            });
+        });
+    }
+
+    initializeFilters() {
+        // Инициализация фильтров поиска
+        const searchInputs = document.querySelectorAll('.search-input');
+        searchInputs.forEach(input => {
+            input.addEventListener('input', this.debounce((e) => {
+                this.handleSearch(e);
+            }, 300));
+        });
+    }
+
+    initializeTabs() {
+        // Инициализация системы табов
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tabName = e.target.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+                if (tabName) {
+                    this.switchTab(tabName);
+                }
+            });
+        });
+    }
+
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const targetTab = document.getElementById(`${tabName}-tab`);
+        if (targetTab) {
+            targetTab.classList.add('active');
+        }
+        
+        const activeBtn = document.querySelector(`[onclick*="${tabName}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
+
+    switchCourseTab(tabName) {
+        this.switchTab(tabName);
+    }
+
+    setupEventListeners() {
+        // Глобальные обработчики событий
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.handleBackButton();
+            }
+        });
+
+        // Обработчики навигации
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const page = btn.dataset.page;
+                this.renderPage(page);
+            });
+        });
+
+        // Обработчики действий
+        document.querySelectorAll('.nav-action-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const page = btn.dataset.page;
+                if (page) {
+                    this.renderPage(page);
+                }
+            });
+        });
+
+        console.log('✅ Обработчики событий установлены');
+    }
+
+    handleBackButton() {
+        if (this.currentSubPage) {
+            this.currentSubPage = '';
+            this.renderPage(this.currentPage);
+        } else if (this.currentPage !== 'home') {
+            this.renderPage('home');
+        } else {
+            if (window.Telegram && Telegram.WebApp) {
+                try {
+                    Telegram.WebApp.close();
+                } catch (e) {
+                    this.showNotification('Используйте кнопку назад в Telegram', 'info');
+                }
+            }
+        }
+    }
+
+    getFilteredCourses() {
+        let courses = this.allContent.courses || [];
+        
+        // Фильтрация по поиску
+        if (this.state.searchQuery) {
+            const query = this.state.searchQuery.toLowerCase();
+            courses = courses.filter(course => 
+                course.title.toLowerCase().includes(query) ||
+                course.description.toLowerCase().includes(query) ||
+                course.category.toLowerCase().includes(query)
+            );
+        }
+        
+        // Фильтрация по категории
+        if (this.state.activeFilters.category) {
+            courses = courses.filter(course => course.category === this.state.activeFilters.category);
+        }
+        
+        // Фильтрация по уровню
+        if (this.state.activeFilters.level) {
+            courses = courses.filter(course => course.level === this.state.activeFilters.level);
+        }
+        
+        // Сортировка
+        switch (this.state.sortBy) {
+            case 'popular':
+                courses.sort((a, b) => b.students_count - a.students_count);
+                break;
+            case 'price_low':
+                courses.sort((a, b) => a.price - b.price);
+                break;
+            case 'price_high':
+                courses.sort((a, b) => b.price - a.price);
+                break;
+            case 'rating':
+                courses.sort((a, b) => b.rating - a.rating);
+                break;
+            case 'newest':
+            default:
+                courses.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                break;
+        }
+        
+        return courses;
+    }
+
+    handleSearch(event) {
+        this.state.searchQuery = event.target.value;
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => {
+            this.renderPage(this.currentPage);
+        }, 300);
+    }
+
+    searchCourses() {
+        this.renderPage('courses');
+    }
+
+    toggleViewMode(mode) {
+        this.state.viewMode = mode;
+        this.renderPage(this.currentPage);
+    }
+
+    applyFilter(filterType, value) {
+        if (value === '') {
+            delete this.state.activeFilters[filterType];
+        } else {
+            this.state.activeFilters[filterType] = value;
+        }
+        this.renderPage(this.currentPage);
+    }
+
+    applySorting(sortBy) {
+        this.state.sortBy = sortBy;
+        this.renderPage(this.currentPage);
+    }
+
+    resetFilters() {
+        this.state.activeFilters = {};
+        this.state.searchQuery = '';
+        this.state.sortBy = 'newest';
+        this.renderPage(this.currentPage);
+    }
+
+    filterNews(category) {
+        this.currentNewsFilter = category;
+        this.renderPage('home');
+    }
+
+    openCourseDetail(courseId) {
+        this.state.currentCourse = courseId;
+        this.currentSubPage = `course-${courseId}`;
+        this.renderPage('courses', `course-${courseId}`);
+    }
+
+    previewCourse(courseId) {
+        const course = this.allContent.courses?.find(c => c.id == courseId);
+        if (course && course.video_url) {
+            this.handleVideo(course.video_url, {
+                title: `Предпросмотр: ${course.title}`,
+                id: courseId
+            });
+        } else {
+            this.showNotification('Предпросмотр для этого курса пока недоступен', 'info');
+        }
+    }
+
+    calculateHomeStats() {
+        return {
+            courses: this.allContent.stats?.totalCourses || this.allContent.courses?.length || 0,
+            students: this.allContent.stats?.totalUsers || 0,
+            experts: 25
+        };
+    }
+
+    getRecommendedCourses() {
+        return this.allContent.courses?.filter(course => course.featured) || [];
+    }
+
+    getLiveStreams() {
+        return this.allContent.streams?.filter(stream => stream.is_live) || [];
+    }
+
+    createEmptyState(type, message = 'Пока ничего нет') {
+        const emptyStates = {
+            courses: { icon: '📚', title: 'Курсы не найдены', description: message },
+            podcasts: { icon: '🎧', title: 'Подкасты не найдены', description: message },
+            streams: { icon: '📹', title: 'Эфиры не найдены', description: message },
+            videos: { icon: '🎯', title: 'Видео не найдены', description: message },
+            materials: { icon: '📋', title: 'Материалы не найдены', description: message }
+        };
+        
+        const state = emptyStates[type] || { icon: '🔍', title: 'Ничего не найдено', description: message };
+        
+        return `
+            <div class="empty-state">
+                <div class="empty-icon">${state.icon}</div>
+                <div class="empty-title">${state.title}</div>
+                <div class="empty-description">${state.description}</div>
+            </div>
+        `;
+    }
+
+    showFatalError(message) {
+        console.error('💥 Фатальная ошибка:', message);
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'fatal-error';
+        errorDiv.innerHTML = `
+            <div class="error-content">
+                <div class="error-icon">⚠️</div>
+                <h3>Ошибка загрузки</h3>
+                <p>${message}</p>
+                <button class="btn btn-primary" onclick="window.location.reload()">
+                    Перезагрузить
+                </button>
+            </div>
+        `;
+        
+        document.body.innerHTML = '';
+        document.body.appendChild(errorDiv);
+    }
+    
     // ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ====================
 
     async safeApiCall(url, options = {}) {
