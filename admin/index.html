@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель Академии АНБ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: white;
+            line-height: 1.6;
+        }
+
+        .admin-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-header {
+            background: #1e293b;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #334155;
+        }
+
+        .admin-header h1 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+        }
+
+        .admin-nav {
+            background: #1e293b;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #334155;
+        }
+
+        .admin-nav ul {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .admin-nav a {
+            color: #cbd5e1;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            transition: all 0.3s;
+        }
+
+        .admin-nav a:hover,
+        .admin-nav a.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .admin-main {
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: #1e293b;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+
+        .content-section {
+            background: #1e293b;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .section-header h2 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-content {
+            padding: 1.5rem;
+        }
+
+        .content-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #64748b;
+            color: #cbd5e1;
+        }
+
+        .btn-outline:hover {
+            background: #334155;
+        }
+
+        .content-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .content-table th,
+        .content-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+
+        .content-table th {
+            background: #1e293b;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .content-table tr:hover {
+            background: #1e293b;
+        }
+
+        .status-active {
+            color: #10b981;
+        }
+
+        .status-inactive {
+            color: #ef4444;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #cbd5e1;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.375rem;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            width: 2rem;
+            height: 2rem;
+            border: 2px solid #334155;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #7f1d1d;
+            color: #fecaca;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+        }
+
+        .success-message {
+            background: #065f46;
+            color: #a7f3d0;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+        }
+
+        .user-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            background: #1e293b;
+        }
+
+        .badge-admin {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .badge-super-admin {
+            background: #f59e0b;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <header class="admin-header">
+            <h1>🔧 Админ-панель Академии АНБ</h1>
+        </header>
+
+        <nav class="admin-nav">
+            <ul>
+                <li><a href="#" class="active" onclick="showTab('dashboard')">📊 Дашборд</a></li>
+                <li><a href="#" onclick="showTab('courses')">📚 Курсы</a></li>
+                <li><a href="#" onclick="showTab('podcasts')">🎧 Подкасты</a></li>
+                <li><a href="#" onclick="showTab('videos')">🎯 Видео</a></li>
+                <li><a href="#" onclick="showTab('materials')">📋 Материалы</a></li>
+                <li><a href="#" onclick="showTab('users')">👥 Пользователи</a></li>
+                <li><a href="#" onclick="showTab('media')">📁 Медиа</a></li>
+            </ul>
+        </nav>
+
+        <main class="admin-main">
+            <!-- Дашборд -->
+            <div id="dashboard-tab" class="tab-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-users">0</div>
+                        <div class="stat-label">Пользователей</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-courses">0</div>
+                        <div class="stat-label">Курсов</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-materials">0</div>
+                        <div class="stat-label">Материалов</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="active-subscriptions">0</div>
+                        <div class="stat-label">Активных подписок</div>
+                    </div>
+                </div>
+
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2>📈 Быстрые действия</h2>
+                    </div>
+                    <div class="section-content">
+                        <div class="content-actions">
+                            <button class="btn btn-primary" onclick="showAddModal('courses')">
+                                ➕ Добавить курс
+                            </button>
+                            <button class="btn btn-primary" onclick="showAddModal('podcasts')">
+                                ➕ Добавить подкаст
+                            </button>
+                            <button class="btn btn-primary" onclick="showAddModal('videos')">
+                                ➕ Добавить видео
+                            </button>
+                            <button class="btn btn-primary" onclick="showAddModal('materials')">
+                                ➕ Добавить материал
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Курсы -->
+            <div id="courses-tab" class="tab-content" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2>📚 Управление курсами</h2>
+                        <button class="btn btn-primary" onclick="showAddModal('courses')">
+                            ➕ Добавить курс
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <div class="loading" id="courses-loading">
+                            <div class="spinner"></div>
+                        </div>
+                        <table class="content-table" id="courses-table" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Название</th>
+                                    <th>Категория</th>
+                                    <th>Цена</th>
+                                    <th>Студенты</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="courses-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Подкасты -->
+            <div id="podcasts-tab" class="tab-content" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2>🎧 Управление подкастами</h2>
+                        <button class="btn btn-primary" onclick="showAddModal('podcasts')">
+                            ➕ Добавить подкаст
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <div class="loading" id="podcasts-loading">
+                            <div class="spinner"></div>
+                        </div>
+                        <table class="content-table" id="podcasts-table" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Название</th>
+                                    <th>Категория</th>
+                                    <th>Длительность</th>
+                                    <th>Прослушивания</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="podcasts-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Видео -->
+            <div id="videos-tab" class="tab-content" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2>🎯 Управление видео</h2>
+                        <button class="btn btn-primary" onclick="showAddModal('videos')">
+                            ➕ Добавить видео
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <div class="loading" id="videos-loading">
+                            <div class="spinner"></div>
+                        </div>
+                        <table class="content-table" id="videos-table" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Название</th>
+                                    <th>Категория</th>
+                                    <th>Длительность</th>
+                                    <th>Просмотры</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="videos-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Материалы -->
+            <div id="materials-tab" class="tab-content" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2>📋 Управление материалами</h2>
+                        <button class="btn btn-primary" onclick="showAddModal('materials')">
+                            ➕ Добавить материал
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <div class="loading" id="materials-loading">
+                            <div class="spinner"></div>
+                        </div>
+                        <table class="content-table" id="materials-table" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Название</th>
+                                    <th>Категория</th>
+                                    <th>Тип</th>
+                                    <th>Загрузки</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="materials-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Пользователи -->
+            <div id="users-tab" class="tab-content" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2>👥 Управление пользователями</h2>
+                    </div>
+                    <div class="section-content">
+                        <div class="loading" id="users-loading">
+                            <div class="spinner"></div>
+                        </div>
+                        <table class="content-table" id="users-table" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Имя</th>
+                                    <th>Username</th>
+                                    <th>Роль</th>
+                                    <th>Подписка</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Медиа -->
+            <div id="media-tab" class="tab-content" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2>📁 Управление медиа</h2>
+                        <button class="btn btn-primary" onclick="showMediaUploadModal()">
+                            📤 Загрузить файл
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <div class="loading" id="media-loading">
+                            <div class="spinner"></div>
+                        </div>
+                        <div class="media-grid" id="media-grid" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальное окно добавления контента -->
+    <div id="add-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Добавить контент</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="content-form">
+                    <input type="hidden" id="content-type">
+                    <input type="hidden" id="content-id">
+                    
+                    <div class="form-group">
+                        <label for="title">Название</label>
+                        <input type="text" id="title" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">Описание</label>
+                        <textarea id="description" class="form-control" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="category">Категория</label>
+                        <input type="text" id="category" class="form-control" required>
+                    </div>
+                    
+                    <div id="course-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="price">Цена (₽)</label>
+                            <input type="number" id="price" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="discount">Скидка (%)</label>
+                            <input type="number" id="discount" class="form-control" min="0" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="duration">Длительность</label>
+                            <input type="text" id="duration" class="form-control" placeholder="12 недель" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="modules">Количество модулей</label>
+                            <input type="number" id="modules" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="level">Уровень</label>
+                            <select id="level" class="form-control" required>
+                                <option value="beginner">Начинающий</option>
+                                <option value="intermediate">Средний</option>
+                                <option value="advanced">Продвинутый</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="media-fields">
+                        <div class="form-group">
+                            <label for="image_url">URL изображения</label>
+                            <input type="url" id="image_url" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="file">Загрузить файл</label>
+                            <input type="file" id="file" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="closeModal()">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'dashboard';
+        let adminData = {};
+
+        // Инициализация админ-панели
+        async function initAdmin() {
+            try {
+                await loadStats();
+                showTab('dashboard');
+            } catch (error) {
+                console.error('Ошибка инициализации:', error);
+                showError('Не удалось загрузить данные');
+            }
+        }
+
+        // Загрузка статистики
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/admin/stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('total-users').textContent = data.data.totalUsers;
+                    document.getElementById('total-courses').textContent = data.data.totalCourses;
+                    document.getElementById('total-materials').textContent = data.data.totalMaterials;
+                    document.getElementById('active-subscriptions').textContent = data.data.activeSubscriptions;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки статистики:', error);
+            }
+        }
+
+        // Переключение вкладок
+        function showTab(tabName) {
+            // Скрыть все вкладки
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            
+            // Показать выбранную вкладку
+            document.getElementById(`${tabName}-tab`).style.display = 'block';
+            
+            // Обновить навигацию
+            document.querySelectorAll('.admin-nav a').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            currentTab = tabName;
+            
+            // Загрузить данные для вкладки
+            loadTabData(tabName);
+        }
+
+        // Загрузка данных для вкладки
+        async function loadTabData(tabName) {
+            try {
+                switch(tabName) {
+                    case 'courses':
+                        await loadCourses();
+                        break;
+                    case 'podcasts':
+                        await loadPodcasts();
+                        break;
+                    case 'videos':
+                        await loadVideos();
+                        break;
+                    case 'materials':
+                        await loadMaterials();
+                        break;
+                    case 'users':
+                        await loadUsers();
+                        break;
+                    case 'media':
+                        await loadMedia();
+                        break;
+                }
+            } catch (error) {
+                console.error(`Ошибка загрузки данных для ${tabName}:`, error);
+                showError(`Не удалось загрузить данные для ${tabName}`);
+            }
+        }
+
+        // Загрузка курсов
+        async function loadCourses() {
+            const loading = document.getElementById('courses-loading');
+            const table = document.getElementById('courses-table');
+            const tbody = document.getElementById('courses-tbody');
+            
+            try {
+                const response = await fetch('/api/content');
+                const data = await response.json();
+                
+                if (data.success) {
+                    loading.style.display = 'none';
+                    table.style.display = 'table';
+                    
+                    tbody.innerHTML = data.data.courses.map(course => `
+                        <tr>
+                            <td>${course.id}</td>
+                            <td>${course.title}</td>
+                            <td>${course.category}</td>
+                            <td>${formatPrice(course.price)}</td>
+                            <td>${course.students_count}</td>
+                            <td class="${course.is_active ? 'status-active' : 'status-inactive'}">
+                                ${course.is_active ? 'Активен' : 'Неактивен'}
+                            </td>
+                            <td>
+                                <button class="btn btn-outline btn-sm" onclick="editContent('courses', ${course.id})">
+                                    ✏️
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteContent('courses', ${course.id})">
+                                    🗑️
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                showError('Не удалось загрузить курсы');
+            }
+        }
+
+        // Загрузка подкастов
+        async function loadPodcasts() {
+            const loading = document.getElementById('podcasts-loading');
+            const table = document.getElementById('podcasts-table');
+            const tbody = document.getElementById('podcasts-tbody');
+            
+            try {
+                const response = await fetch('/api/content');
+                const data = await response.json();
+                
+                if (data.success) {
+                    loading.style.display = 'none';
+                    table.style.display = 'table';
+                    
+                    tbody.innerHTML = data.data.podcasts.map(podcast => `
+                        <tr>
+                            <td>${podcast.id}</td>
+                            <td>${podcast.title}</td>
+                            <td>${podcast.category}</td>
+                            <td>${podcast.duration}</td>
+                            <td>${podcast.listens}</td>
+                            <td>
+                                <button class="btn btn-outline btn-sm" onclick="editContent('podcasts', ${podcast.id})">
+                                    ✏️
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteContent('podcasts', ${podcast.id})">
+                                    🗑️
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                showError('Не удалось загрузить подкасты');
+            }
+        }
+
+        // Загрузка видео
+        async function loadVideos() {
+            const loading = document.getElementById('videos-loading');
+            const table = document.getElementById('videos-table');
+            const tbody = document.getElementById('videos-tbody');
+            
+            try {
+                const response = await fetch('/api/content');
+                const data = await response.json();
+                
+                if (data.success) {
+                    loading.style.display = 'none';
+                    table.style.display = 'table';
+                    
+                    tbody.innerHTML = data.data.videos.map(video => `
+                        <tr>
+                            <td>${video.id}</td>
+                            <td>${video.title}</td>
+                            <td>${video.category}</td>
+                            <td>${video.duration}</td>
+                            <td>${video.views}</td>
+                            <td>
+                                <button class="btn btn-outline btn-sm" onclick="editContent('videos', ${video.id})">
+                                    ✏️
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteContent('videos', ${video.id})">
+                                    🗑️
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                showError('Не удалось загрузить видео');
+            }
+        }
+
+        // Загрузка материалов
+        async function loadMaterials() {
+            const loading = document.getElementById('materials-loading');
+            const table = document.getElementById('materials-table');
+            const tbody = document.getElementById('materials-tbody');
+            
+            try {
+                const response = await fetch('/api/content');
+                const data = await response.json();
+                
+                if (data.success) {
+                    loading.style.display = 'none';
+                    table.style.display = 'table';
+                    
+                    tbody.innerHTML = data.data.materials.map(material => `
+                        <tr>
+                            <td>${material.id}</td>
+                            <td>${material.title}</td>
+                            <td>${material.category}</td>
+                            <td>${material.material_type}</td>
+                            <td>${material.downloads}</td>
+                            <td>
+                                <button class="btn btn-outline btn-sm" onclick="editContent('materials', ${material.id})">
+                                    ✏️
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteContent('materials', ${material.id})">
+                                    🗑️
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                showError('Не удалось загрузить материалы');
+            }
+        }
+
+        // Загрузка пользователей
+        async function loadUsers() {
+            // В реальном приложении здесь был бы API для пользователей
+            const loading = document.getElementById('users-loading');
+            const table = document.getElementById('users-table');
+            const tbody = document.getElementById('users-tbody');
+            
+            // Демо-данные
+            setTimeout(() => {
+                loading.style.display = 'none';
+                table.style.display = 'table';
+                
+                tbody.innerHTML = `
+                    <tr>
+                        <td>1</td>
+                        <td>Иван Петров</td>
+                        <td>@ivanpetrov</td>
+                        <td><span class="user-badge badge-super-admin">Супер-админ</span></td>
+                        <td>до 15.01.2025</td>
+                        <td>
+                            <button class="btn btn-outline btn-sm">✉️</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Анна Сидорова</td>
+                        <td>@annasid</td>
+                        <td><span class="user-badge badge-admin">Админ</span></td>
+                        <td>до 20.02.2025</td>
+                        <td>
+                            <button class="btn btn-outline btn-sm">✉️</button>
+                        </td>
+                    </tr>
+                `;
+            }, 1000);
+        }
+
+        // Загрузка медиа
+        async function loadMedia() {
+            const loading = document.getElementById('media-loading');
+            const grid = document.getElementById('media-grid');
+            
+            try {
+                const response = await fetch('/api/media');
+                const data = await response.json();
+                
+                if (data.success) {
+                    loading.style.display = 'none';
+                    grid.style.display = 'grid';
+                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
+                    grid.style.gap = '1rem';
+                    
+                    grid.innerHTML = data.files.map(file => `
+                        <div class="media-item" style="background: #1e293b; padding: 1rem; border-radius: 0.5rem;">
+                            <div style="font-size: 2rem; text-align: center; margin-bottom: 0.5rem;">
+                                ${getFileIcon(file.mime_type)}
+                            </div>
+                            <div style="font-size: 0.875rem; word-break: break-all;">
+                                ${file.original_name}
+                            </div>
+                            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem;">
+                                ${formatFileSize(file.size)}
+                            </div>
+                            <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                                <button class="btn btn-outline btn-sm" onclick="copyUrl('${file.url}')">
+                                    📋
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteMedia(${file.id})">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                showError('Не удалось загрузить медиа');
+            }
+        }
+
+        // Показать модальное окно добавления
+        function showAddModal(type) {
+            const modal = document.getElementById('add-modal');
+            const title = document.getElementById('modal-title');
+            const form = document.getElementById('content-form');
+            const courseFields = document.getElementById('course-fields');
+            
+            document.getElementById('content-type').value = type;
+            document.getElementById('content-id').value = '';
+            form.reset();
+            
+            // Настройка полей в зависимости от типа
+            switch(type) {
+                case 'courses':
+                    title.textContent = 'Добавить курс';
+                    courseFields.style.display = 'block';
+                    break;
+                case 'podcasts':
+                    title.textContent = 'Добавить подкаст';
+                    courseFields.style.display = 'none';
+                    break;
+                case 'videos':
+                    title.textContent = 'Добавить видео';
+                    courseFields.style.display = 'none';
+                    break;
+                case 'materials':
+                    title.textContent = 'Добавить материал';
+                    courseFields.style.display = 'none';
+                    break;
+            }
+            
+            modal.classList.add('active');
+        }
+
+        // Показать модальное окно загрузки медиа
+        function showMediaUploadModal() {
+            // Реализация загрузки медиа
+            alert('Функция загрузки медиа в разработке');
+        }
+
+        // Закрыть модальное окно
+        function closeModal() {
+            document.getElementById('add-modal').classList.remove('active');
+        }
+
+        // Редактирование контента
+        function editContent(type, id) {
+            // Реализация редактирования
+            alert(`Редактирование ${type} #${id} в разработке`);
+        }
+
+        // Удаление контента
+        async function deleteContent(type, id) {
+            if (confirm(`Вы уверены, что хотите удалить этот ${type}?`)) {
+                try {
+                    const response = await fetch(`/api/admin/content/${type}/${id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showSuccess(`${type} успешно удален`);
+                        loadTabData(currentTab);
+                    } else {
+                        showError('Ошибка при удалении');
+                    }
+                } catch (error) {
+                    showError('Ошибка при удалении');
+                }
+            }
+        }
+
+        // Удаление медиа
+        async function deleteMedia(id) {
+            if (confirm('Вы уверены, что хотите удалить этот файл?')) {
+                try {
+                    const response = await fetch(`/api/media/${id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showSuccess('Файл успешно удален');
+                        loadMedia();
+                    } else {
+                        showError('Ошибка при удалении файла');
+                    }
+                } catch (error) {
+                    showError('Ошибка при удалении файла');
+                }
+            }
+        }
+
+        // Копирование URL
+        function copyUrl(url) {
+            navigator.clipboard.writeText(window.location.origin + url).then(() => {
+                showSuccess('URL скопирован в буфер');
+            });
+        }
+
+        // Вспомогательные функции
+        function formatPrice(price) {
+            return new Intl.NumberFormat('ru-RU').format(price) + ' ₽';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getFileIcon(mimeType) {
+            if (mimeType.startsWith('image/')) return '🖼️';
+            if (mimeType.startsWith('video/')) return '🎬';
+            if (mimeType.startsWith('audio/')) return '🎵';
+            if (mimeType === 'application/pdf') return '📄';
+            return '📎';
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            document.querySelector('.admin-main').prepend(errorDiv);
+            setTimeout(() => errorDiv.remove(), 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.textContent = message;
+            document.querySelector('.admin-main').prepend(successDiv);
+            setTimeout(() => successDiv.remove(), 5000);
+        }
+
+        // Обработка формы
+        document.getElementById('content-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const type = document.getElementById('content-type').value;
+            const formData = new FormData();
+            
+            // Добавляем поля формы
+            const fields = ['title', 'description', 'category', 'price', 'discount', 'duration', 'modules', 'level', 'image_url'];
+            fields.forEach(field => {
+                const value = document.getElementById(field).value;
+                if (value) formData.append(field, value);
+            });
+            
+            // Добавляем файл
+            const fileInput = document.getElementById('file');
+            if (fileInput.files[0]) {
+                formData.append('file', fileInput.files[0]);
+            }
+            
+            try {
+                const response = await fetch(`/api/admin/content/${type}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('Контент успешно создан');
+                    closeModal();
+                    loadTabData(currentTab);
+                } else {
+                    showError('Ошибка при создании контента');
+                }
+            } catch (error) {
+                showError('Ошибка при создании контента');
+            }
+        });
+
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', initAdmin);
+    </script>
+</body>
+</html>
