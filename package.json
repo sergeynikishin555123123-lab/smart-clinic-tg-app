@@ -1,0 +1,139 @@
+{
+  "name": "anb-academy-full",
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Академия АНБ - полнофункциональная платформа медицинского образования с Telegram ботом и WebApp",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "dev-bot": "nodemon server.js",
+    "dev-api": "node --watch server.js",
+    "setup": "node setup.js",
+    "deploy": "chmod +x deploy.sh && ./deploy.sh",
+    "production": "NODE_ENV=production node server.js",
+    "test": "node test.js",
+    "test-api": "node test-api.js",
+    "test-bot": "node test-bot.js",
+    "lint": "npx eslint server.js webapp/app.js",
+    "lint-fix": "npx eslint server.js webapp/app.js --fix",
+    "format": "npx prettier --write .",
+    "clean": "rm -rf node_modules package-lock.json logs/*.log",
+    "reinstall": "npm run clean && npm install",
+    "db-init": "node scripts/init-database.js",
+    "db-reset": "node scripts/reset-database.js",
+    "db-seed": "node scripts/seed-demo-data.js",
+    "backup": "node scripts/backup-database.js",
+    "health-check": "node scripts/health-check.js",
+    "bot-webhook": "node scripts/set-webhook.js",
+    "bot-polling": "BOT_MODE=polling node server.js",
+    "build": "echo 'No build step required for Node.js app'",
+    "docker-build": "docker build -t anb-academy .",
+    "docker-run": "docker run -p 3000:3000 --env-file .env anb-academy",
+    "docker-compose-up": "docker-compose up -d",
+    "docker-compose-down": "docker-compose down",
+    "logs": "tail -f logs/server.log",
+    "logs-error": "tail -f logs/error.log",
+    "stats": "node scripts/show-stats.js",
+    "monitor": "node scripts/monitor.js"
+  },
+  "keywords": [
+    "medical",
+    "education",
+    "telegram",
+    "webapp",
+    "bot",
+    "academy",
+    "neurology",
+    "courses",
+    "learning",
+    "platform",
+    "telegram-bot",
+    "web-app",
+    "postgresql",
+    "express",
+    "nodejs",
+    "javascript",
+    "timeweb"
+  ],
+  "author": {
+    "name": "Академия АНБ",
+    "email": "dev@anb-academy.ru",
+    "url": "https://anb-academy.ru"
+  },
+  "contributors": [
+    {
+      "name": "АНБ Команда",
+      "email": "team@anb-academy.ru"
+    }
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anb-academy/anb-platform.git"
+  },
+  "bugs": {
+    "url": "https://github.com/anb-academy/anb-platform/issues",
+    "email": "support@anb-academy.ru"
+  },
+  "homepage": "https://anb-academy.ru",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "telegraf": "^4.16.3",
+    "pg": "^8.11.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "compression": "^1.7.4",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "express-rate-limit": "^7.1.5",
+    "validator": "^13.11.0",
+    "uuid": "^9.0.1",
+    "moment": "^2.29.4",
+    "lodash": "^4.17.21",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.8",
+    "utf-8-validate": "^6.0.3"
+  },
+  "files": [
+    "server.js",
+    "webapp/",
+    "package.json",
+    "README.md",
+    "LICENSE",
+    ".env.example",
+    "setup.js",
+    "deploy.sh",
+    "scripts/"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "volta": {
+    "node": "18.18.2"
+  },
+  "config": {
+    "port": 3000,
+    "webapp_path": "/webapp",
+    "api_prefix": "/api",
+    "upload_limit": "10mb"
+  }
+}
