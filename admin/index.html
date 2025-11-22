@@ -13,8 +13,8 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0f172a;
-            color: white;
+            background: #ffffff;
+            color: #000000;
             line-height: 1.6;
         }
 
@@ -25,9 +25,9 @@
         }
 
         .admin-header {
-            background: #1e293b;
+            background: #f8f9fa;
             padding: 1rem 2rem;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid #e0e0e0;
         }
 
         .admin-header h1 {
@@ -35,12 +35,13 @@
             align-items: center;
             gap: 0.5rem;
             font-size: 1.5rem;
+            color: #58b8e7;
         }
 
         .admin-nav {
-            background: #1e293b;
+            background: #f8f9fa;
             padding: 1rem 2rem;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid #e0e0e0;
         }
 
         .admin-nav ul {
@@ -50,7 +51,7 @@
         }
 
         .admin-nav a {
-            color: #cbd5e1;
+            color: #666666;
             text-decoration: none;
             padding: 0.5rem 1rem;
             border-radius: 0.375rem;
@@ -59,7 +60,7 @@
 
         .admin-nav a:hover,
         .admin-nav a.active {
-            background: #3b82f6;
+            background: #58b8e7;
             color: white;
         }
 
@@ -76,35 +77,37 @@
         }
 
         .stat-card {
-            background: #1e293b;
+            background: #ffffff;
             padding: 1.5rem;
             border-radius: 0.5rem;
-            border: 1px solid #334155;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .stat-value {
             font-size: 2rem;
             font-weight: bold;
-            color: #3b82f6;
+            color: #58b8e7;
         }
 
         .stat-label {
-            color: #94a3b8;
+            color: #666666;
             margin-top: 0.5rem;
         }
 
         .content-section {
-            background: #1e293b;
+            background: #ffffff;
             border-radius: 0.5rem;
-            border: 1px solid #334155;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 2rem;
         }
 
         .section-header {
             padding: 1.5rem;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid #e0e0e0;
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
         }
 
@@ -137,40 +140,40 @@
         }
 
         .btn-primary {
-            background: #3b82f6;
+            background: #58b8e7;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #2563eb;
+            background: #4aa8d6;
         }
 
         .btn-success {
-            background: #10b981;
+            background: #28a745;
             color: white;
         }
 
         .btn-success:hover {
-            background: #059669;
+            background: #218838;
         }
 
         .btn-danger {
-            background: #ef4444;
+            background: #dc3545;
             color: white;
         }
 
         .btn-danger:hover {
-            background: #dc2626;
+            background: #c82333;
         }
 
         .btn-outline {
             background: transparent;
-            border: 1px solid #64748b;
-            color: #cbd5e1;
+            border: 1px solid #666666;
+            color: #666666;
         }
 
         .btn-outline:hover {
-            background: #334155;
+            background: #f8f9fa;
         }
 
         .content-table {
@@ -182,25 +185,25 @@
         .content-table td {
             padding: 1rem;
             text-align: left;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid #e0e0e0;
         }
 
         .content-table th {
-            background: #1e293b;
-            color: #94a3b8;
+            background: #f8f9fa;
+            color: #666666;
             font-weight: 600;
         }
 
         .content-table tr:hover {
-            background: #1e293b;
+            background: #f8f9fa;
         }
 
         .status-active {
-            color: #10b981;
+            color: #28a745;
         }
 
         .status-inactive {
-            color: #ef4444;
+            color: #dc3545;
         }
 
         .modal {
@@ -221,9 +224,9 @@
         }
 
         .modal-content {
-            background: #1e293b;
+            background: #ffffff;
             border-radius: 0.5rem;
-            border: 1px solid #334155;
+            border: 1px solid #e0e0e0;
             width: 90%;
             max-width: 600px;
             max-height: 90vh;
@@ -232,16 +235,16 @@
 
         .modal-header {
             padding: 1.5rem;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid #e0e0e0;
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
         }
 
         .modal-close {
             background: none;
             border: none;
-            color: #94a3b8;
+            color: #666666;
             font-size: 1.5rem;
             cursor: pointer;
         }
@@ -257,22 +260,22 @@
         .form-group label {
             display: block;
             margin-bottom: 0.5rem;
-            color: #cbd5e1;
+            color: #666666;
         }
 
         .form-control {
             width: 100%;
             padding: 0.75rem;
-            background: #0f172a;
-            border: 1px solid #334155;
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
             border-radius: 0.375rem;
-            color: white;
+            color: #000000;
             font-size: 1rem;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: #3b82f6;
+            border-color: #58b8e7;
         }
 
         .form-actions {
@@ -292,8 +295,8 @@
         .spinner {
             width: 2rem;
             height: 2rem;
-            border: 2px solid #334155;
-            border-top: 2px solid #3b82f6;
+            border: 2px solid #e0e0e0;
+            border-top: 2px solid #58b8e7;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -304,16 +307,16 @@
         }
 
         .error-message {
-            background: #7f1d1d;
-            color: #fecaca;
+            background: #f8d7da;
+            color: #721c24;
             padding: 1rem;
             border-radius: 0.375rem;
             margin-bottom: 1rem;
         }
 
         .success-message {
-            background: #065f46;
-            color: #a7f3d0;
+            background: #d4edda;
+            color: #155724;
             padding: 1rem;
             border-radius: 0.375rem;
             margin-bottom: 1rem;
@@ -326,17 +329,58 @@
             padding: 0.25rem 0.5rem;
             border-radius: 1rem;
             font-size: 0.75rem;
-            background: #1e293b;
+            background: #f8f9fa;
         }
 
         .badge-admin {
-            background: #3b82f6;
+            background: #58b8e7;
             color: white;
         }
 
         .badge-super-admin {
-            background: #f59e0b;
+            background: #ffc107;
             color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .media-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .media-preview {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .media-info {
+            padding: 1rem;
+        }
+
+        .media-name {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            word-break: break-all;
+        }
+
+        .media-meta {
+            color: #666666;
+            font-size: 0.875rem;
         }
     </style>
 </head>
@@ -360,7 +404,7 @@
 
         <main class="admin-main">
             <!-- Дашборд -->
-            <div id="dashboard-tab" class="tab-content">
+            <div id="dashboard-tab" class="tab-content active">
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-value" id="total-users">0</div>
@@ -625,16 +669,40 @@
                         </div>
                     </div>
                     
-                    <div id="media-fields">
+                    <div id="podcast-fields" style="display: none;">
                         <div class="form-group">
-                            <label for="image_url">URL изображения</label>
-                            <input type="url" id="image_url" class="form-control">
+                            <label for="duration">Длительность</label>
+                            <input type="text" id="podcast-duration" class="form-control" placeholder="45:20" required>
                         </div>
-                        
+                    </div>
+                    
+                    <div id="video-fields" style="display: none;">
                         <div class="form-group">
-                            <label for="file">Загрузить файл</label>
-                            <input type="file" id="file" class="form-control">
+                            <label for="duration">Длительность</label>
+                            <input type="text" id="video-duration" class="form-control" placeholder="8:30" required>
                         </div>
+                    </div>
+                    
+                    <div id="material-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="material-type">Тип материала</label>
+                            <select id="material-type" class="form-control" required>
+                                <option value="checklist">Чек-лист</option>
+                                <option value="protocol">Протокол</option>
+                                <option value="mri">МРТ</option>
+                                <option value="case">Клинический случай</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="image_url">URL изображения</label>
+                        <input type="url" id="image_url" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="file">Загрузить файл</label>
+                        <input type="file" id="file" class="form-control">
                     </div>
                     
                     <div class="form-actions">
@@ -646,52 +714,48 @@
         </div>
     </div>
 
+    <!-- Модальное окно загрузки медиа -->
+    <div id="media-upload-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📤 Загрузить файл</h3>
+                <button class="modal-close" onclick="closeMediaUploadModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="media-upload-form">
+                    <div class="form-group">
+                        <label for="media-file">Выберите файл</label>
+                        <input type="file" id="media-file" class="form-control" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="closeMediaUploadModal()">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Загрузить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentTab = 'dashboard';
-        let adminData = {};
+        let currentEditingId = null;
 
-        // Инициализация админ-панели
-        async function initAdmin() {
-            try {
-                await loadStats();
-                showTab('dashboard');
-            } catch (error) {
-                console.error('Ошибка инициализации:', error);
-                showError('Не удалось загрузить данные');
-            }
-        }
-
-        // Загрузка статистики
-        async function loadStats() {
-            try {
-                const response = await fetch('/api/admin/stats');
-                const data = await response.json();
-                
-                if (data.success) {
-                    document.getElementById('total-users').textContent = data.data.totalUsers;
-                    document.getElementById('total-courses').textContent = data.data.totalCourses;
-                    document.getElementById('total-materials').textContent = data.data.totalMaterials;
-                    document.getElementById('active-subscriptions').textContent = data.data.activeSubscriptions;
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки статистики:', error);
-            }
-        }
-
-        // Переключение вкладок
+        // Показать вкладку
         function showTab(tabName) {
             // Скрыть все вкладки
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.style.display = 'none';
             });
             
-            // Показать выбранную вкладку
-            document.getElementById(`${tabName}-tab`).style.display = 'block';
-            
-            // Обновить навигацию
+            // Убрать активный класс со всех ссылок
             document.querySelectorAll('.admin-nav a').forEach(link => {
                 link.classList.remove('active');
             });
+            
+            // Показать выбранную вкладку
+            document.getElementById(`${tabName}-tab`).style.display = 'block';
+            
+            // Добавить активный класс к выбранной ссылке
             event.target.classList.add('active');
             
             currentTab = tabName;
@@ -700,308 +764,333 @@
             loadTabData(tabName);
         }
 
-        // Загрузка данных для вкладки
+        // Загрузить данные для вкладки
         async function loadTabData(tabName) {
             try {
-                switch(tabName) {
-                    case 'courses':
-                        await loadCourses();
-                        break;
-                    case 'podcasts':
-                        await loadPodcasts();
-                        break;
-                    case 'videos':
-                        await loadVideos();
-                        break;
-                    case 'materials':
-                        await loadMaterials();
-                        break;
-                    case 'users':
-                        await loadUsers();
-                        break;
-                    case 'media':
-                        await loadMedia();
-                        break;
-                }
-            } catch (error) {
-                console.error(`Ошибка загрузки данных для ${tabName}:`, error);
-                showError(`Не удалось загрузить данные для ${tabName}`);
-            }
-        }
-
-        // Загрузка курсов
-        async function loadCourses() {
-            const loading = document.getElementById('courses-loading');
-            const table = document.getElementById('courses-table');
-            const tbody = document.getElementById('courses-tbody');
-            
-            try {
-                const response = await fetch('/api/content');
+                showLoading(tabName);
+                
+                const response = await fetch(`/api/admin/${tabName === 'dashboard' ? 'stats' : tabName}`);
                 const data = await response.json();
                 
                 if (data.success) {
-                    loading.style.display = 'none';
-                    table.style.display = 'table';
-                    
-                    tbody.innerHTML = data.data.courses.map(course => `
-                        <tr>
-                            <td>${course.id}</td>
-                            <td>${course.title}</td>
-                            <td>${course.category}</td>
-                            <td>${formatPrice(course.price)}</td>
-                            <td>${course.students_count}</td>
-                            <td class="${course.is_active ? 'status-active' : 'status-inactive'}">
-                                ${course.is_active ? 'Активен' : 'Неактивен'}
-                            </td>
-                            <td>
-                                <button class="btn btn-outline btn-sm" onclick="editContent('courses', ${course.id})">
-                                    ✏️
-                                </button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteContent('courses', ${course.id})">
-                                    🗑️
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('');
+                    switch(tabName) {
+                        case 'dashboard':
+                            updateDashboard(data.data);
+                            break;
+                        case 'courses':
+                            renderCoursesTable(data.data);
+                            break;
+                        case 'podcasts':
+                            renderPodcastsTable(data.data);
+                            break;
+                        case 'videos':
+                            renderVideosTable(data.data);
+                            break;
+                        case 'materials':
+                            renderMaterialsTable(data.data);
+                            break;
+                        case 'users':
+                            renderUsersTable(data.data);
+                            break;
+                        case 'media':
+                            renderMediaGrid(data.data);
+                            break;
+                    }
+                } else {
+                    showError(`Ошибка загрузки данных: ${data.error}`);
                 }
             } catch (error) {
-                loading.style.display = 'none';
-                showError('Не удалось загрузить курсы');
+                showError(`Ошибка сети: ${error.message}`);
             }
         }
 
-        // Загрузка подкастов
-        async function loadPodcasts() {
-            const loading = document.getElementById('podcasts-loading');
-            const table = document.getElementById('podcasts-table');
-            const tbody = document.getElementById('podcasts-tbody');
-            
-            try {
-                const response = await fetch('/api/content');
-                const data = await response.json();
-                
-                if (data.success) {
-                    loading.style.display = 'none';
-                    table.style.display = 'table';
-                    
-                    tbody.innerHTML = data.data.podcasts.map(podcast => `
-                        <tr>
-                            <td>${podcast.id}</td>
-                            <td>${podcast.title}</td>
-                            <td>${podcast.category}</td>
-                            <td>${podcast.duration}</td>
-                            <td>${podcast.listens}</td>
-                            <td>
-                                <button class="btn btn-outline btn-sm" onclick="editContent('podcasts', ${podcast.id})">
-                                    ✏️
-                                </button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteContent('podcasts', ${podcast.id})">
-                                    🗑️
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('');
-                }
-            } catch (error) {
-                loading.style.display = 'none';
-                showError('Не удалось загрузить подкасты');
-            }
+        // Обновить дашборд
+        function updateDashboard(stats) {
+            document.getElementById('total-users').textContent = stats.totalUsers;
+            document.getElementById('total-courses').textContent = stats.totalCourses;
+            document.getElementById('total-materials').textContent = stats.totalMaterials;
+            document.getElementById('active-subscriptions').textContent = stats.activeSubscriptions;
         }
 
-        // Загрузка видео
-        async function loadVideos() {
-            const loading = document.getElementById('videos-loading');
-            const table = document.getElementById('videos-table');
-            const tbody = document.getElementById('videos-tbody');
+        // Показать/скрыть загрузку
+        function showLoading(tabName) {
+            const loadingElement = document.getElementById(`${tabName}-loading`);
+            const contentElement = document.getElementById(`${tabName}-${tabName === 'media' ? 'grid' : 'table'}`);
             
-            try {
-                const response = await fetch('/api/content');
-                const data = await response.json();
-                
-                if (data.success) {
-                    loading.style.display = 'none';
-                    table.style.display = 'table';
-                    
-                    tbody.innerHTML = data.data.videos.map(video => `
-                        <tr>
-                            <td>${video.id}</td>
-                            <td>${video.title}</td>
-                            <td>${video.category}</td>
-                            <td>${video.duration}</td>
-                            <td>${video.views}</td>
-                            <td>
-                                <button class="btn btn-outline btn-sm" onclick="editContent('videos', ${video.id})">
-                                    ✏️
-                                </button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteContent('videos', ${video.id})">
-                                    🗑️
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('');
-                }
-            } catch (error) {
-                loading.style.display = 'none';
-                showError('Не удалось загрузить видео');
-            }
+            if (loadingElement) loadingElement.style.display = 'flex';
+            if (contentElement) contentElement.style.display = 'none';
         }
 
-        // Загрузка материалов
-        async function loadMaterials() {
-            const loading = document.getElementById('materials-loading');
-            const table = document.getElementById('materials-table');
-            const tbody = document.getElementById('materials-tbody');
+        function hideLoading(tabName) {
+            const loadingElement = document.getElementById(`${tabName}-loading`);
+            const contentElement = document.getElementById(`${tabName}-${tabName === 'media' ? 'grid' : 'table'}`);
             
-            try {
-                const response = await fetch('/api/content');
-                const data = await response.json();
-                
-                if (data.success) {
-                    loading.style.display = 'none';
-                    table.style.display = 'table';
-                    
-                    tbody.innerHTML = data.data.materials.map(material => `
-                        <tr>
-                            <td>${material.id}</td>
-                            <td>${material.title}</td>
-                            <td>${material.category}</td>
-                            <td>${material.material_type}</td>
-                            <td>${material.downloads}</td>
-                            <td>
-                                <button class="btn btn-outline btn-sm" onclick="editContent('materials', ${material.id})">
-                                    ✏️
-                                </button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteContent('materials', ${material.id})">
-                                    🗑️
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('');
-                }
-            } catch (error) {
-                loading.style.display = 'none';
-                showError('Не удалось загрузить материалы');
-            }
+            if (loadingElement) loadingElement.style.display = 'none';
+            if (contentElement) contentElement.style.display = 'block';
         }
 
-        // Загрузка пользователей
-        async function loadUsers() {
-            // В реальном приложении здесь был бы API для пользователей
-            const loading = document.getElementById('users-loading');
-            const table = document.getElementById('users-table');
-            const tbody = document.getElementById('users-tbody');
+        // Показать ошибку
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
             
-            // Демо-данные
+            const sectionContent = document.querySelector(`#${currentTab}-tab .section-content`);
+            sectionContent.insertBefore(errorDiv, sectionContent.firstChild);
+            
             setTimeout(() => {
-                loading.style.display = 'none';
-                table.style.display = 'table';
-                
-                tbody.innerHTML = `
-                    <tr>
-                        <td>1</td>
-                        <td>Иван Петров</td>
-                        <td>@ivanpetrov</td>
-                        <td><span class="user-badge badge-super-admin">Супер-админ</span></td>
-                        <td>до 15.01.2025</td>
-                        <td>
-                            <button class="btn btn-outline btn-sm">✉️</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td>Анна Сидорова</td>
-                        <td>@annasid</td>
-                        <td><span class="user-badge badge-admin">Админ</span></td>
-                        <td>до 20.02.2025</td>
-                        <td>
-                            <button class="btn btn-outline btn-sm">✉️</button>
-                        </td>
-                    </tr>
-                `;
-            }, 1000);
+                errorDiv.remove();
+            }, 5000);
         }
 
-        // Загрузка медиа
-        async function loadMedia() {
-            const loading = document.getElementById('media-loading');
-            const grid = document.getElementById('media-grid');
+        // Показать успех
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.textContent = message;
             
-            try {
-                const response = await fetch('/api/media');
-                const data = await response.json();
-                
-                if (data.success) {
-                    loading.style.display = 'none';
-                    grid.style.display = 'grid';
-                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
-                    grid.style.gap = '1rem';
-                    
-                    grid.innerHTML = data.files.map(file => `
-                        <div class="media-item" style="background: #1e293b; padding: 1rem; border-radius: 0.5rem;">
-                            <div style="font-size: 2rem; text-align: center; margin-bottom: 0.5rem;">
-                                ${getFileIcon(file.mime_type)}
-                            </div>
-                            <div style="font-size: 0.875rem; word-break: break-all;">
-                                ${file.original_name}
-                            </div>
-                            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem;">
-                                ${formatFileSize(file.size)}
-                            </div>
-                            <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-                                <button class="btn btn-outline btn-sm" onclick="copyUrl('${file.url}')">
-                                    📋
-                                </button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteMedia(${file.id})">
-                                    🗑️
-                                </button>
-                            </div>
+            const sectionContent = document.querySelector(`#${currentTab}-tab .section-content`);
+            sectionContent.insertBefore(successDiv, sectionContent.firstChild);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 5000);
+        }
+
+        // Рендер таблицы курсов
+        function renderCoursesTable(courses) {
+            const tbody = document.getElementById('courses-tbody');
+            tbody.innerHTML = '';
+            
+            courses.forEach(course => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${course.id}</td>
+                    <td>${course.title}</td>
+                    <td>${course.category}</td>
+                    <td>${formatPrice(course.price)}</td>
+                    <td>${course.students_count}</td>
+                    <td class="${course.is_active ? 'status-active' : 'status-inactive'}">
+                        ${course.is_active ? 'Активен' : 'Неактивен'}
+                    </td>
+                    <td>
+                        <button class="btn btn-outline btn-small" onclick="editContent('courses', ${course.id})">
+                            ✏️
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteContent('courses', ${course.id})">
+                            🗑️
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            hideLoading('courses');
+        }
+
+        // Рендер таблицы подкастов
+        function renderPodcastsTable(podcasts) {
+            const tbody = document.getElementById('podcasts-tbody');
+            tbody.innerHTML = '';
+            
+            podcasts.forEach(podcast => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${podcast.id}</td>
+                    <td>${podcast.title}</td>
+                    <td>${podcast.category}</td>
+                    <td>${podcast.duration}</td>
+                    <td>${podcast.listens}</td>
+                    <td>
+                        <button class="btn btn-outline btn-small" onclick="editContent('podcasts', ${podcast.id})">
+                            ✏️
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteContent('podcasts', ${podcast.id})">
+                            🗑️
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            hideLoading('podcasts');
+        }
+
+        // Рендер таблицы видео
+        function renderVideosTable(videos) {
+            const tbody = document.getElementById('videos-tbody');
+            tbody.innerHTML = '';
+            
+            videos.forEach(video => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${video.id}</td>
+                    <td>${video.title}</td>
+                    <td>${video.category}</td>
+                    <td>${video.duration}</td>
+                    <td>${video.views}</td>
+                    <td>
+                        <button class="btn btn-outline btn-small" onclick="editContent('videos', ${video.id})">
+                            ✏️
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteContent('videos', ${video.id})">
+                            🗑️
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            hideLoading('videos');
+        }
+
+        // Рендер таблицы материалов
+        function renderMaterialsTable(materials) {
+            const tbody = document.getElementById('materials-tbody');
+            tbody.innerHTML = '';
+            
+            materials.forEach(material => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${material.id}</td>
+                    <td>${material.title}</td>
+                    <td>${material.category}</td>
+                    <td>${material.material_type}</td>
+                    <td>${material.downloads}</td>
+                    <td>
+                        <button class="btn btn-outline btn-small" onclick="editContent('materials', ${material.id})">
+                            ✏️
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteContent('materials', ${material.id})">
+                            🗑️
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            hideLoading('materials');
+        }
+
+        // Рендер таблицы пользователей
+        function renderUsersTable(users) {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = '';
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.first_name}</td>
+                    <td>@${user.username || 'нет'}</td>
+                    <td>
+                        ${user.is_super_admin ? 
+                            '<span class="user-badge badge-super-admin">Супер-админ</span>' : 
+                            user.is_admin ? 
+                            '<span class="user-badge badge-admin">Админ</span>' : 
+                            'Пользователь'
+                        }
+                    </td>
+                    <td>${user.subscription_end ? new Date(user.subscription_end).toLocaleDateString('ru-RU') : 'Нет'}</td>
+                    <td>
+                        <button class="btn btn-outline btn-small" onclick="editUser(${user.id})">
+                            ✏️
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            hideLoading('users');
+        }
+
+        // Рендер сетки медиа
+        function renderMediaGrid(files) {
+            const grid = document.getElementById('media-grid');
+            grid.innerHTML = '';
+            
+            files.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'media-item';
+                item.innerHTML = `
+                    <img src="${file.url}" alt="${file.original_name}" class="media-preview" onerror="this.src='/webapp/assets/default.jpg'">
+                    <div class="media-info">
+                        <div class="media-name">${file.original_name}</div>
+                        <div class="media-meta">
+                            ${formatFileSize(file.size)}<br>
+                            ${new Date(file.created_at).toLocaleDateString('ru-RU')}
                         </div>
-                    `).join('');
-                }
-            } catch (error) {
-                loading.style.display = 'none';
-                showError('Не удалось загрузить медиа');
-            }
+                        <div style="margin-top: 0.5rem;">
+                            <button class="btn btn-danger btn-small" onclick="deleteMedia(${file.id})">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(item);
+            });
+            
+            hideLoading('media');
+        }
+
+        // Форматирование цены
+        function formatPrice(price) {
+            return new Intl.NumberFormat('ru-RU').format(price) + ' ₽';
+        }
+
+        // Форматирование размера файла
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
         // Показать модальное окно добавления
-        function showAddModal(type) {
-            const modal = document.getElementById('add-modal');
-            const title = document.getElementById('modal-title');
-            const form = document.getElementById('content-form');
-            const courseFields = document.getElementById('course-fields');
-            
-            document.getElementById('content-type').value = type;
+        function showAddModal(contentType) {
+            currentEditingId = null;
+            document.getElementById('modal-title').textContent = `Добавить ${getContentTypeName(contentType)}`;
+            document.getElementById('content-type').value = contentType;
             document.getElementById('content-id').value = '';
-            form.reset();
             
-            // Настройка полей в зависимости от типа
-            switch(type) {
+            // Скрыть все специфические поля
+            document.getElementById('course-fields').style.display = 'none';
+            document.getElementById('podcast-fields').style.display = 'none';
+            document.getElementById('video-fields').style.display = 'none';
+            document.getElementById('material-fields').style.display = 'none';
+            
+            // Показать нужные поля
+            switch(contentType) {
                 case 'courses':
-                    title.textContent = 'Добавить курс';
-                    courseFields.style.display = 'block';
+                    document.getElementById('course-fields').style.display = 'block';
                     break;
                 case 'podcasts':
-                    title.textContent = 'Добавить подкаст';
-                    courseFields.style.display = 'none';
+                    document.getElementById('podcast-fields').style.display = 'block';
                     break;
                 case 'videos':
-                    title.textContent = 'Добавить видео';
-                    courseFields.style.display = 'none';
+                    document.getElementById('video-fields').style.display = 'block';
                     break;
                 case 'materials':
-                    title.textContent = 'Добавить материал';
-                    courseFields.style.display = 'none';
+                    document.getElementById('material-fields').style.display = 'block';
                     break;
             }
             
-            modal.classList.add('active');
+            // Очистить форму
+            document.getElementById('content-form').reset();
+            
+            document.getElementById('add-modal').classList.add('active');
         }
 
-        // Показать модальное окно загрузки медиа
-        function showMediaUploadModal() {
-            // Реализация загрузки медиа
-            alert('Функция загрузки медиа в разработке');
+        // Получить название типа контента
+        function getContentTypeName(contentType) {
+            const names = {
+                'courses': 'курс',
+                'podcasts': 'подкаст',
+                'videos': 'видео',
+                'materials': 'материал'
+            };
+            return names[contentType] || 'контент';
         }
 
         // Закрыть модальное окно
@@ -1009,35 +1098,82 @@
             document.getElementById('add-modal').classList.remove('active');
         }
 
-        // Редактирование контента
-        function editContent(type, id) {
-            // Реализация редактирования
-            alert(`Редактирование ${type} #${id} в разработке`);
+        // Редактировать контент
+        async function editContent(contentType, id) {
+            try {
+                const response = await fetch(`/api/content/${contentType}/${id}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentEditingId = id;
+                    const content = data.data;
+                    
+                    document.getElementById('modal-title').textContent = `Редактировать ${getContentTypeName(contentType)}`;
+                    document.getElementById('content-type').value = contentType;
+                    document.getElementById('content-id').value = id;
+                    
+                    // Заполнить форму
+                    document.getElementById('title').value = content.title;
+                    document.getElementById('description').value = content.description;
+                    document.getElementById('category').value = content.category;
+                    document.getElementById('image_url').value = content.image_url || '';
+                    
+                    // Заполнить специфические поля
+                    switch(contentType) {
+                        case 'courses':
+                            document.getElementById('course-fields').style.display = 'block';
+                            document.getElementById('price').value = content.price;
+                            document.getElementById('discount').value = content.discount || 0;
+                            document.getElementById('duration').value = content.duration;
+                            document.getElementById('modules').value = content.modules;
+                            document.getElementById('level').value = content.level;
+                            break;
+                        case 'podcasts':
+                            document.getElementById('podcast-fields').style.display = 'block';
+                            document.getElementById('podcast-duration').value = content.duration;
+                            break;
+                        case 'videos':
+                            document.getElementById('video-fields').style.display = 'block';
+                            document.getElementById('video-duration').value = content.duration;
+                            break;
+                        case 'materials':
+                            document.getElementById('material-fields').style.display = 'block';
+                            document.getElementById('material-type').value = content.material_type;
+                            break;
+                    }
+                    
+                    document.getElementById('add-modal').classList.add('active');
+                } else {
+                    showError('Ошибка загрузки данных');
+                }
+            } catch (error) {
+                showError(`Ошибка сети: ${error.message}`);
+            }
         }
 
-        // Удаление контента
-        async function deleteContent(type, id) {
-            if (confirm(`Вы уверены, что хотите удалить этот ${type}?`)) {
+        // Удалить контент
+        async function deleteContent(contentType, id) {
+            if (confirm('Вы уверены, что хотите удалить этот контент?')) {
                 try {
-                    const response = await fetch(`/api/admin/content/${type}/${id}`, {
+                    const response = await fetch(`/api/admin/content/${contentType}/${id}`, {
                         method: 'DELETE'
                     });
                     
                     const data = await response.json();
                     
                     if (data.success) {
-                        showSuccess(`${type} успешно удален`);
+                        showSuccess('Контент успешно удален');
                         loadTabData(currentTab);
                     } else {
-                        showError('Ошибка при удалении');
+                        showError(`Ошибка удаления: ${data.error}`);
                     }
                 } catch (error) {
-                    showError('Ошибка при удалении');
+                    showError(`Ошибка сети: ${error.message}`);
                 }
             }
         }
 
-        // Удаление медиа
+        // Удалить медиа файл
         async function deleteMedia(id) {
             if (confirm('Вы уверены, что хотите удалить этот файл?')) {
                 try {
@@ -1049,82 +1185,113 @@
                     
                     if (data.success) {
                         showSuccess('Файл успешно удален');
-                        loadMedia();
+                        loadTabData('media');
                     } else {
-                        showError('Ошибка при удалении файла');
+                        showError(`Ошибка удаления: ${data.error}`);
                     }
                 } catch (error) {
-                    showError('Ошибка при удалении файла');
+                    showError(`Ошибка сети: ${error.message}`);
                 }
             }
         }
 
-        // Копирование URL
-        function copyUrl(url) {
-            navigator.clipboard.writeText(window.location.origin + url).then(() => {
-                showSuccess('URL скопирован в буфер');
-            });
-        }
-
-        // Вспомогательные функции
-        function formatPrice(price) {
-            return new Intl.NumberFormat('ru-RU').format(price) + ' ₽';
-        }
-
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        function getFileIcon(mimeType) {
-            if (mimeType.startsWith('image/')) return '🖼️';
-            if (mimeType.startsWith('video/')) return '🎬';
-            if (mimeType.startsWith('audio/')) return '🎵';
-            if (mimeType === 'application/pdf') return '📄';
-            return '📎';
-        }
-
-        function showError(message) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'error-message';
-            errorDiv.textContent = message;
-            document.querySelector('.admin-main').prepend(errorDiv);
-            setTimeout(() => errorDiv.remove(), 5000);
-        }
-
-        function showSuccess(message) {
-            const successDiv = document.createElement('div');
-            successDiv.className = 'success-message';
-            successDiv.textContent = message;
-            document.querySelector('.admin-main').prepend(successDiv);
-            setTimeout(() => successDiv.remove(), 5000);
-        }
-
-        // Обработка формы
+        // Обработчик отправки формы
         document.getElementById('content-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const type = document.getElementById('content-type').value;
+            const contentType = document.getElementById('content-type').value;
+            const contentId = document.getElementById('content-id').value;
             const formData = new FormData();
             
-            // Добавляем поля формы
-            const fields = ['title', 'description', 'category', 'price', 'discount', 'duration', 'modules', 'level', 'image_url'];
-            fields.forEach(field => {
-                const value = document.getElementById(field).value;
-                if (value) formData.append(field, value);
-            });
+            // Добавить основные поля
+            formData.append('title', document.getElementById('title').value);
+            formData.append('description', document.getElementById('description').value);
+            formData.append('category', document.getElementById('category').value);
+            formData.append('image_url', document.getElementById('image_url').value);
+            formData.append('adminId', 1); // Временное значение
             
-            // Добавляем файл
+            // Добавить специфические поля
+            switch(contentType) {
+                case 'courses':
+                    formData.append('price', document.getElementById('price').value);
+                    formData.append('discount', document.getElementById('discount').value);
+                    formData.append('duration', document.getElementById('duration').value);
+                    formData.append('modules', document.getElementById('modules').value);
+                    formData.append('level', document.getElementById('level').value);
+                    break;
+                case 'podcasts':
+                    formData.append('duration', document.getElementById('podcast-duration').value);
+                    break;
+                case 'videos':
+                    formData.append('duration', document.getElementById('video-duration').value);
+                    break;
+                case 'materials':
+                    formData.append('material_type', document.getElementById('material-type').value);
+                    break;
+            }
+            
+            // Добавить файл, если выбран
             const fileInput = document.getElementById('file');
             if (fileInput.files[0]) {
                 formData.append('file', fileInput.files[0]);
             }
             
             try {
-                const response = await fetch(`/api/admin/content/${type}`, {
+                let response;
+                if (currentEditingId) {
+                    // Редактирование
+                    response = await fetch(`/api/admin/content/${contentType}/${contentId}`, {
+                        method: 'PUT',
+                        body: formData
+                    });
+                } else {
+                    // Создание
+                    response = await fetch(`/api/admin/content/${contentType}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(currentEditingId ? 'Контент успешно обновлен' : 'Контент успешно создан');
+                    closeModal();
+                    loadTabData(currentTab);
+                } else {
+                    showError(`Ошибка сохранения: ${data.error}`);
+                }
+            } catch (error) {
+                showError(`Ошибка сети: ${error.message}`);
+            }
+        });
+
+        // Показать модальное окно загрузки медиа
+        function showMediaUploadModal() {
+            document.getElementById('media-upload-modal').classList.add('active');
+        }
+
+        // Закрыть модальное окно загрузки медиа
+        function closeMediaUploadModal() {
+            document.getElementById('media-upload-modal').classList.remove('active');
+        }
+
+        // Обработчик загрузки медиа
+        document.getElementById('media-upload-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const fileInput = document.getElementById('media-file');
+            
+            if (!fileInput.files[0]) {
+                showError('Выберите файл для загрузки');
+                return;
+            }
+            
+            formData.append('file', fileInput.files[0]);
+            
+            try {
+                const response = await fetch('/api/upload', {
                     method: 'POST',
                     body: formData
                 });
@@ -1132,19 +1299,21 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    showSuccess('Контент успешно создан');
-                    closeModal();
-                    loadTabData(currentTab);
+                    showSuccess('Файл успешно загружен');
+                    closeMediaUploadModal();
+                    loadTabData('media');
                 } else {
-                    showError('Ошибка при создании контента');
+                    showError(`Ошибка загрузки: ${data.error}`);
                 }
             } catch (error) {
-                showError('Ошибка при создании контента');
+                showError(`Ошибка сети: ${error.message}`);
             }
         });
 
-        // Инициализация при загрузке
-        document.addEventListener('DOMContentLoaded', initAdmin);
+        // Загрузить данные при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTabData('dashboard');
+        });
     </script>
 </body>
 </html>
