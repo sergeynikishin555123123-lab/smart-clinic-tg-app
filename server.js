@@ -4,15 +4,8 @@ import pkg from 'pg';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import dotenv from 'dotenv';
-import cron from 'node-cron';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import multer from 'multer';
-import path from 'path';
 import fs from 'fs';
-
-const execAsync = promisify(exec);
-dotenv.config();
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
@@ -21,7 +14,7 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ==================== НАСТРОЙКА MULTER ДЛЯ ЗАГРУЗКИ ФАЙЛОВ ====================
+// ==================== НАСТРОЙКА MULTER ====================
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -369,6 +362,24 @@ async function checkTableStructure() {
             console.log('🔄 Добавляем колонку avatar_url в таблицу users...');
             await pool.query('ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500)');
         }
+
+        // Проверяем наличие колонки is_active в таблицах
+        const tables = ['courses', 'podcasts', 'streams', 'videos', 'materials', 'events', 'news'];
+        for (const table of tables) {
+            const { rows: activeColumnExists } = await pool.query(`
+                SELECT EXISTS (
+                    SELECT FROM information_schema.columns 
+                    WHERE table_schema = 'public' 
+                    AND table_name = $1 
+                    AND column_name = 'is_active'
+                );
+            `, [table]);
+            
+            if (!activeColumnExists[0].exists) {
+                console.log(`🔄 Добавляем колонку is_active в таблицу ${table}...`);
+                await pool.query(`ALTER TABLE ${table} ADD COLUMN is_active BOOLEAN DEFAULT true`);
+            }
+        }
         
     } catch (error) {
         console.error('❌ Ошибка проверки структуры таблиц:', error);
@@ -625,7 +636,26 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// ==================== МЕДИА ОБРАБОТЧИКИ ====================
+app.get('/api/db-health', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT NOW() as time');
+        res.json({ 
+            success: true, 
+            database: 'connected',
+            time: result.rows[0].time 
+        });
+    } catch (error) {
+        res.status(503).json({ 
+            success: false, 
+            database: 'disconnected',
+            error: error.message 
+        });
+    }
+});
+
+// ════════════════════════════════════════════════════
+// 🎯 ЯКОРЬ ДЛЯ ВСТАВКИ 1: НАЧАЛО МЕДИА ОБРАБОТЧИКОВ
+// ════════════════════════════════════════════════════
 
 // Загрузка файлов
 app.post('/api/upload', upload.single('file'), async (req, res) => {
@@ -686,47 +716,9 @@ app.delete('/api/media/:id', async (req, res) => {
     }
 });
 
-app.get('/api/db-health', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT NOW() as time');
-        res.json({ 
-            success: true, 
-            database: 'connected',
-            time: result.rows[0].time 
-        });
-    } catch (error) {
-        res.status(503).json({ 
-            success: false, 
-            database: 'disconnected',
-            error: error.message 
-        });
-    }
-});
-
-// Загрузка файлов
-app.post('/api/upload', upload.single('file'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ success: false, error: 'Файл не загружен' });
-        }
-
-        const fileUrl = `/uploads/${req.file.filename}`;
-        
-        const { rows } = await pool.query(
-            'INSERT INTO media_files (filename, original_name, mime_type, size, url) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [req.file.filename, req.file.originalname, req.file.mimetype, req.file.size, fileUrl]
-        );
-
-        res.json({ 
-            success: true, 
-            file: rows[0],
-            url: fileUrl
-        });
-    } catch (error) {
-        console.error('Upload error:', error);
-        res.status(500).json({ success: false, error: 'Ошибка загрузки файла' });
-    }
-});
+// ════════════════════════════════════════════════════
+// 🎯 ЯКОРЬ ДЛЯ ВСТАВКИ 1: КОНЕЦ МЕДИА ОБРАБОТЧИКОВ
+// ════════════════════════════════════════════════════
 
 // Получение контента
 app.get('/api/content', async (req, res) => {
@@ -928,7 +920,9 @@ app.get('/api/admin/stats', async (req, res) => {
     }
 });
 
-// ==================== УЛУЧШЕННЫЕ АДМИН МЕТОДЫ ====================
+// ════════════════════════════════════════════════════
+// 🎯 ЯКОРЬ ДЛЯ ВСТАВКИ 2: НАЧАЛО УЛУЧШЕННЫХ АДМИН МЕТОДОВ
+// ════════════════════════════════════════════════════
 
 // Добавление контента с поддержкой файлов
 app.post('/api/admin/content', upload.single('file'), async (req, res) => {
@@ -1051,45 +1045,9 @@ app.post('/api/admin/content/batch', async (req, res) => {
     }
 });
 
-// Добавление контента
-app.post('/api/admin/content', upload.single('file'), async (req, res) => {
-    try {
-        const { action, contentType, data } = req.body;
-        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
-        
-        if (action === 'create') {
-            let query = '';
-            let values = [];
-            
-            switch (contentType) {
-                case 'courses':
-                    query = `INSERT INTO courses (title, description, price, discount, duration, modules, category, level, image_url, video_url) 
-                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`;
-                    values = [parsedData.title, parsedData.description, parsedData.price, parsedData.discount, parsedData.duration, parsedData.modules, parsedData.category, parsedData.level, parsedData.image_url, parsedData.video_url];
-                    break;
-                case 'podcasts':
-                    const audioUrl = req.file ? `/uploads/${req.file.filename}` : parsedData.audio_url;
-                    query = `INSERT INTO podcasts (title, description, duration, category, image_url, audio_url) 
-                             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
-                    values = [parsedData.title, parsedData.description, parsedData.duration, parsedData.category, parsedData.image_url, audioUrl];
-                    break;
-                case 'videos':
-                    const videoUrl = req.file ? `/uploads/${req.file.filename}` : parsedData.video_url;
-                    query = `INSERT INTO videos (title, description, duration, category, thumbnail_url, video_url) 
-                             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
-                    values = [parsedData.title, parsedData.description, parsedData.duration, parsedData.category, parsedData.thumbnail_url, videoUrl];
-                    break;
-                // ... другие типы контента
-            }
-            
-            const { rows } = await pool.query(query, values);
-            res.json({ success: true, data: rows[0] });
-        }
-    } catch (error) {
-        console.error('Admin content error:', error);
-        res.status(500).json({ success: false, error: 'Ошибка административного действия' });
-    }
-});
+// ════════════════════════════════════════════════════
+// 🎯 ЯКОРЬ ДЛЯ ВСТАВКИ 2: КОНЕЦ УЛУЧШЕННЫХ АДМИН МЕТОДОВ
+// ════════════════════════════════════════════════════
 
 // SPA fallback
 app.get('/webapp*', (req, res) => {
