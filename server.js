@@ -1,3 +1,4 @@
+// server.js - ПОЛНОСТЬЮ ПЕРЕРАБОТАННЫЙ СЕРВЕР
 import express from 'express';
 import { Telegraf, session, Markup } from 'telegraf';
 import pkg from 'pg';
@@ -8,6 +9,7 @@ import multer from 'multer';
 import fs from 'fs';
 import cors from 'cors';
 import compression from 'compression';
+import crypto from 'crypto';
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
@@ -37,7 +39,7 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 50 * 1024 * 1024 // 50MB
+        fileSize: 100 * 1024 * 1024 // 100MB
     },
     fileFilter: (req, file, cb) => {
         const allowedTypes = {
@@ -56,7 +58,8 @@ const upload = multer({
             'audio/ogg': true,
             'application/pdf': true,
             'application/msword': true,
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': true
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': true,
+            'text/html': true
         };
         
         if (allowedTypes[file.mimetype]) {
@@ -134,21 +137,17 @@ function initializeDatabase() {
 
 // ==================== MIDDLEWARE ====================
 
-// Убираем Helmet и настраиваем CORS для TimeWeb
 app.use(cors({
-    origin: true, // Разрешаем все источники
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Убираем X-Frame-Options для работы в iframe Telegram
 app.use((req, res, next) => {
-    // Убираем заголовки, которые блокируют iframe
     res.removeHeader('X-Frame-Options');
     res.removeHeader('Content-Security-Policy');
     
-    // Разрешаем iframe для Telegram
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
@@ -160,8 +159,8 @@ app.use((req, res, next) => {
 });
 
 app.use(compression());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(express.static(join(__dirname)));
 app.use('/uploads', express.static(join(__dirname, 'uploads')));
 app.use('/admin', express.static(join(__dirname, 'admin')));
@@ -369,6 +368,26 @@ async function createTables() {
                 size INTEGER,
                 url VARCHAR(500),
                 uploaded_by INTEGER REFERENCES users(id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS user_learning_path (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                current_level VARCHAR(50) DEFAULT 'Понимаю',
+                progress_data JSONB DEFAULT '{}',
+                completed_requirements JSONB DEFAULT '[]',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS payments (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                amount INTEGER,
+                currency VARCHAR(10) DEFAULT 'RUB',
+                status VARCHAR(50) DEFAULT 'pending',
+                payment_method VARCHAR(100),
+                transaction_id VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
@@ -656,7 +675,7 @@ function setupBot() {
                     break;
                     
                 case '🆘 Поддержка':
-                    await ctx.reply('Если у вас возникли вопросы или проблемы, напишите нам: @anb_support');
+                    await ctx.reply('Если у вас возникли вопросы или проблемы, напишите нам: @academy_anb');
                     break;
                     
                 default:
@@ -938,6 +957,12 @@ app.post('/api/user', async (req, res) => {
             [user.id]
         );
 
+        // Получаем путь обучения
+        const { rows: learningPath } = await pool.query(
+            'SELECT * FROM user_learning_path WHERE user_id = $1',
+            [user.id]
+        );
+
         const userFavorites = {
             courses: favorites.filter(f => f.content_type === 'courses').map(f => f.content_id),
             podcasts: favorites.filter(f => f.content_type === 'podcasts').map(f => f.content_id),
@@ -954,6 +979,12 @@ app.post('/api/user', async (req, res) => {
             modules_completed: 2,
             materials_watched: 12,
             events_attended: 1
+        };
+
+        const learningPathData = learningPath[0] || {
+            current_level: 'Понимаю',
+            progress_data: {},
+            completed_requirements: []
         };
 
         const userData = {
@@ -975,13 +1006,49 @@ app.post('/api/user', async (req, res) => {
                     materialsWatched: userProgress.materials_watched,
                     eventsAttended: userProgress.events_attended
                 }
-            }
+            },
+            learningPath: learningPathData
         };
 
         res.json({ success: true, user: userData });
     } catch (error) {
         console.error('API User error:', error);
         res.status(500).json({ success: false, error: 'Ошибка загрузки пользователя' });
+    }
+});
+
+// Обновление прогресса пользователя
+app.post('/api/user/progress', async (req, res) => {
+    try {
+        const { userId, progressData } = req.body;
+        
+        await pool.query(
+            `INSERT INTO user_progress (user_id, level, experience, courses_bought, modules_completed, materials_watched, events_attended)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (user_id) 
+             DO UPDATE SET 
+                level = $2, 
+                experience = $3, 
+                courses_bought = $4, 
+                modules_completed = $5, 
+                materials_watched = $6, 
+                events_attended = $7,
+                updated_at = CURRENT_TIMESTAMP`,
+            [
+                userId,
+                progressData.level,
+                progressData.experience,
+                progressData.coursesBought,
+                progressData.modulesCompleted,
+                progressData.materialsWatched,
+                progressData.eventsAttended
+            ]
+        );
+
+        res.json({ success: true, message: 'Прогресс обновлен' });
+    } catch (error) {
+        console.error('Update progress error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка обновления прогресса' });
     }
 });
 
@@ -1073,6 +1140,23 @@ app.get('/api/admin/stats', async (req, res) => {
     } catch (error) {
         console.error('Admin stats error:', error);
         res.status(500).json({ success: false, error: 'Ошибка загрузки статистики' });
+    }
+});
+
+// Получение всех пользователей
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        const { rows: users } = await pool.query(`
+            SELECT u.*, up.level, up.experience 
+            FROM users u 
+            LEFT JOIN user_progress up ON u.id = up.user_id 
+            ORDER BY u.created_at DESC
+        `);
+        
+        res.json({ success: true, data: users });
+    } catch (error) {
+        console.error('Admin users error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки пользователей' });
     }
 });
 
@@ -1239,7 +1323,32 @@ app.put('/api/admin/content/:type/:id', upload.single('file'), async (req, res) 
                 ];
                 break;
 
-            // ... аналогично для других типов
+            case 'videos':
+                query = `UPDATE videos SET title=$1, description=$2, duration=$3, category=$4, thumbnail_url=$5, video_url=$6, updated_at=CURRENT_TIMESTAMP WHERE id=$7 RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.duration, 
+                    data.category, 
+                    data.thumbnail_url || fileUrl, 
+                    data.video_url || fileUrl,
+                    id
+                ];
+                break;
+
+            case 'materials':
+                query = `UPDATE materials SET title=$1, description=$2, category=$3, material_type=$4, image_url=$5, file_url=$6, updated_at=CURRENT_TIMESTAMP WHERE id=$7 RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.category, 
+                    data.material_type, 
+                    data.image_url || fileUrl, 
+                    data.file_url || fileUrl,
+                    id
+                ];
+                break;
+
             default:
                 return res.status(400).json({ success: false, error: 'Неверный тип контента' });
         }
@@ -1286,6 +1395,55 @@ app.delete('/api/admin/content/:type/:id', async (req, res) => {
     } catch (error) {
         console.error('Admin content delete error:', error);
         res.status(500).json({ success: false, error: 'Ошибка удаления контента' });
+    }
+});
+
+// ==================== ПЛАТЕЖИ И ПОДПИСКИ ====================
+
+// Создание платежа
+app.post('/api/payments/create', async (req, res) => {
+    try {
+        const { userId, amount, paymentMethod } = req.body;
+        
+        const transactionId = crypto.randomBytes(16).toString('hex');
+        
+        const { rows } = await pool.query(
+            'INSERT INTO payments (user_id, amount, payment_method, transaction_id) VALUES ($1, $2, $3, $4) RETURNING *',
+            [userId, amount, paymentMethod, transactionId]
+        );
+
+        res.json({ 
+            success: true, 
+            payment: rows[0],
+            paymentUrl: `/payments/process/${transactionId}`
+        });
+    } catch (error) {
+        console.error('Create payment error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания платежа' });
+    }
+});
+
+// Обновление подписки
+app.post('/api/subscription/update', async (req, res) => {
+    try {
+        const { userId, months } = req.body;
+        
+        const endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + months);
+        
+        await pool.query(
+            'UPDATE users SET subscription_end = $1 WHERE id = $2',
+            [endDate, userId]
+        );
+
+        res.json({ 
+            success: true, 
+            message: 'Подписка обновлена',
+            subscriptionEnd: endDate
+        });
+    } catch (error) {
+        console.error('Update subscription error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка обновления подписки' });
     }
 });
 
