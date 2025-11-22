@@ -36,6 +36,11 @@
     "logs-error": "tail -f logs/error.log",
     "stats": "node scripts/show-stats.js",
     "monitor": "node scripts/monitor.js"
+    "admin": "node scripts/admin-setup.js",
+    "media-cleanup": "node scripts/cleanup-media.js",
+    "backup-media": "node scripts/backup-media.js",
+    "migrate-media": "node scripts/migrate-media.js",
+    "stats-media": "node scripts/stats-media.js"
   },
   "keywords": [
     "medical",
