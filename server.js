@@ -625,6 +625,67 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// ==================== МЕДИА ОБРАБОТЧИКИ ====================
+
+// Загрузка файлов
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: 'Файл не загружен' });
+        }
+
+        const fileUrl = `/uploads/${req.file.filename}`;
+        
+        const { rows } = await pool.query(
+            'INSERT INTO media_files (filename, original_name, mime_type, size, url) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [req.file.filename, req.file.originalname, req.file.mimetype, req.file.size, fileUrl]
+        );
+
+        res.json({ 
+            success: true, 
+            file: rows[0],
+            url: fileUrl
+        });
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки файла' });
+    }
+});
+
+// Получение списка медиа файлов
+app.get('/api/media', async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT * FROM media_files ORDER BY created_at DESC');
+        res.json({ success: true, files: rows });
+    } catch (error) {
+        console.error('Media list error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки медиа' });
+    }
+});
+
+// Удаление медиа файла
+app.delete('/api/media/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { rows } = await pool.query('SELECT * FROM media_files WHERE id = $1', [id]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Файл не найден' });
+        }
+
+        const filePath = join(__dirname, 'uploads', rows[0].filename);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+
+        await pool.query('DELETE FROM media_files WHERE id = $1', [id]);
+        res.json({ success: true, message: 'Файл удален' });
+    } catch (error) {
+        console.error('Delete media error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка удаления файла' });
+    }
+});
+
 app.get('/api/db-health', async (req, res) => {
     try {
         const result = await pool.query('SELECT NOW() as time');
@@ -864,6 +925,129 @@ app.get('/api/admin/stats', async (req, res) => {
     } catch (error) {
         console.error('Admin stats error:', error);
         res.status(500).json({ success: false, error: 'Ошибка загрузки статистики' });
+    }
+});
+
+// ==================== УЛУЧШЕННЫЕ АДМИН МЕТОДЫ ====================
+
+// Добавление контента с поддержкой файлов
+app.post('/api/admin/content', upload.single('file'), async (req, res) => {
+    try {
+        const { action, contentType, data } = req.body;
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+        
+        if (action === 'create') {
+            let query = '';
+            let values = [];
+            let fileUrl = null;
+
+            if (req.file) {
+                fileUrl = `/uploads/${req.file.filename}`;
+            }
+
+            switch (contentType) {
+                case 'courses':
+                    query = `INSERT INTO courses (title, description, price, discount, duration, modules, category, level, image_url, video_url) 
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`;
+                    values = [
+                        parsedData.title, 
+                        parsedData.description, 
+                        parsedData.price, 
+                        parsedData.discount, 
+                        parsedData.duration, 
+                        parsedData.modules, 
+                        parsedData.category, 
+                        parsedData.level, 
+                        parsedData.image_url, 
+                        parsedData.video_url
+                    ];
+                    break;
+
+                case 'podcasts':
+                    const audioUrl = fileUrl || parsedData.audio_url;
+                    query = `INSERT INTO podcasts (title, description, duration, category, image_url, audio_url) 
+                             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+                    values = [
+                        parsedData.title, 
+                        parsedData.description, 
+                        parsedData.duration, 
+                        parsedData.category, 
+                        parsedData.image_url, 
+                        audioUrl
+                    ];
+                    break;
+
+                case 'videos':
+                    const videoUrl = fileUrl || parsedData.video_url;
+                    query = `INSERT INTO videos (title, description, duration, category, thumbnail_url, video_url) 
+                             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+                    values = [
+                        parsedData.title, 
+                        parsedData.description, 
+                        parsedData.duration, 
+                        parsedData.category, 
+                        parsedData.thumbnail_url, 
+                        videoUrl
+                    ];
+                    break;
+
+                case 'materials':
+                    const materialFileUrl = fileUrl || parsedData.file_url;
+                    query = `INSERT INTO materials (title, description, category, material_type, image_url, file_url) 
+                             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+                    values = [
+                        parsedData.title, 
+                        parsedData.description, 
+                        parsedData.category, 
+                        parsedData.material_type, 
+                        parsedData.image_url, 
+                        materialFileUrl
+                    ];
+                    break;
+
+                default:
+                    return res.status(400).json({ success: false, error: 'Неверный тип контента' });
+            }
+            
+            const { rows } = await pool.query(query, values);
+            
+            // Логируем действие админа
+            await pool.query(
+                'INSERT INTO admin_actions (admin_id, action_type, description, target_id) VALUES ($1, $2, $3, $4)',
+                [req.body.adminId, 'create', `Создан ${contentType}: ${parsedData.title}`, rows[0].id]
+            );
+
+            res.json({ success: true, data: rows[0] });
+        }
+    } catch (error) {
+        console.error('Admin content error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания контента' });
+    }
+});
+
+// Массовое управление контентом
+app.post('/api/admin/content/batch', async (req, res) => {
+    try {
+        const { action, contentType, ids } = req.body;
+        
+        switch (action) {
+            case 'activate':
+                await pool.query(`UPDATE ${contentType} SET is_active = true WHERE id = ANY($1)`, [ids]);
+                break;
+            case 'deactivate':
+                await pool.query(`UPDATE ${contentType} SET is_active = false WHERE id = ANY($1)`, [ids]);
+                break;
+            case 'delete':
+                await pool.query(`DELETE FROM ${contentType} WHERE id = ANY($1)`, [ids]);
+                break;
+            default:
+                return res.status(400).json({ success: false, error: 'Неверное действие' });
+        }
+
+        res.json({ success: true, message: 'Операция выполнена' });
+    } catch (error) {
+        console.error('Batch operation error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка выполнения операции' });
     }
 });
 
