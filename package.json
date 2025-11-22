@@ -35,7 +35,7 @@
     "logs": "tail -f logs/server.log",
     "logs-error": "tail -f logs/error.log",
     "stats": "node scripts/show-stats.js",
-    "monitor": "node scripts/monitor.js"
+    "monitor": "node scripts/monitor.js",
     "admin": "node scripts/admin-setup.js",
     "media-cleanup": "node scripts/cleanup-media.js",
     "backup-media": "node scripts/backup-media.js",
