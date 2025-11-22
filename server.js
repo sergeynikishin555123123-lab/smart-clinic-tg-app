@@ -1,4 +1,4 @@
-// server.js - ПОЛНОСТЬЮ ПЕРЕРАБОТАННЫЙ СЕРВЕР
+// server.js - ПОЛНОСТЬЮ РАБОЧИЙ СЕРВЕР С АДМИНКОЙ, ПРОФИЛЕМ И ЛАЙКАМИ
 import express from 'express';
 import { Telegraf, session, Markup } from 'telegraf';
 import pkg from 'pg';
@@ -20,7 +20,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ==================== НАСТРОЙКА MULTER ====================
+// ==================== НАСТРОЙКА MULTER ДЛЯ ФОТО И ВИДЕО ====================
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -39,7 +39,7 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 100 * 1024 * 1024 // 100MB
+        fileSize: 100 * 1024 * 1024 // 100MB для видео
     },
     fileFilter: (req, file, cb) => {
         const allowedTypes = {
@@ -57,8 +57,6 @@ const upload = multer({
             'audio/wav': true,
             'audio/ogg': true,
             'application/pdf': true,
-            'application/msword': true,
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': true,
             'text/html': true
         };
         
@@ -70,13 +68,11 @@ const upload = multer({
     }
 });
 
-// ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
+// ==================== ИНИЦИАЛИЗАЦИЯ ====================
 
 let bot = null;
 let pool = null;
 
-// ==================== ИНИЦИАЛИЗАЦИЯ БОТА ====================
-  
 function initializeBot() {
     if (process.env.BOT_TOKEN) {
         try {
@@ -92,8 +88,6 @@ function initializeBot() {
         return false;
     }
 }
-
-// ==================== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ====================
 
 function initializeDatabase() {
     try {
@@ -111,15 +105,8 @@ function initializeDatabase() {
             ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
         };
 
-        console.log('📊 Параметры подключения:');
-        console.log(`   Host: ${poolConfig.host}`);
-        console.log(`   Database: ${poolConfig.database}`);
-        console.log(`   User: ${poolConfig.user}`);
-        console.log(`   Port: ${poolConfig.port}`);
-
         pool = new Pool(poolConfig);
         
-        // Тестируем подключение
         pool.query('SELECT NOW() as time')
             .then(result => {
                 console.log('✅ Тест подключения к БД успешен:', result.rows[0].time);
@@ -390,6 +377,15 @@ async function createTables() {
                 transaction_id VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS likes (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                content_id INTEGER,
+                content_type VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, content_id, content_type)
+            );
         `);
         console.log('✅ Таблицы созданы');
     } catch (error) {
@@ -408,7 +404,8 @@ async function checkTableStructure() {
             { table: 'videos', columns: ['is_active'] },
             { table: 'materials', columns: ['is_active'] },
             { table: 'events', columns: ['is_active'] },
-            { table: 'news', columns: ['is_active'] }
+            { table: 'news', columns: ['is_active'] },
+            { table: 'likes', columns: ['user_id'] }
         ];
 
         for (const { table, columns } of tablesToCheck) {
@@ -428,6 +425,7 @@ async function checkTableStructure() {
                     let columnType = 'VARCHAR(500)';
                     if (column === 'telegram_id') columnType = 'BIGINT';
                     if (column === 'is_active') columnType = 'BOOLEAN DEFAULT true';
+                    if (column === 'user_id') columnType = 'INTEGER REFERENCES users(id)';
                     
                     await pool.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${columnType}`);
                 }
@@ -494,17 +492,6 @@ async function seedDemoData() {
                 INSERT INTO materials (title, description, category, material_type, downloads, image_url, file_url) VALUES
                 ('Чек-лист неврологического осмотра', 'Полный чек-лист для стандартного осмотра', 'Неврология', 'checklist', 234, '/webapp/assets/material-default.jpg', 'https://example.com/material1.pdf'),
                 ('Протокол ведения пациентов с болями в спине', 'Стандартизированный протокол диагностики и лечения', 'Неврология', 'protocol', 189, '/webapp/assets/material-default.jpg', 'https://example.com/material2.pdf')
-            `);
-        }
-
-        // Демо-мероприятия
-        const { rows: eventCount } = await pool.query('SELECT COUNT(*) FROM events');
-        if (parseInt(eventCount[0].count) === 0) {
-            console.log('🗺️ Добавляем демо-мероприятия...');
-            await pool.query(`
-                INSERT INTO events (title, description, event_type, event_date, location, participants, image_url, registration_url) VALUES
-                ('Конференция по современной неврологии', 'Ежегодная конференция с ведущими специалистами', 'offline', '2024-12-15 10:00:00', 'Москва, ул. Профессиональная, 15', 250, '/webapp/assets/event-default.jpg', 'https://example.com/register1'),
-                ('Онлайн-семинар по мануальной терапии', 'Практический семинар с разбором техник', 'online', '2024-12-10 14:00:00', 'Онлайн', 180, '/webapp/assets/event-default.jpg', 'https://example.com/register2')
             `);
         }
 
@@ -957,6 +944,12 @@ app.post('/api/user', async (req, res) => {
             [user.id]
         );
 
+        // Получаем лайки пользователя
+        const { rows: likes } = await pool.query(
+            'SELECT * FROM likes WHERE user_id = $1',
+            [user.id]
+        );
+
         // Получаем путь обучения
         const { rows: learningPath } = await pool.query(
             'SELECT * FROM user_learning_path WHERE user_id = $1',
@@ -970,6 +963,15 @@ app.post('/api/user', async (req, res) => {
             videos: favorites.filter(f => f.content_type === 'videos').map(f => f.content_id),
             materials: favorites.filter(f => f.content_type === 'materials').map(f => f.content_id),
             events: favorites.filter(f => f.content_type === 'events').map(f => f.content_id)
+        };
+
+        const userLikes = {
+            courses: likes.filter(l => l.content_type === 'courses').map(l => l.content_id),
+            podcasts: likes.filter(l => l.content_type === 'podcasts').map(l => l.content_id),
+            streams: likes.filter(l => l.content_type === 'streams').map(l => l.content_id),
+            videos: likes.filter(l => l.content_type === 'videos').map(l => l.content_id),
+            materials: likes.filter(l => l.content_type === 'materials').map(l => l.content_id),
+            events: likes.filter(l => l.content_type === 'events').map(l => l.content_id)
         };
 
         const userProgress = progress[0] || {
@@ -997,6 +999,7 @@ app.post('/api/user', async (req, res) => {
             subscriptionEnd: user.subscription_end,
             avatarUrl: user.avatar_url,
             favorites: userFavorites,
+            likes: userLikes,
             progress: {
                 level: userProgress.level,
                 experience: userProgress.experience,
@@ -1106,6 +1109,63 @@ app.get('/api/favorites/:userId', async (req, res) => {
     } catch (error) {
         console.error('Get favorites error:', error);
         res.status(500).json({ success: false, error: 'Ошибка загрузки избранного' });
+    }
+});
+
+// ==================== ЛАЙКИ API ====================
+
+// Переключение лайка
+app.post('/api/likes/toggle', async (req, res) => {
+    try {
+        const { userId, contentId, contentType } = req.body;
+        
+        const { rows: existing } = await pool.query(
+            'SELECT * FROM likes WHERE user_id = $1 AND content_id = $2 AND content_type = $3',
+            [userId, contentId, contentType]
+        );
+
+        if (existing.length > 0) {
+            await pool.query(
+                'DELETE FROM likes WHERE user_id = $1 AND content_id = $2 AND content_type = $3',
+                [userId, contentId, contentType]
+            );
+            res.json({ success: true, action: 'unliked', liked: false });
+        } else {
+            await pool.query(
+                'INSERT INTO likes (user_id, content_id, content_type) VALUES ($1, $2, $3)',
+                [userId, contentId, contentType]
+            );
+            res.json({ success: true, action: 'liked', liked: true });
+        }
+    } catch (error) {
+        console.error('Toggle like error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка обновления лайка' });
+    }
+});
+
+// Получение количества лайков для контента
+app.get('/api/likes/:contentType/:contentId', async (req, res) => {
+    try {
+        const { contentType, contentId } = req.params;
+        
+        const { rows: count } = await pool.query(
+            'SELECT COUNT(*) as like_count FROM likes WHERE content_id = $1 AND content_type = $2',
+            [contentId, contentType]
+        );
+
+        const { rows: userLikes } = await pool.query(
+            'SELECT COUNT(*) as user_liked FROM likes WHERE user_id = $1 AND content_id = $2 AND content_type = $3',
+            [req.query.userId, contentId, contentType]
+        );
+
+        res.json({ 
+            success: true, 
+            likes: parseInt(count[0].like_count),
+            userLiked: parseInt(userLikes[0].user_liked) > 0
+        });
+    } catch (error) {
+        console.error('Get likes error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки лайков' });
     }
 });
 
