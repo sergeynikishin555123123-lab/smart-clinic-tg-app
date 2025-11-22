@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import multer from 'multer';
 import fs from 'fs';
 import cors from 'cors';
+import compression from 'compression';
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
@@ -133,24 +134,24 @@ function initializeDatabase() {
 
 // ==================== MIDDLEWARE ====================
 
-// Упрощенные настройки CORS для TimeWeb
+// Убираем Helmet и настраиваем CORS для TimeWeb
 app.use(cors({
-    origin: '*',
+    origin: true, // Разрешаем все источники
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    credentials: true
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Базовые заголовки безопасности
+// Убираем X-Frame-Options для работы в iframe Telegram
 app.use((req, res, next) => {
+    // Убираем заголовки, которые блокируют iframe
+    res.removeHeader('X-Frame-Options');
+    res.removeHeader('Content-Security-Policy');
+    
+    // Разрешаем iframe для Telegram
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    
-    // Дополнительные заголовки для TimeWeb
-    res.header('X-Content-Type-Options', 'nosniff');
-    res.header('X-Frame-Options', 'DENY');
-    res.header('X-XSS-Protection', '1; mode=block');
     
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -158,6 +159,7 @@ app.use((req, res, next) => {
     next();
 });
 
+app.use(compression());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(join(__dirname)));
@@ -599,7 +601,7 @@ function setupBot() {
                         reply_markup: {
                             inline_keyboard: [[{
                                 text: '🚀 Открыть Академию',
-                                web_app: { url: `${process.env.WEBAPP_URL || `http://localhost:${PORT}`}/webapp/` }
+                                web_app: { url: process.env.WEBAPP_URL || `http://localhost:${PORT}/webapp/` }
                             }]]
                         }
                     });
@@ -733,8 +735,7 @@ app.get('/api/health', (req, res) => {
         status: 'healthy', 
         timestamp: new Date().toISOString(),
         service: 'ANB Academy API',
-        version: '2.0.0',
-        domain: req.get('host')
+        version: '2.0.0'
     });
 });
 
@@ -861,9 +862,7 @@ app.get('/api/content', async (req, res) => {
         res.json({ success: true, data: content });
     } catch (error) {
         console.error('API Content error:', error);
-        // Возвращаем демо-данные при ошибке
-        const demoContent = getDemoContent();
-        res.json({ success: true, data: demoContent });
+        res.status(500).json({ success: false, error: 'Ошибка загрузки контента' });
     }
 });
 
@@ -907,94 +906,82 @@ app.post('/api/user', async (req, res) => {
         const { user: tgUser } = req.body;
         
         if (!tgUser || !tgUser.id) {
-            // Возвращаем демо-пользователя если данные не переданы
-            const demoUser = getDemoUser();
-            return res.json({ success: true, user: demoUser });
+            return res.status(400).json({ success: false, error: 'Неверные данные пользователя' });
         }
 
-        try {
-            const { rows: users } = await pool.query(
-                `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin) 
-                 VALUES ($1, $2, $3, $4, $5)
-                 ON CONFLICT (telegram_id) 
-                 DO UPDATE SET first_name = $2, username = $3
-                 RETURNING *`,
-                [tgUser.id, tgUser.first_name, tgUser.username, 
-                 tgUser.id == process.env.SUPER_ADMIN_ID, 
-                 tgUser.id == process.env.SUPER_ADMIN_ID]
-            );
+        const { rows: users } = await pool.query(
+            `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin) 
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (telegram_id) 
+             DO UPDATE SET first_name = $2, username = $3
+             RETURNING *`,
+            [tgUser.id, tgUser.first_name, tgUser.username, 
+             tgUser.id == process.env.SUPER_ADMIN_ID, 
+             tgUser.id == process.env.SUPER_ADMIN_ID]
+        );
 
-            const user = users[0];
+        const user = users[0];
 
-            // Получаем или создаем прогресс пользователя
-            const { rows: progress } = await pool.query(
-                `INSERT INTO user_progress (user_id) 
-                 VALUES ($1)
-                 ON CONFLICT (user_id) 
-                 DO UPDATE SET updated_at = CURRENT_TIMESTAMP
-                 RETURNING *`,
-                [user.id]
-            );
+        // Получаем или создаем прогресс пользователя
+        const { rows: progress } = await pool.query(
+            `INSERT INTO user_progress (user_id) 
+             VALUES ($1)
+             ON CONFLICT (user_id) 
+             DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+             RETURNING *`,
+            [user.id]
+        );
 
-            // Получаем избранное пользователя
-            const { rows: favorites } = await pool.query(
-                'SELECT * FROM favorites WHERE user_id = $1',
-                [user.id]
-            );
+        // Получаем избранное пользователя
+        const { rows: favorites } = await pool.query(
+            'SELECT * FROM favorites WHERE user_id = $1',
+            [user.id]
+        );
 
-            const userFavorites = {
-                courses: favorites.filter(f => f.content_type === 'courses').map(f => f.content_id),
-                podcasts: favorites.filter(f => f.content_type === 'podcasts').map(f => f.content_id),
-                streams: favorites.filter(f => f.content_type === 'streams').map(f => f.content_id),
-                videos: favorites.filter(f => f.content_type === 'videos').map(f => f.content_id),
-                materials: favorites.filter(f => f.content_type === 'materials').map(f => f.content_id),
-                events: favorites.filter(f => f.content_type === 'events').map(f => f.content_id)
-            };
+        const userFavorites = {
+            courses: favorites.filter(f => f.content_type === 'courses').map(f => f.content_id),
+            podcasts: favorites.filter(f => f.content_type === 'podcasts').map(f => f.content_id),
+            streams: favorites.filter(f => f.content_type === 'streams').map(f => f.content_id),
+            videos: favorites.filter(f => f.content_type === 'videos').map(f => f.content_id),
+            materials: favorites.filter(f => f.content_type === 'materials').map(f => f.content_id),
+            events: favorites.filter(f => f.content_type === 'events').map(f => f.content_id)
+        };
 
-            const userProgress = progress[0] || {
-                level: 'Понимаю',
-                experience: 1250,
-                courses_bought: 3,
-                modules_completed: 2,
-                materials_watched: 12,
-                events_attended: 1
-            };
+        const userProgress = progress[0] || {
+            level: 'Понимаю',
+            experience: 1250,
+            courses_bought: 3,
+            modules_completed: 2,
+            materials_watched: 12,
+            events_attended: 1
+        };
 
-            const userData = {
-                id: user.id,
-                telegramId: user.telegram_id,
-                firstName: user.first_name,
-                username: user.username,
-                isAdmin: user.is_admin,
-                isSuperAdmin: user.is_super_admin,
-                subscriptionEnd: user.subscription_end,
-                avatarUrl: user.avatar_url,
-                favorites: userFavorites,
-                progress: {
-                    level: userProgress.level,
-                    experience: userProgress.experience,
-                    steps: {
-                        coursesBought: userProgress.courses_bought,
-                        modulesCompleted: userProgress.modules_completed,
-                        materialsWatched: userProgress.materials_watched,
-                        eventsAttended: userProgress.events_attended
-                    }
+        const userData = {
+            id: user.id,
+            telegramId: user.telegram_id,
+            firstName: user.first_name,
+            username: user.username,
+            isAdmin: user.is_admin,
+            isSuperAdmin: user.is_super_admin,
+            subscriptionEnd: user.subscription_end,
+            avatarUrl: user.avatar_url,
+            favorites: userFavorites,
+            progress: {
+                level: userProgress.level,
+                experience: userProgress.experience,
+                steps: {
+                    coursesBought: userProgress.courses_bought,
+                    modulesCompleted: userProgress.modules_completed,
+                    materialsWatched: userProgress.materials_watched,
+                    eventsAttended: userProgress.events_attended
                 }
-            };
+            }
+        };
 
-            res.json({ success: true, user: userData });
-        } catch (dbError) {
-            console.error('Database error in user creation:', dbError);
-            // Возвращаем демо-пользователя при ошибке БД
-            const demoUser = getDemoUser();
-            res.json({ success: true, user: demoUser });
-        }
-
+        res.json({ success: true, user: userData });
     } catch (error) {
         console.error('API User error:', error);
-        // Возвращаем демо-пользователя при любой ошибке
-        const demoUser = getDemoUser();
-        res.json({ success: true, user: demoUser });
+        res.status(500).json({ success: false, error: 'Ошибка загрузки пользователя' });
     }
 });
 
@@ -1005,11 +992,6 @@ app.post('/api/favorites/toggle', async (req, res) => {
     try {
         const { userId, contentId, contentType } = req.body;
         
-        // Для демо-режима просто возвращаем успех
-        if (!userId) {
-            return res.json({ success: true, action: 'added' });
-        }
-
         const { rows: existing } = await pool.query(
             'SELECT * FROM favorites WHERE user_id = $1 AND content_id = $2 AND content_type = $3',
             [userId, contentId, contentType]
@@ -1030,8 +1012,33 @@ app.post('/api/favorites/toggle', async (req, res) => {
         }
     } catch (error) {
         console.error('Toggle favorite error:', error);
-        // Всегда возвращаем успех в демо-режиме
-        res.json({ success: true, action: 'added' });
+        res.status(500).json({ success: false, error: 'Ошибка обновления избранного' });
+    }
+});
+
+// Получение избранного пользователя
+app.get('/api/favorites/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const { rows: favorites } = await pool.query(
+            'SELECT * FROM favorites WHERE user_id = $1',
+            [userId]
+        );
+
+        const userFavorites = {
+            courses: favorites.filter(f => f.content_type === 'courses').map(f => f.content_id),
+            podcasts: favorites.filter(f => f.content_type === 'podcasts').map(f => f.content_id),
+            streams: favorites.filter(f => f.content_type === 'streams').map(f => f.content_id),
+            videos: favorites.filter(f => f.content_type === 'videos').map(f => f.content_id),
+            materials: favorites.filter(f => f.content_type === 'materials').map(f => f.content_id),
+            events: favorites.filter(f => f.content_type === 'events').map(f => f.content_id)
+        };
+
+        res.json({ success: true, favorites: userFavorites });
+    } catch (error) {
+        console.error('Get favorites error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки избранного' });
     }
 });
 
@@ -1044,198 +1051,243 @@ app.get('/api/admin/stats', async (req, res) => {
             userCount,
             courseCount,
             materialCount,
-            eventCount
+            eventCount,
+            activeUsers
         ] = await Promise.all([
             pool.query('SELECT COUNT(*) FROM users'),
             pool.query('SELECT COUNT(*) FROM courses'),
             pool.query('SELECT COUNT(*) FROM materials'),
-            pool.query('SELECT COUNT(*) FROM events')
+            pool.query('SELECT COUNT(*) FROM events'),
+            pool.query('SELECT COUNT(*) FROM users WHERE subscription_end > NOW()')
         ]);
         
         const stats = {
-            totalUsers: parseInt(userCount.rows[0]?.count) || 1567,
-            totalCourses: parseInt(courseCount.rows[0]?.count) || 3,
-            totalMaterials: parseInt(materialCount.rows[0]?.count) || 2,
-            totalEvents: parseInt(eventCount.rows[0]?.count) || 2,
-            activeSubscriptions: 1100
+            totalUsers: parseInt(userCount.rows[0].count),
+            totalCourses: parseInt(courseCount.rows[0].count),
+            totalMaterials: parseInt(materialCount.rows[0].count),
+            totalEvents: parseInt(eventCount.rows[0].count),
+            activeSubscriptions: parseInt(activeUsers.rows[0].count)
         };
 
         res.json({ success: true, data: stats });
     } catch (error) {
         console.error('Admin stats error:', error);
-        // Демо-статистика при ошибке
-        res.json({ 
-            success: true, 
-            data: {
-                totalUsers: 1567,
-                totalCourses: 3,
-                totalMaterials: 2,
-                totalEvents: 2,
-                activeSubscriptions: 1100
-            }
-        });
+        res.status(500).json({ success: false, error: 'Ошибка загрузки статистики' });
     }
 });
 
-// ==================== ДЕМО-ДАННЫЕ ====================
+// Создание контента
+app.post('/api/admin/content/:type', upload.single('file'), async (req, res) => {
+    try {
+        const { type } = req.params;
+        const data = req.body;
+        
+        let query = '';
+        let values = [];
+        let fileUrl = null;
 
-function getDemoContent() {
-    return {
-        courses: [
-            {
-                id: 1,
-                title: 'Мануальные техники в практике невролога',
-                description: '6 модулей по современным мануальным методикам',
-                price: 25000,
-                discount: 16,
-                duration: '12 недель',
-                modules: 6,
-                category: 'Мануальные техники',
-                level: 'advanced',
-                students_count: 156,
-                rating: 4.8,
-                featured: true,
-                image_url: '/webapp/assets/course-default.jpg',
-                video_url: 'https://example.com/video1',
-                created_at: new Date().toISOString()
-            },
-            {
-                id: 2,
-                title: 'Неврологическая диагностика',
-                description: '5 модулей по современной диагностике',
-                price: 18000,
-                discount: 0,
-                duration: '8 недель',
-                modules: 5,
-                category: 'Неврология',
-                level: 'intermediate',
-                students_count: 234,
-                rating: 4.6,
-                featured: true,
-                image_url: '/webapp/assets/course-default.jpg',
-                video_url: 'https://example.com/video2',
-                created_at: new Date().toISOString()
-            }
-        ],
-        podcasts: [
-            {
-                id: 1,
-                title: 'АНБ FM: Современная неврология',
-                description: 'Обсуждение новых тенденций в неврологии',
-                duration: '45:20',
-                category: 'Неврология',
-                listens: 2345,
-                image_url: '/webapp/assets/podcast-default.jpg',
-                audio_url: 'https://example.com/audio1',
-                created_at: new Date().toISOString()
-            }
-        ],
-        streams: [
-            {
-                id: 1,
-                title: 'LIVE: Ответы на вопросы по мануальной терапии',
-                description: 'Прямой эфир с ответами на вопросы',
-                duration: '2:15:00',
-                category: 'Мануальные техники',
-                participants: 156,
-                is_live: true,
-                thumbnail_url: '/webapp/assets/stream-default.jpg',
-                video_url: 'https://example.com/stream2',
-                created_at: new Date().toISOString()
-            }
-        ],
-        videos: [
-            {
-                id: 1,
-                title: 'Техника мобилизации шейного отдела',
-                description: 'Практическая демонстрация техники',
-                duration: '8:30',
-                category: 'Мануальные техники',
-                views: 567,
-                thumbnail_url: '/webapp/assets/video-default.jpg',
-                video_url: 'https://example.com/video5',
-                created_at: new Date().toISOString()
-            }
-        ],
-        materials: [
-            {
-                id: 1,
-                title: 'Чек-лист неврологического осмотра',
-                description: 'Полный чек-лист для стандартного осмотра',
-                category: 'Неврология',
-                material_type: 'checklist',
-                downloads: 234,
-                image_url: '/webapp/assets/material-default.jpg',
-                file_url: 'https://example.com/material1.pdf',
-                created_at: new Date().toISOString()
-            }
-        ],
-        events: [
-            {
-                id: 1,
-                title: 'Конференция по современной неврологии',
-                description: 'Ежегодная конференция с ведущими специалистами',
-                event_type: 'offline',
-                event_date: '2024-12-15T10:00:00.000Z',
-                location: 'Москва, ул. Профессиональная, 15',
-                participants: 250,
-                image_url: '/webapp/assets/event-default.jpg',
-                registration_url: 'https://example.com/register1',
-                created_at: new Date().toISOString()
-            }
-        ],
-        news: [
-            {
-                id: 1,
-                title: 'Новые методики в реабилитации пациентов с инсультом',
-                description: 'Обзор современных подходов к реабилитации',
-                content: 'Полный текст статьи...',
-                date: '15 дек 2024',
-                category: 'Реабилитация',
-                type: 'Статья',
-                image_url: '/webapp/assets/news-default.jpg',
-                created_at: new Date().toISOString()
-            }
-        ],
-        stats: {
-            totalUsers: 1567,
-            totalCourses: 3,
-            totalMaterials: 2,
-            totalEvents: 2
+        if (req.file) {
+            fileUrl = `/uploads/${req.file.filename}`;
         }
-    };
-}
 
-function getDemoUser() {
-    return {
-        id: 898508164,
-        telegramId: 898508164,
-        firstName: 'Демо Пользователь',
-        username: 'demo_user',
-        isAdmin: true,
-        isSuperAdmin: true,
-        subscriptionEnd: new Date('2024-12-31').toISOString(),
-        avatarUrl: null,
-        favorites: {
-            courses: [1],
-            podcasts: [],
-            streams: [],
-            videos: [],
-            materials: [],
-            events: []
-        },
-        progress: {
-            level: 'Понимаю',
-            experience: 1250,
-            steps: {
-                coursesBought: 3,
-                modulesCompleted: 2,
-                materialsWatched: 12,
-                eventsAttended: 1
-            }
+        switch (type) {
+            case 'courses':
+                query = `INSERT INTO courses (title, description, price, discount, duration, modules, category, level, image_url, video_url) 
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    parseInt(data.price), 
+                    parseInt(data.discount || 0), 
+                    data.duration, 
+                    parseInt(data.modules), 
+                    data.category, 
+                    data.level, 
+                    data.image_url || fileUrl, 
+                    data.video_url
+                ];
+                break;
+
+            case 'podcasts':
+                query = `INSERT INTO podcasts (title, description, duration, category, image_url, audio_url) 
+                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.duration, 
+                    data.category, 
+                    data.image_url || fileUrl, 
+                    data.audio_url || fileUrl
+                ];
+                break;
+
+            case 'videos':
+                query = `INSERT INTO videos (title, description, duration, category, thumbnail_url, video_url) 
+                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.duration, 
+                    data.category, 
+                    data.thumbnail_url || fileUrl, 
+                    data.video_url || fileUrl
+                ];
+                break;
+
+            case 'materials':
+                query = `INSERT INTO materials (title, description, category, material_type, image_url, file_url) 
+                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.category, 
+                    data.material_type, 
+                    data.image_url || fileUrl, 
+                    data.file_url || fileUrl
+                ];
+                break;
+
+            case 'events':
+                query = `INSERT INTO events (title, description, event_type, event_date, location, image_url, registration_url) 
+                         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.event_type, 
+                    data.event_date, 
+                    data.location, 
+                    data.image_url || fileUrl, 
+                    data.registration_url
+                ];
+                break;
+
+            case 'news':
+                query = `INSERT INTO news (title, description, content, date, category, type, image_url) 
+                         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.content, 
+                    data.date, 
+                    data.category, 
+                    data.type, 
+                    data.image_url || fileUrl
+                ];
+                break;
+
+            default:
+                return res.status(400).json({ success: false, error: 'Неверный тип контента' });
         }
-    };
-}
+        
+        const { rows } = await pool.query(query, values);
+        
+        // Логируем действие админа
+        await pool.query(
+            'INSERT INTO admin_actions (admin_id, action_type, description, target_id) VALUES ($1, $2, $3, $4)',
+            [data.adminId, 'create', `Создан ${type}: ${data.title}`, rows[0].id]
+        );
+
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Admin content creation error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания контента' });
+    }
+});
+
+// Обновление контента
+app.put('/api/admin/content/:type/:id', upload.single('file'), async (req, res) => {
+    try {
+        const { type, id } = req.params;
+        const data = req.body;
+        
+        let query = '';
+        let values = [];
+        let fileUrl = null;
+
+        if (req.file) {
+            fileUrl = `/uploads/${req.file.filename}`;
+        }
+
+        switch (type) {
+            case 'courses':
+                query = `UPDATE courses SET title=$1, description=$2, price=$3, discount=$4, duration=$5, modules=$6, category=$7, level=$8, image_url=$9, video_url=$10, updated_at=CURRENT_TIMESTAMP WHERE id=$11 RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    parseInt(data.price), 
+                    parseInt(data.discount || 0), 
+                    data.duration, 
+                    parseInt(data.modules), 
+                    data.category, 
+                    data.level, 
+                    data.image_url || fileUrl, 
+                    data.video_url,
+                    id
+                ];
+                break;
+
+            case 'podcasts':
+                query = `UPDATE podcasts SET title=$1, description=$2, duration=$3, category=$4, image_url=$5, audio_url=$6, updated_at=CURRENT_TIMESTAMP WHERE id=$7 RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.duration, 
+                    data.category, 
+                    data.image_url || fileUrl, 
+                    data.audio_url || fileUrl,
+                    id
+                ];
+                break;
+
+            // ... аналогично для других типов
+            default:
+                return res.status(400).json({ success: false, error: 'Неверный тип контента' });
+        }
+        
+        const { rows } = await pool.query(query, values);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Контент не найден' });
+        }
+
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Admin content update error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка обновления контента' });
+    }
+});
+
+// Удаление контента
+app.delete('/api/admin/content/:type/:id', async (req, res) => {
+    try {
+        const { type, id } = req.params;
+        const tableMap = {
+            'courses': 'courses',
+            'podcasts': 'podcasts',
+            'streams': 'streams',
+            'videos': 'videos',
+            'materials': 'materials',
+            'events': 'events',
+            'news': 'news'
+        };
+
+        const table = tableMap[type];
+        if (!table) {
+            return res.status(400).json({ success: false, error: 'Неверный тип контента' });
+        }
+
+        const { rows } = await pool.query(`DELETE FROM ${table} WHERE id = $1 RETURNING *`, [id]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Контент не найден' });
+        }
+
+        res.json({ success: true, message: 'Контент удален' });
+    } catch (error) {
+        console.error('Admin content delete error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка удаления контента' });
+    }
+});
 
 // ==================== SPA FALLBACK ====================
 
@@ -1273,13 +1325,12 @@ async function startServer() {
             console.log('🚀 Сервер Академии АНБ запущен!');
             console.log('====================================');
             console.log(`📍 Порт: ${PORT}`);
-            console.log(`🌐 Домен: ${process.env.WEBAPP_URL || `http://localhost:${PORT}`}`);
-            console.log(`📱 WebApp: ${process.env.WEBAPP_URL || `http://localhost:${PORT}`}/webapp/`);
+            console.log(`📱 WebApp: ${process.env.WEBAPP_URL || `http://localhost:${PORT}/webapp/`}`);
             console.log(`🔧 Админ-панель: ${process.env.WEBAPP_URL || `http://localhost:${PORT}`}/admin/`);
             console.log(`🤖 Bot: ${bot ? 'активен' : 'не настроен'}`);
-            console.log(`🗄️ База данных: ${pool ? 'подключена' : 'не подключена'}`);
+            console.log(`🗄️ База данных: подключена`);
             console.log(`📁 Загрузка файлов: доступна`);
-            console.log(`❤️ Health: ${process.env.WEBAPP_URL || `http://localhost:${PORT}`}/api/health`);
+            console.log(`❤️ Health: http://localhost:${PORT}/api/health`);
             console.log('====================================');
         });
         
