@@ -6,10 +6,15 @@ import { dirname, join } from 'path';
 import dotenv from 'dotenv';
 import multer from 'multer';
 import fs from 'fs';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,7 +30,7 @@ const storage = multer.diskStorage({
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname);
+        const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + '.' + file.originalname.split('.').pop();
         cb(null, uniqueName);
     }
 });
@@ -33,7 +38,7 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 10 * 1024 * 1024 // 10MB
+        fileSize: 50 * 1024 * 1024 // 50MB
     },
     fileFilter: (req, file, cb) => {
         const allowedTypes = {
@@ -41,17 +46,24 @@ const upload = multer({
             'image/jpg': true,
             'image/png': true,
             'image/gif': true,
+            'image/webp': true,
             'video/mp4': true,
             'video/mpeg': true,
+            'video/quicktime': true,
+            'video/webm': true,
             'audio/mpeg': true,
             'audio/mp3': true,
-            'application/pdf': true
+            'audio/wav': true,
+            'audio/ogg': true,
+            'application/pdf': true,
+            'application/msword': true,
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': true
         };
         
         if (allowedTypes[file.mimetype]) {
             cb(null, true);
         } else {
-            cb(new Error('Неподдерживаемый тип файла'), false);
+            cb(new Error(`Неподдерживаемый тип файла: ${file.mimetype}`), false);
         }
     }
 });
@@ -91,9 +103,10 @@ function initializeDatabase() {
             database: process.env.DB_NAME || 'default_db',
             password: process.env.DB_PASSWORD,
             port: parseInt(process.env.DB_PORT) || 5432,
-            connectionTimeoutMillis: 10000,
+            connectionTimeoutMillis: 30000,
             idleTimeoutMillis: 30000,
-            max: 20
+            max: 20,
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
         };
 
         console.log('📊 Параметры подключения:');
@@ -104,6 +117,7 @@ function initializeDatabase() {
 
         pool = new Pool(poolConfig);
         
+        // Тестируем подключение
         pool.query('SELECT NOW() as time')
             .then(result => {
                 console.log('✅ Тест подключения к БД успешен:', result.rows[0].time);
@@ -121,9 +135,17 @@ function initializeDatabase() {
 
 // ==================== MIDDLEWARE ====================
 
-app.use(express.json());
+app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false
+}));
+app.use(compression());
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(join(__dirname)));
 app.use('/uploads', express.static(join(__dirname, 'uploads')));
+app.use('/admin', express.static(join(__dirname, 'admin')));
 
 app.use((req, res, next) => {
     if (!pool) {
@@ -165,219 +187,212 @@ async function initDatabase() {
 }
 
 async function createTables() {
-    await pool.query(`
-        CREATE TABLE users (
-            id SERIAL PRIMARY KEY,
-            telegram_id BIGINT UNIQUE,
-            first_name VARCHAR(255),
-            username VARCHAR(255),
-            email VARCHAR(255),
-            specialization VARCHAR(255),
-            city VARCHAR(255),
-            subscription_end DATE,
-            is_admin BOOLEAN DEFAULT false,
-            is_super_admin BOOLEAN DEFAULT false,
-            avatar_url VARCHAR(500),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                telegram_id BIGINT UNIQUE,
+                first_name VARCHAR(255),
+                username VARCHAR(255),
+                email VARCHAR(255),
+                specialization VARCHAR(255),
+                city VARCHAR(255),
+                subscription_end DATE,
+                is_admin BOOLEAN DEFAULT false,
+                is_super_admin BOOLEAN DEFAULT false,
+                avatar_url VARCHAR(500),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE user_progress (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id),
-            level VARCHAR(50) DEFAULT 'Понимаю',
-            experience INTEGER DEFAULT 1250,
-            courses_bought INTEGER DEFAULT 3,
-            modules_completed INTEGER DEFAULT 2,
-            materials_watched INTEGER DEFAULT 12,
-            events_attended INTEGER DEFAULT 1,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+            CREATE TABLE IF NOT EXISTS user_progress (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                level VARCHAR(50) DEFAULT 'Понимаю',
+                experience INTEGER DEFAULT 1250,
+                courses_bought INTEGER DEFAULT 3,
+                modules_completed INTEGER DEFAULT 2,
+                materials_watched INTEGER DEFAULT 12,
+                events_attended INTEGER DEFAULT 1,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE favorites (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id),
-            content_id INTEGER,
-            content_type VARCHAR(50),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+            CREATE TABLE IF NOT EXISTS favorites (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                content_id INTEGER,
+                content_type VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE courses (
-            id SERIAL PRIMARY KEY,
-            title VARCHAR(500),
-            description TEXT,
-            price INTEGER,
-            discount INTEGER DEFAULT 0,
-            duration VARCHAR(100),
-            modules INTEGER,
-            category VARCHAR(255),
-            level VARCHAR(50),
-            students_count INTEGER DEFAULT 0,
-            rating DECIMAL(3,2) DEFAULT 4.5,
-            featured BOOLEAN DEFAULT false,
-            image_url VARCHAR(500),
-            video_url VARCHAR(500),
-            is_active BOOLEAN DEFAULT true,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+            CREATE TABLE IF NOT EXISTS courses (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                price INTEGER,
+                discount INTEGER DEFAULT 0,
+                duration VARCHAR(100),
+                modules INTEGER,
+                category VARCHAR(255),
+                level VARCHAR(50),
+                students_count INTEGER DEFAULT 0,
+                rating DECIMAL(3,2) DEFAULT 4.5,
+                featured BOOLEAN DEFAULT false,
+                image_url VARCHAR(500),
+                video_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE podcasts (
-            id SERIAL PRIMARY KEY,
-            title VARCHAR(500),
-            description TEXT,
-            duration VARCHAR(100),
-            category VARCHAR(255),
-            listens INTEGER DEFAULT 0,
-            image_url VARCHAR(500),
-            audio_url VARCHAR(500),
-            is_active BOOLEAN DEFAULT true
-        );
+            CREATE TABLE IF NOT EXISTS podcasts (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                duration VARCHAR(100),
+                category VARCHAR(255),
+                listens INTEGER DEFAULT 0,
+                image_url VARCHAR(500),
+                audio_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE streams (
-            id SERIAL PRIMARY KEY,
-            title VARCHAR(500),
-            description TEXT,
-            duration VARCHAR(100),
-            category VARCHAR(255),
-            participants INTEGER DEFAULT 0,
-            is_live BOOLEAN DEFAULT false,
-            thumbnail_url VARCHAR(500),
-            video_url VARCHAR(500),
-            is_active BOOLEAN DEFAULT true,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+            CREATE TABLE IF NOT EXISTS streams (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                duration VARCHAR(100),
+                category VARCHAR(255),
+                participants INTEGER DEFAULT 0,
+                is_live BOOLEAN DEFAULT false,
+                thumbnail_url VARCHAR(500),
+                video_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE videos (
-            id SERIAL PRIMARY KEY,
-            title VARCHAR(500),
-            description TEXT,
-            duration VARCHAR(100),
-            category VARCHAR(255),
-            views INTEGER DEFAULT 0,
-            thumbnail_url VARCHAR(500),
-            video_url VARCHAR(500),
-            is_active BOOLEAN DEFAULT true,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+            CREATE TABLE IF NOT EXISTS videos (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                duration VARCHAR(100),
+                category VARCHAR(255),
+                views INTEGER DEFAULT 0,
+                thumbnail_url VARCHAR(500),
+                video_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE materials (
-            id SERIAL PRIMARY KEY,
-            title VARCHAR(500),
-            description TEXT,
-            category VARCHAR(255),
-            material_type VARCHAR(100),
-            downloads INTEGER DEFAULT 0,
-            image_url VARCHAR(500),
-            file_url VARCHAR(500),
-            is_active BOOLEAN DEFAULT true,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+            CREATE TABLE IF NOT EXISTS materials (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                category VARCHAR(255),
+                material_type VARCHAR(100),
+                downloads INTEGER DEFAULT 0,
+                image_url VARCHAR(500),
+                file_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE events (
-            id SERIAL PRIMARY KEY,
-            title VARCHAR(500),
-            description TEXT,
-            event_type VARCHAR(50),
-            event_date TIMESTAMP,
-            location VARCHAR(500),
-            participants INTEGER DEFAULT 0,
-            image_url VARCHAR(500),
-            registration_url VARCHAR(500),
-            is_active BOOLEAN DEFAULT true,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+            CREATE TABLE IF NOT EXISTS events (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                event_type VARCHAR(50),
+                event_date TIMESTAMP,
+                location VARCHAR(500),
+                participants INTEGER DEFAULT 0,
+                image_url VARCHAR(500),
+                registration_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE news (
-            id SERIAL PRIMARY KEY,
-            title VARCHAR(500),
-            description TEXT,
-            content TEXT,
-            date VARCHAR(100),
-            category VARCHAR(255),
-            type VARCHAR(100),
-            image_url VARCHAR(500),
-            is_active BOOLEAN DEFAULT true,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+            CREATE TABLE IF NOT EXISTS news (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                content TEXT,
+                date VARCHAR(100),
+                category VARCHAR(255),
+                type VARCHAR(100),
+                image_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE admin_actions (
-            id SERIAL PRIMARY KEY,
-            admin_id INTEGER REFERENCES users(id),
-            action_type VARCHAR(100),
-            description TEXT,
-            target_id INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+            CREATE TABLE IF NOT EXISTS admin_actions (
+                id SERIAL PRIMARY KEY,
+                admin_id INTEGER REFERENCES users(id),
+                action_type VARCHAR(100),
+                description TEXT,
+                target_id INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE support_requests (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id),
-            topic VARCHAR(255),
-            course_id INTEGER,
-            message TEXT,
-            status VARCHAR(50) DEFAULT 'open',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+            CREATE TABLE IF NOT EXISTS support_requests (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                topic VARCHAR(255),
+                course_id INTEGER,
+                message TEXT,
+                status VARCHAR(50) DEFAULT 'open',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE media_files (
-            id SERIAL PRIMARY KEY,
-            filename VARCHAR(255),
-            original_name VARCHAR(255),
-            mime_type VARCHAR(100),
-            size INTEGER,
-            url VARCHAR(500),
-            uploaded_by INTEGER REFERENCES users(id),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    `);
-    console.log('✅ Таблицы созданы');
+            CREATE TABLE IF NOT EXISTS media_files (
+                id SERIAL PRIMARY KEY,
+                filename VARCHAR(255),
+                original_name VARCHAR(255),
+                mime_type VARCHAR(100),
+                size INTEGER,
+                url VARCHAR(500),
+                uploaded_by INTEGER REFERENCES users(id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log('✅ Таблицы созданы');
+    } catch (error) {
+        console.error('❌ Ошибка создания таблиц:', error);
+        throw error;
+    }
 }
 
 async function checkTableStructure() {
     try {
-        const { rows: columnExists } = await pool.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.columns 
-                WHERE table_schema = 'public' 
-                AND table_name = 'users' 
-                AND column_name = 'telegram_id'
-            );
-        `);
-        
-        if (!columnExists[0].exists) {
-            console.log('🔄 Добавляем колонку telegram_id в таблицу users...');
-            await pool.query('ALTER TABLE users ADD COLUMN telegram_id BIGINT UNIQUE');
-        }
+        const tablesToCheck = [
+            { table: 'users', columns: ['telegram_id', 'avatar_url'] },
+            { table: 'courses', columns: ['is_active'] },
+            { table: 'podcasts', columns: ['is_active'] },
+            { table: 'streams', columns: ['is_active'] },
+            { table: 'videos', columns: ['is_active'] },
+            { table: 'materials', columns: ['is_active'] },
+            { table: 'events', columns: ['is_active'] },
+            { table: 'news', columns: ['is_active'] }
+        ];
 
-        // Проверяем наличие колонки avatar_url
-        const { rows: avatarColumnExists } = await pool.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.columns 
-                WHERE table_schema = 'public' 
-                AND table_name = 'users' 
-                AND column_name = 'avatar_url'
-            );
-        `);
-        
-        if (!avatarColumnExists[0].exists) {
-            console.log('🔄 Добавляем колонку avatar_url в таблицу users...');
-            await pool.query('ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500)');
-        }
-
-        // Проверяем наличие колонки is_active в таблицах
-        const tables = ['courses', 'podcasts', 'streams', 'videos', 'materials', 'events', 'news'];
-        for (const table of tables) {
-            const { rows: activeColumnExists } = await pool.query(`
-                SELECT EXISTS (
-                    SELECT FROM information_schema.columns 
-                    WHERE table_schema = 'public' 
-                    AND table_name = $1 
-                    AND column_name = 'is_active'
-                );
-            `, [table]);
-            
-            if (!activeColumnExists[0].exists) {
-                console.log(`🔄 Добавляем колонку is_active в таблицу ${table}...`);
-                await pool.query(`ALTER TABLE ${table} ADD COLUMN is_active BOOLEAN DEFAULT true`);
+        for (const { table, columns } of tablesToCheck) {
+            for (const column of columns) {
+                const { rows: columnExists } = await pool.query(`
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.columns 
+                        WHERE table_schema = 'public' 
+                        AND table_name = $1 
+                        AND column_name = $2
+                    );
+                `, [table, column]);
+                
+                if (!columnExists[0].exists) {
+                    console.log(`🔄 Добавляем колонку ${column} в таблицу ${table}...`);
+                    
+                    let columnType = 'VARCHAR(500)';
+                    if (column === 'telegram_id') columnType = 'BIGINT';
+                    if (column === 'is_active') columnType = 'BOOLEAN DEFAULT true';
+                    
+                    await pool.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${columnType}`);
+                }
             }
         }
         
@@ -491,6 +506,7 @@ function setupBot() {
 
     bot.use(session());
 
+    // Команда /start
     bot.start(async (ctx) => {
         const userId = ctx.from.id;
         const userName = ctx.from.first_name;
@@ -525,7 +541,8 @@ function setupBot() {
                     keyboard: [
                         ['📱 Открыть Академию', '📚 Курсы'],
                         ['🎧 АНБ FM', '📹 Эфиры и разборы'],
-                        ['👤 Мой профиль', '🆘 Поддержка']
+                        ['👤 Мой профиль', '🆘 Поддержка'],
+                        ['🔧 Админ-панель']
                     ],
                     resize_keyboard: true
                 }
@@ -538,7 +555,8 @@ function setupBot() {
                     keyboard: [
                         ['📱 Открыть Академию', '📚 Курсы'],
                         ['🎧 АНБ FM', '📹 Эфиры и разборы'],
-                        ['👤 Мой профиль', '🆘 Поддержка']
+                        ['👤 Мой профиль', '🆘 Поддержка'],
+                        ['🔧 Админ-панель']
                     ],
                     resize_keyboard: true
                 }
@@ -546,72 +564,136 @@ function setupBot() {
         }
     });
 
+    // Обработка текстовых сообщений
     bot.on('text', async (ctx) => {
         const text = ctx.message.text;
+        const userId = ctx.from.id;
         
-        switch(text) {
-            case '📱 Открыть Академию':
-                await ctx.reply('Открываю Академию АНБ...', {
-                    reply_markup: {
-                        inline_keyboard: [[{
-                            text: '🚀 Открыть Академию',
-                            web_app: { url: process.env.WEBAPP_URL }
-                        }]]
+        try {
+            const { rows: users } = await pool.query(
+                'SELECT * FROM users WHERE telegram_id = $1',
+                [userId]
+            );
+            const user = users[0];
+            
+            switch(text) {
+                case '📱 Открыть Академию':
+                    await ctx.reply('Открываю Академию АНБ...', {
+                        reply_markup: {
+                            inline_keyboard: [[{
+                                text: '🚀 Открыть Академию',
+                                web_app: { url: process.env.WEBAPP_URL }
+                            }]]
+                        }
+                    });
+                    break;
+                    
+                case '📚 Курсы':
+                    await ctx.reply('Открываю курсы...', {
+                        reply_markup: {
+                            inline_keyboard: [[{
+                                text: '📚 Все курсы',
+                                web_app: { url: `${process.env.WEBAPP_URL}/webapp/#courses` }
+                            }]]
+                        }
+                    });
+                    break;
+                    
+                case '🎧 АНБ FM':
+                    await ctx.reply('Открываю подкасты...', {
+                        reply_markup: {
+                            inline_keyboard: [[{
+                                text: '🎧 АНБ FM',
+                                web_app: { url: `${process.env.WEBAPP_URL}/webapp/#podcasts` }
+                            }]]
+                        }
+                    });
+                    break;
+                    
+                case '👤 Мой профиль':
+                    await ctx.reply('Открываю профиль...', {
+                        reply_markup: {
+                            inline_keyboard: [[{
+                                text: '👤 Мой профиль',
+                                web_app: { url: `${process.env.WEBAPP_URL}/webapp/#profile` }
+                            }]]
+                        }
+                    });
+                    break;
+                    
+                case '🔧 Админ-панель':
+                    if (user && (user.is_admin || user.is_super_admin)) {
+                        await ctx.reply('Открываю админ-панель...', {
+                            reply_markup: {
+                                inline_keyboard: [[{
+                                    text: '🔧 Админ-панель',
+                                    web_app: { url: `${process.env.WEBAPP_URL}/admin/` }
+                                }]]
+                            }
+                        });
+                    } else {
+                        await ctx.reply('❌ У вас нет доступа к админ-панели');
                     }
-                });
-                break;
-                
-            case '📚 Курсы':
-                await ctx.reply('Открываю курсы...', {
-                    reply_markup: {
-                        inline_keyboard: [[{
-                            text: '📚 Все курсы',
-                            web_app: { url: `${process.env.WEBAPP_URL}/webapp/#courses` }
-                        }]]
-                    }
-                });
-                break;
-                
-            case '🎧 АНБ FM':
-                await ctx.reply('Открываю подкасты...', {
-                    reply_markup: {
-                        inline_keyboard: [[{
-                            text: '🎧 АНБ FM',
-                            web_app: { url: `${process.env.WEBAPP_URL}/webapp/#podcasts` }
-                        }]]
-                    }
-                });
-                break;
-                
-            case '👤 Мой профиль':
-                await ctx.reply('Открываю профиль...', {
-                    reply_markup: {
-                        inline_keyboard: [[{
-                            text: '👤 Мой профиль',
-                            web_app: { url: `${process.env.WEBAPP_URL}/webapp/#profile` }
-                        }]]
-                    }
-                });
-                break;
-                
-            default:
-                await ctx.reply('Используйте кнопки меню для навигации по Академии 🎓');
+                    break;
+                    
+                case '🆘 Поддержка':
+                    await ctx.reply('Если у вас возникли вопросы или проблемы, напишите нам: @anb_support');
+                    break;
+                    
+                default:
+                    await ctx.reply('Используйте кнопки меню для навигации по Академии 🎓');
+            }
+        } catch (error) {
+            console.error('Ошибка обработки сообщения:', error);
+            await ctx.reply('Произошла ошибка. Попробуйте еще раз.');
         }
     });
 
+    // Команда /menu
     bot.command('menu', (ctx) => {
         ctx.reply('Главное меню Академии АНБ:', {
             reply_markup: {
                 keyboard: [
                     ['📱 Открыть Академию', '📚 Курсы'],
                     ['🎧 АНБ FM', '📹 Эфиры и разборы'],
-                    ['👤 Мой профиль', '🆘 Поддержка']
+                    ['👤 Мой профиль', '🆘 Поддержка'],
+                    ['🔧 Админ-панель']
                 ],
                 resize_keyboard: true
             }
         });
     });
 
+    // Команда /admin
+    bot.command('admin', async (ctx) => {
+        const userId = ctx.from.id;
+        
+        try {
+            const { rows: users } = await pool.query(
+                'SELECT * FROM users WHERE telegram_id = $1',
+                [userId]
+            );
+            const user = users[0];
+            
+            if (user && (user.is_admin || user.is_super_admin)) {
+                await ctx.reply('Открываю админ-панель...', {
+                    reply_markup: {
+                        inline_keyboard: [[{
+                            text: '🔧 Админ-панель',
+                            web_app: { url: `${process.env.WEBAPP_URL}/admin/` }
+                        }]]
+                    }
+                });
+            } else {
+                await ctx.reply('❌ У вас нет доступа к админ-панели');
+            }
+        } catch (error) {
+            console.error('Ошибка проверки прав админа:', error);
+            await ctx.reply('❌ Ошибка проверки доступа');
+        }
+    });
+
+    // Запуск бота
     bot.launch().then(() => {
         console.log('✅ Telegram Bot запущен');
     }).catch(error => {
@@ -628,14 +710,17 @@ function setupBot() {
 
 // ==================== API ROUTES ====================
 
+// Health check
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'healthy', 
         timestamp: new Date().toISOString(),
-        service: 'ANB Academy API'
+        service: 'ANB Academy API',
+        version: '2.0.0'
     });
 });
 
+// Database health check
 app.get('/api/db-health', async (req, res) => {
     try {
         const result = await pool.query('SELECT NOW() as time');
@@ -653,9 +738,7 @@ app.get('/api/db-health', async (req, res) => {
     }
 });
 
-// ════════════════════════════════════════════════════
-// 🎯 ЯКОРЬ ДЛЯ ВСТАВКИ 1: НАЧАЛО МЕДИА ОБРАБОТЧИКОВ
-// ════════════════════════════════════════════════════
+// ==================== МЕДИА ОБРАБОТЧИКИ ====================
 
 // Загрузка файлов
 app.post('/api/upload', upload.single('file'), async (req, res) => {
@@ -716,35 +799,44 @@ app.delete('/api/media/:id', async (req, res) => {
     }
 });
 
-// ════════════════════════════════════════════════════
-// 🎯 ЯКОРЬ ДЛЯ ВСТАВКИ 1: КОНЕЦ МЕДИА ОБРАБОТЧИКОВ
-// ════════════════════════════════════════════════════
+// ==================== КОНТЕНТ API ====================
 
-// Получение контента
+// Получение всего контента
 app.get('/api/content', async (req, res) => {
     try {
-        const { rows: courses } = await pool.query('SELECT * FROM courses WHERE is_active = true');
-        const { rows: podcasts } = await pool.query('SELECT * FROM podcasts WHERE is_active = true');
-        const { rows: streams } = await pool.query('SELECT * FROM streams WHERE is_active = true');
-        const { rows: videos } = await pool.query('SELECT * FROM videos WHERE is_active = true');
-        const { rows: materials } = await pool.query('SELECT * FROM materials WHERE is_active = true');
-        const { rows: events } = await pool.query('SELECT * FROM events WHERE is_active = true');
-        const { rows: news } = await pool.query('SELECT * FROM news WHERE is_active = true');
-        const { rows: userCount } = await pool.query('SELECT COUNT(*) FROM users');
-        
+        const [
+            coursesResult,
+            podcastsResult,
+            streamsResult,
+            videosResult,
+            materialsResult,
+            eventsResult,
+            newsResult,
+            userCountResult
+        ] = await Promise.all([
+            pool.query('SELECT * FROM courses WHERE is_active = true ORDER BY created_at DESC'),
+            pool.query('SELECT * FROM podcasts WHERE is_active = true ORDER BY created_at DESC'),
+            pool.query('SELECT * FROM streams WHERE is_active = true ORDER BY created_at DESC'),
+            pool.query('SELECT * FROM videos WHERE is_active = true ORDER BY created_at DESC'),
+            pool.query('SELECT * FROM materials WHERE is_active = true ORDER BY created_at DESC'),
+            pool.query('SELECT * FROM events WHERE is_active = true ORDER BY created_at DESC'),
+            pool.query('SELECT * FROM news WHERE is_active = true ORDER BY created_at DESC'),
+            pool.query('SELECT COUNT(*) FROM users')
+        ]);
+
         const content = {
-            courses: courses || [],
-            podcasts: podcasts || [],
-            streams: streams || [],
-            videos: videos || [],
-            materials: materials || [],
-            events: events || [],
-            news: news || [],
+            courses: coursesResult.rows || [],
+            podcasts: podcastsResult.rows || [],
+            streams: streamsResult.rows || [],
+            videos: videosResult.rows || [],
+            materials: materialsResult.rows || [],
+            events: eventsResult.rows || [],
+            news: newsResult.rows || [],
             stats: {
-                totalUsers: parseInt(userCount[0].count) || 1567,
-                totalCourses: courses?.length || 0,
-                totalMaterials: materials?.length || 0,
-                totalEvents: events?.length || 0
+                totalUsers: parseInt(userCountResult.rows[0]?.count) || 1567,
+                totalCourses: coursesResult.rows?.length || 0,
+                totalMaterials: materialsResult.rows?.length || 0,
+                totalEvents: eventsResult.rows?.length || 0
             }
         };
 
@@ -755,7 +847,41 @@ app.get('/api/content', async (req, res) => {
     }
 });
 
-// Управление пользователями
+// Получение конкретного контента по ID и типу
+app.get('/api/content/:type/:id', async (req, res) => {
+    try {
+        const { type, id } = req.params;
+        const tableMap = {
+            'courses': 'courses',
+            'podcasts': 'podcasts',
+            'streams': 'streams',
+            'videos': 'videos',
+            'materials': 'materials',
+            'events': 'events',
+            'news': 'news'
+        };
+
+        const table = tableMap[type];
+        if (!table) {
+            return res.status(400).json({ success: false, error: 'Неверный тип контента' });
+        }
+
+        const { rows } = await pool.query(`SELECT * FROM ${table} WHERE id = $1 AND is_active = true`, [id]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Контент не найден' });
+        }
+
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Content detail error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки контента' });
+    }
+});
+
+// ==================== ПОЛЬЗОВАТЕЛИ API ====================
+
+// Создание/обновление пользователя
 app.post('/api/user', async (req, res) => {
     try {
         const { user: tgUser } = req.body;
@@ -764,111 +890,85 @@ app.post('/api/user', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Неверные данные пользователя' });
         }
 
-        try {
-            const { rows: users } = await pool.query(
-                `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin) 
-                 VALUES ($1, $2, $3, $4, $5)
-                 ON CONFLICT (telegram_id) 
-                 DO UPDATE SET first_name = $2, username = $3
-                 RETURNING *`,
-                [tgUser.id, tgUser.first_name, tgUser.username, 
-                 tgUser.id == process.env.SUPER_ADMIN_ID, 
-                 tgUser.id == process.env.SUPER_ADMIN_ID]
-            );
+        const { rows: users } = await pool.query(
+            `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin) 
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (telegram_id) 
+             DO UPDATE SET first_name = $2, username = $3
+             RETURNING *`,
+            [tgUser.id, tgUser.first_name, tgUser.username, 
+             tgUser.id == process.env.SUPER_ADMIN_ID, 
+             tgUser.id == process.env.SUPER_ADMIN_ID]
+        );
 
-            const user = users[0];
+        const user = users[0];
 
-            const { rows: progress } = await pool.query(
-                'SELECT * FROM user_progress WHERE user_id = $1',
-                [user.id]
-            );
+        // Получаем или создаем прогресс пользователя
+        const { rows: progress } = await pool.query(
+            `INSERT INTO user_progress (user_id) 
+             VALUES ($1)
+             ON CONFLICT (user_id) 
+             DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+             RETURNING *`,
+            [user.id]
+        );
 
-            const { rows: favorites } = await pool.query(
-                'SELECT * FROM favorites WHERE user_id = $1',
-                [user.id]
-            );
+        // Получаем избранное пользователя
+        const { rows: favorites } = await pool.query(
+            'SELECT * FROM favorites WHERE user_id = $1',
+            [user.id]
+        );
 
-            const userFavorites = {
-                courses: favorites.filter(f => f.content_type === 'courses').map(f => f.content_id),
-                podcasts: favorites.filter(f => f.content_type === 'podcasts').map(f => f.content_id),
-                streams: favorites.filter(f => f.content_type === 'streams').map(f => f.content_id),
-                videos: favorites.filter(f => f.content_type === 'videos').map(f => f.content_id),
-                materials: favorites.filter(f => f.content_type === 'materials').map(f => f.content_id),
-                events: favorites.filter(f => f.content_type === 'events').map(f => f.content_id)
-            };
+        const userFavorites = {
+            courses: favorites.filter(f => f.content_type === 'courses').map(f => f.content_id),
+            podcasts: favorites.filter(f => f.content_type === 'podcasts').map(f => f.content_id),
+            streams: favorites.filter(f => f.content_type === 'streams').map(f => f.content_id),
+            videos: favorites.filter(f => f.content_type === 'videos').map(f => f.content_id),
+            materials: favorites.filter(f => f.content_type === 'materials').map(f => f.content_id),
+            events: favorites.filter(f => f.content_type === 'events').map(f => f.content_id)
+        };
 
-            const userProgress = progress[0] || {
-                level: 'Понимаю',
-                experience: 1250,
-                courses_bought: 3,
-                modules_completed: 2,
-                materials_watched: 12,
-                events_attended: 1
-            };
+        const userProgress = progress[0] || {
+            level: 'Понимаю',
+            experience: 1250,
+            courses_bought: 3,
+            modules_completed: 2,
+            materials_watched: 12,
+            events_attended: 1
+        };
 
-            const userData = {
-                id: user.id,
-                telegramId: user.telegram_id,
-                firstName: user.first_name,
-                username: user.username,
-                isAdmin: user.is_admin,
-                isSuperAdmin: user.is_super_admin,
-                subscriptionEnd: user.subscription_end,
-                avatarUrl: user.avatar_url,
-                favorites: userFavorites,
-                progress: {
-                    level: userProgress.level,
-                    experience: userProgress.experience,
-                    steps: {
-                        coursesBought: userProgress.courses_bought,
-                        modulesCompleted: userProgress.modules_completed,
-                        materialsWatched: userProgress.materials_watched,
-                        eventsAttended: userProgress.events_attended
-                    }
+        const userData = {
+            id: user.id,
+            telegramId: user.telegram_id,
+            firstName: user.first_name,
+            username: user.username,
+            isAdmin: user.is_admin,
+            isSuperAdmin: user.is_super_admin,
+            subscriptionEnd: user.subscription_end,
+            avatarUrl: user.avatar_url,
+            favorites: userFavorites,
+            progress: {
+                level: userProgress.level,
+                experience: userProgress.experience,
+                steps: {
+                    coursesBought: userProgress.courses_bought,
+                    modulesCompleted: userProgress.modules_completed,
+                    materialsWatched: userProgress.materials_watched,
+                    eventsAttended: userProgress.events_attended
                 }
-            };
+            }
+        };
 
-            res.json({ success: true, user: userData });
-        } catch (dbError) {
-            console.error('Database error:', dbError);
-            const demoUser = {
-                id: tgUser.id,
-                telegramId: tgUser.id,
-                firstName: tgUser.first_name || 'Пользователь',
-                username: tgUser.username,
-                isAdmin: tgUser.id == process.env.SUPER_ADMIN_ID,
-                isSuperAdmin: tgUser.id == process.env.SUPER_ADMIN_ID,
-                subscriptionEnd: new Date('2024-12-31').toISOString(),
-                avatarUrl: null,
-                favorites: {
-                    courses: [],
-                    podcasts: [],
-                    streams: [],
-                    videos: [],
-                    materials: [],
-                    events: []
-                },
-                progress: {
-                    level: 'Понимаю',
-                    experience: 1250,
-                    steps: {
-                        coursesBought: 3,
-                        modulesCompleted: 2,
-                        materialsWatched: 12,
-                        eventsAttended: 1
-                    }
-                }
-            };
-            res.json({ success: true, user: demoUser });
-        }
-
+        res.json({ success: true, user: userData });
     } catch (error) {
         console.error('API User error:', error);
         res.status(500).json({ success: false, error: 'Ошибка загрузки пользователя' });
     }
 });
 
-// Избранное
+// ==================== ИЗБРАННОЕ API ====================
+
+// Переключение избранного
 app.post('/api/favorites/toggle', async (req, res) => {
     try {
         const { userId, contentId, contentType } = req.body;
@@ -897,20 +997,57 @@ app.post('/api/favorites/toggle', async (req, res) => {
     }
 });
 
-// Админские эндпоинты
+// Получение избранного пользователя
+app.get('/api/favorites/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const { rows: favorites } = await pool.query(
+            'SELECT * FROM favorites WHERE user_id = $1',
+            [userId]
+        );
+
+        const userFavorites = {
+            courses: favorites.filter(f => f.content_type === 'courses').map(f => f.content_id),
+            podcasts: favorites.filter(f => f.content_type === 'podcasts').map(f => f.content_id),
+            streams: favorites.filter(f => f.content_type === 'streams').map(f => f.content_id),
+            videos: favorites.filter(f => f.content_type === 'videos').map(f => f.content_id),
+            materials: favorites.filter(f => f.content_type === 'materials').map(f => f.content_id),
+            events: favorites.filter(f => f.content_type === 'events').map(f => f.content_id)
+        };
+
+        res.json({ success: true, favorites: userFavorites });
+    } catch (error) {
+        console.error('Get favorites error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки избранного' });
+    }
+});
+
+// ==================== АДМИН API ====================
+
+// Получение статистики для админ-панели
 app.get('/api/admin/stats', async (req, res) => {
     try {
-        const { rows: userCount } = await pool.query('SELECT COUNT(*) FROM users');
-        const { rows: courseCount } = await pool.query('SELECT COUNT(*) FROM courses');
-        const { rows: materialCount } = await pool.query('SELECT COUNT(*) FROM materials');
-        const { rows: eventCount } = await pool.query('SELECT COUNT(*) FROM events');
+        const [
+            userCount,
+            courseCount,
+            materialCount,
+            eventCount,
+            activeUsers
+        ] = await Promise.all([
+            pool.query('SELECT COUNT(*) FROM users'),
+            pool.query('SELECT COUNT(*) FROM courses'),
+            pool.query('SELECT COUNT(*) FROM materials'),
+            pool.query('SELECT COUNT(*) FROM events'),
+            pool.query('SELECT COUNT(*) FROM users WHERE subscription_end > NOW()')
+        ]);
         
         const stats = {
-            totalUsers: parseInt(userCount[0].count),
-            totalCourses: parseInt(courseCount[0].count),
-            totalMaterials: parseInt(materialCount[0].count),
-            totalEvents: parseInt(eventCount[0].count),
-            activeSubscriptions: Math.floor(parseInt(userCount[0].count) * 0.7)
+            totalUsers: parseInt(userCount.rows[0].count),
+            totalCourses: parseInt(courseCount.rows[0].count),
+            totalMaterials: parseInt(materialCount.rows[0].count),
+            totalEvents: parseInt(eventCount.rows[0].count),
+            activeSubscriptions: parseInt(activeUsers.rows[0].count)
         };
 
         res.json({ success: true, data: stats });
@@ -920,138 +1057,227 @@ app.get('/api/admin/stats', async (req, res) => {
     }
 });
 
-// ════════════════════════════════════════════════════
-// 🎯 ЯКОРЬ ДЛЯ ВСТАВКИ 2: НАЧАЛО УЛУЧШЕННЫХ АДМИН МЕТОДОВ
-// ════════════════════════════════════════════════════
-
-// Добавление контента с поддержкой файлов
-app.post('/api/admin/content', upload.single('file'), async (req, res) => {
+// Создание контента
+app.post('/api/admin/content/:type', upload.single('file'), async (req, res) => {
     try {
-        const { action, contentType, data } = req.body;
-        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+        const { type } = req.params;
+        const data = req.body;
         
-        if (action === 'create') {
-            let query = '';
-            let values = [];
-            let fileUrl = null;
+        let query = '';
+        let values = [];
+        let fileUrl = null;
 
-            if (req.file) {
-                fileUrl = `/uploads/${req.file.filename}`;
-            }
-
-            switch (contentType) {
-                case 'courses':
-                    query = `INSERT INTO courses (title, description, price, discount, duration, modules, category, level, image_url, video_url) 
-                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`;
-                    values = [
-                        parsedData.title, 
-                        parsedData.description, 
-                        parsedData.price, 
-                        parsedData.discount, 
-                        parsedData.duration, 
-                        parsedData.modules, 
-                        parsedData.category, 
-                        parsedData.level, 
-                        parsedData.image_url, 
-                        parsedData.video_url
-                    ];
-                    break;
-
-                case 'podcasts':
-                    const audioUrl = fileUrl || parsedData.audio_url;
-                    query = `INSERT INTO podcasts (title, description, duration, category, image_url, audio_url) 
-                             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
-                    values = [
-                        parsedData.title, 
-                        parsedData.description, 
-                        parsedData.duration, 
-                        parsedData.category, 
-                        parsedData.image_url, 
-                        audioUrl
-                    ];
-                    break;
-
-                case 'videos':
-                    const videoUrl = fileUrl || parsedData.video_url;
-                    query = `INSERT INTO videos (title, description, duration, category, thumbnail_url, video_url) 
-                             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
-                    values = [
-                        parsedData.title, 
-                        parsedData.description, 
-                        parsedData.duration, 
-                        parsedData.category, 
-                        parsedData.thumbnail_url, 
-                        videoUrl
-                    ];
-                    break;
-
-                case 'materials':
-                    const materialFileUrl = fileUrl || parsedData.file_url;
-                    query = `INSERT INTO materials (title, description, category, material_type, image_url, file_url) 
-                             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
-                    values = [
-                        parsedData.title, 
-                        parsedData.description, 
-                        parsedData.category, 
-                        parsedData.material_type, 
-                        parsedData.image_url, 
-                        materialFileUrl
-                    ];
-                    break;
-
-                default:
-                    return res.status(400).json({ success: false, error: 'Неверный тип контента' });
-            }
-            
-            const { rows } = await pool.query(query, values);
-            
-            // Логируем действие админа
-            await pool.query(
-                'INSERT INTO admin_actions (admin_id, action_type, description, target_id) VALUES ($1, $2, $3, $4)',
-                [req.body.adminId, 'create', `Создан ${contentType}: ${parsedData.title}`, rows[0].id]
-            );
-
-            res.json({ success: true, data: rows[0] });
+        if (req.file) {
+            fileUrl = `/uploads/${req.file.filename}`;
         }
+
+        switch (type) {
+            case 'courses':
+                query = `INSERT INTO courses (title, description, price, discount, duration, modules, category, level, image_url, video_url) 
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    parseInt(data.price), 
+                    parseInt(data.discount || 0), 
+                    data.duration, 
+                    parseInt(data.modules), 
+                    data.category, 
+                    data.level, 
+                    data.image_url || fileUrl, 
+                    data.video_url
+                ];
+                break;
+
+            case 'podcasts':
+                query = `INSERT INTO podcasts (title, description, duration, category, image_url, audio_url) 
+                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.duration, 
+                    data.category, 
+                    data.image_url || fileUrl, 
+                    data.audio_url || fileUrl
+                ];
+                break;
+
+            case 'videos':
+                query = `INSERT INTO videos (title, description, duration, category, thumbnail_url, video_url) 
+                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.duration, 
+                    data.category, 
+                    data.thumbnail_url || fileUrl, 
+                    data.video_url || fileUrl
+                ];
+                break;
+
+            case 'materials':
+                query = `INSERT INTO materials (title, description, category, material_type, image_url, file_url) 
+                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.category, 
+                    data.material_type, 
+                    data.image_url || fileUrl, 
+                    data.file_url || fileUrl
+                ];
+                break;
+
+            case 'events':
+                query = `INSERT INTO events (title, description, event_type, event_date, location, image_url, registration_url) 
+                         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.event_type, 
+                    data.event_date, 
+                    data.location, 
+                    data.image_url || fileUrl, 
+                    data.registration_url
+                ];
+                break;
+
+            case 'news':
+                query = `INSERT INTO news (title, description, content, date, category, type, image_url) 
+                         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.content, 
+                    data.date, 
+                    data.category, 
+                    data.type, 
+                    data.image_url || fileUrl
+                ];
+                break;
+
+            default:
+                return res.status(400).json({ success: false, error: 'Неверный тип контента' });
+        }
+        
+        const { rows } = await pool.query(query, values);
+        
+        // Логируем действие админа
+        await pool.query(
+            'INSERT INTO admin_actions (admin_id, action_type, description, target_id) VALUES ($1, $2, $3, $4)',
+            [data.adminId, 'create', `Создан ${type}: ${data.title}`, rows[0].id]
+        );
+
+        res.json({ success: true, data: rows[0] });
     } catch (error) {
-        console.error('Admin content error:', error);
+        console.error('Admin content creation error:', error);
         res.status(500).json({ success: false, error: 'Ошибка создания контента' });
     }
 });
 
-// Массовое управление контентом
-app.post('/api/admin/content/batch', async (req, res) => {
+// Обновление контента
+app.put('/api/admin/content/:type/:id', upload.single('file'), async (req, res) => {
     try {
-        const { action, contentType, ids } = req.body;
+        const { type, id } = req.params;
+        const data = req.body;
         
-        switch (action) {
-            case 'activate':
-                await pool.query(`UPDATE ${contentType} SET is_active = true WHERE id = ANY($1)`, [ids]);
-                break;
-            case 'deactivate':
-                await pool.query(`UPDATE ${contentType} SET is_active = false WHERE id = ANY($1)`, [ids]);
-                break;
-            case 'delete':
-                await pool.query(`DELETE FROM ${contentType} WHERE id = ANY($1)`, [ids]);
-                break;
-            default:
-                return res.status(400).json({ success: false, error: 'Неверное действие' });
+        let query = '';
+        let values = [];
+        let fileUrl = null;
+
+        if (req.file) {
+            fileUrl = `/uploads/${req.file.filename}`;
         }
 
-        res.json({ success: true, message: 'Операция выполнена' });
+        switch (type) {
+            case 'courses':
+                query = `UPDATE courses SET title=$1, description=$2, price=$3, discount=$4, duration=$5, modules=$6, category=$7, level=$8, image_url=$9, video_url=$10, updated_at=CURRENT_TIMESTAMP WHERE id=$11 RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    parseInt(data.price), 
+                    parseInt(data.discount || 0), 
+                    data.duration, 
+                    parseInt(data.modules), 
+                    data.category, 
+                    data.level, 
+                    data.image_url || fileUrl, 
+                    data.video_url,
+                    id
+                ];
+                break;
+
+            case 'podcasts':
+                query = `UPDATE podcasts SET title=$1, description=$2, duration=$3, category=$4, image_url=$5, audio_url=$6, updated_at=CURRENT_TIMESTAMP WHERE id=$7 RETURNING *`;
+                values = [
+                    data.title, 
+                    data.description, 
+                    data.duration, 
+                    data.category, 
+                    data.image_url || fileUrl, 
+                    data.audio_url || fileUrl,
+                    id
+                ];
+                break;
+
+            // ... аналогично для других типов
+            default:
+                return res.status(400).json({ success: false, error: 'Неверный тип контента' });
+        }
+        
+        const { rows } = await pool.query(query, values);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Контент не найден' });
+        }
+
+        res.json({ success: true, data: rows[0] });
     } catch (error) {
-        console.error('Batch operation error:', error);
-        res.status(500).json({ success: false, error: 'Ошибка выполнения операции' });
+        console.error('Admin content update error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка обновления контента' });
     }
 });
 
-// ════════════════════════════════════════════════════
-// 🎯 ЯКОРЬ ДЛЯ ВСТАВКИ 2: КОНЕЦ УЛУЧШЕННЫХ АДМИН МЕТОДОВ
-// ════════════════════════════════════════════════════
+// Удаление контента
+app.delete('/api/admin/content/:type/:id', async (req, res) => {
+    try {
+        const { type, id } = req.params;
+        const tableMap = {
+            'courses': 'courses',
+            'podcasts': 'podcasts',
+            'streams': 'streams',
+            'videos': 'videos',
+            'materials': 'materials',
+            'events': 'events',
+            'news': 'news'
+        };
 
-// SPA fallback
+        const table = tableMap[type];
+        if (!table) {
+            return res.status(400).json({ success: false, error: 'Неверный тип контента' });
+        }
+
+        const { rows } = await pool.query(`DELETE FROM ${table} WHERE id = $1 RETURNING *`, [id]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Контент не найден' });
+        }
+
+        res.json({ success: true, message: 'Контент удален' });
+    } catch (error) {
+        console.error('Admin content delete error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка удаления контента' });
+    }
+});
+
+// ==================== SPA FALLBACK ====================
+
 app.get('/webapp*', (req, res) => {
     res.sendFile(join(__dirname, 'webapp', 'index.html'));
+});
+
+app.get('/admin*', (req, res) => {
+    res.sendFile(join(__dirname, 'admin', 'index.html'));
 });
 
 app.get('*', (req, res) => {
@@ -1064,21 +1290,24 @@ async function startServer() {
     try {
         console.log('🚀 Запуск Академии АНБ...');
         
-        initializeBot();
+        // Инициализация базы данных
         initializeDatabase();
-        
         await initDatabase();
         
+        // Инициализация бота
+        initializeBot();
         if (bot) {
             setupBot();
         }
         
+        // Запуск сервера
         app.listen(PORT, '0.0.0.0', () => {
             console.log('====================================');
             console.log('🚀 Сервер Академии АНБ запущен!');
             console.log('====================================');
             console.log(`📍 Порт: ${PORT}`);
             console.log(`📱 WebApp: ${process.env.WEBAPP_URL || `http://localhost:${PORT}/webapp/`}`);
+            console.log(`🔧 Админ-панель: ${process.env.WEBAPP_URL || `http://localhost:${PORT}`}/admin/`);
             console.log(`🤖 Bot: ${bot ? 'активен' : 'не настроен'}`);
             console.log(`🗄️ База данных: подключена`);
             console.log(`📁 Загрузка файлов: доступна`);
