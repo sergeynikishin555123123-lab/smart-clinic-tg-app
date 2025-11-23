@@ -1474,6 +1474,7 @@
             const tbody = document.getElementById('courses-tbody');
             
             try {
+                // ИСПРАВЛЕННАЯ СТРОКА - новый API эндпоинт
                 const response = await fetch('/api/content/courses?limit=100');
                 const data = await response.json();
                 
@@ -1481,6 +1482,7 @@
                     loading.style.display = 'none';
                     table.style.display = 'table';
                     
+                    // ИСПРАВЛЕННАЯ СТРОКА - используем data.data вместо data.data.courses
                     tbody.innerHTML = data.data.map(course => `
                         <tr>
                             <td>${course.id}</td>
@@ -1522,6 +1524,7 @@
             const grid = document.getElementById('instructors-grid');
             
             try {
+                // ЭТА СТРОКА УЖЕ ПРАВИЛЬНАЯ, но проверьте:
                 const response = await fetch('/api/instructors');
                 const data = await response.json();
                 
@@ -1652,14 +1655,19 @@
             const tbody = document.getElementById('podcasts-tbody');
             
             try {
+                // ЗАМЕНИТЕ ЭТУ СТРОКУ:
                 const response = await fetch('/api/content');
+                // НА ЭТУ:
+                const response = await fetch('/api/content/podcasts?limit=100');
+                
                 const data = await response.json();
                 
                 if (data.success) {
                     loading.style.display = 'none';
                     table.style.display = 'table';
                     
-                    tbody.innerHTML = data.data.podcasts.map(podcast => `
+                    // ЗАМЕНИТЕ data.data.podcasts НА data.data
+                    tbody.innerHTML = data.data.map(podcast => `
                         <tr>
                             <td>${podcast.id}</td>
                             <td>${podcast.title}</td>
@@ -1685,20 +1693,25 @@
             }
         }
 
-        async function loadVideos() {
+         async function loadVideos() {
             const loading = document.getElementById('videos-loading');
             const table = document.getElementById('videos-table');
             const tbody = document.getElementById('videos-tbody');
             
             try {
+                // ЗАМЕНИТЕ ЭТУ СТРОКУ:
                 const response = await fetch('/api/content');
+                // НА ЭТУ:
+                const response = await fetch('/api/content/videos?limit=100');
+                
                 const data = await response.json();
                 
                 if (data.success) {
                     loading.style.display = 'none';
                     table.style.display = 'table';
                     
-                    tbody.innerHTML = data.data.videos.map(video => `
+                    // ЗАМЕНИТЕ data.data.videos НА data.data
+                    tbody.innerHTML = data.data.map(video => `
                         <tr>
                             <td>${video.id}</td>
                             <td>${video.title}</td>
@@ -1730,14 +1743,19 @@
             const tbody = document.getElementById('materials-tbody');
             
             try {
+                // ЗАМЕНИТЕ ЭТУ СТРОКУ:
                 const response = await fetch('/api/content');
+                // НА ЭТУ:
+                const response = await fetch('/api/content/materials?limit=100');
+                
                 const data = await response.json();
                 
                 if (data.success) {
                     loading.style.display = 'none';
                     table.style.display = 'table';
                     
-                    tbody.innerHTML = data.data.materials.map(material => `
+                    // ЗАМЕНИТЕ data.data.materials НА data.data
+                    tbody.innerHTML = data.data.map(material => `
                         <tr>
                             <td>${material.id}</td>
                             <td>${material.title}</td>
