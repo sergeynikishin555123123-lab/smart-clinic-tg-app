@@ -1077,6 +1077,88 @@ createStreamDetailPage(streamId) {
         </div>
     `;
 }
+
+    // Функция для подписки
+showSubscriptionModal() {
+    const modal = document.createElement('div');
+    modal.className = 'media-modal active';
+    modal.innerHTML = `
+        <div class="modal-overlay" onclick="this.parentElement.remove()">
+            <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h3>💎 Выбор подписки</h3>
+                    <button class="modal-close" onclick="this.closest('.media-modal').remove()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="subscription-plans">
+                        ${this.subscriptionPlans.map(plan => `
+                            <div class="subscription-plan" onclick="app.selectSubscriptionPlan(${plan.id})">
+                                <div class="plan-header">
+                                    <h4>${plan.name}</h4>
+                                    <div class="plan-price">
+                                        ${this.formatPrice(plan.price_monthly)}/мес
+                                    </div>
+                                </div>
+                                <div class="plan-description">${plan.description}</div>
+                                <ul class="plan-features">
+                                    ${JSON.parse(plan.features).map(feature => `
+                                        <li>✅ ${feature}</li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-primary btn-large" onclick="app.purchaseSubscription()">
+                        💳 Оформить подписку
+                    </button>
+                    <button class="btn btn-outline" onclick="this.closest('.media-modal').remove()">
+                        Отмена
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// Заглушки для функций
+selectSubscriptionPlan(planId) {
+    this.subscriptionState.selectedPlan = this.subscriptionPlans.find(p => p.id === planId);
+}
+
+purchaseSubscription() {
+    this.showNotification('Функция покупки подписки в разработке', 'info');
+}
+
+purchaseCourse(courseId) {
+    this.showNotification('Функция покупки курса в разработке', 'info');
+}
+
+addToCart(courseId) {
+    this.showNotification('Курс добавлен в корзину', 'success');
+}
+
+startCourse(courseId) {
+    this.showNotification('🎯 Курс успешно открыт! Приятного обучения!', 'success');
+}
+
+shareContent(type, id) {
+    this.showNotification('Функция sharing в разработке', 'info');
+}
+
+switchCourseTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+    document.querySelector(`[onclick="app.switchCourseTab('${tabName}')"]`).classList.add('active');
+}
     // ==================== СТРАНИЦА ПОДКАСТОВ ====================
 
     createPodcastsPage() {
