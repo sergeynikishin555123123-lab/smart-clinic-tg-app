@@ -349,12 +349,11 @@ async loadNavigation() {
         return pages[page] || this.createNotFoundPage();
     }
 
-    // ==================== ГЛАВНАЯ СТРАНИЦА ====================
+   // ==================== ГЛАВНАЯ СТРАНИЦА ====================
 
 createHomePage() {
     const stats = this.calculateHomeStats();
     const recommendedCourses = this.getRecommendedCourses();
-    const liveStreams = this.getLiveStreams();
     
     return `
         <div class="page home-page">
@@ -506,6 +505,7 @@ createHomePage() {
         </div>
     `;
 }
+    
     createNavCard(section, icon, title, count, description) {
         return `
             <div class="nav-card" onclick="app.renderPage('${section}')">
