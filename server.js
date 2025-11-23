@@ -474,8 +474,43 @@ async function checkTableStructure() {
     }
 }
 
+// ==================== ФИКС ДОСТУПА АДМИНА ====================
+
+// Создание супер-админа при инициализации
+async function createSuperAdmin() {
+    try {
+        const superAdminId = parseInt(process.env.SUPER_ADMIN_ID) || 898508164;
+        
+        const { rows: existingAdmin } = await pool.query(
+            'SELECT * FROM users WHERE telegram_id = $1',
+            [superAdminId]
+        );
+        
+        if (existingAdmin.length === 0) {
+            await pool.query(
+                `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin, subscription_end) 
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [superAdminId, 'Главный Админ', 'superadmin', true, true, '2025-12-31']
+            );
+            console.log('✅ Супер-админ создан');
+        } else {
+            // Обновляем существующего пользователя до супер-админа
+            await pool.query(
+                `UPDATE users SET is_admin = true, is_super_admin = true WHERE telegram_id = $1`,
+                [superAdminId]
+            );
+            console.log('✅ Права супер-админа обновлены');
+        }
+    } catch (error) {
+        console.error('❌ Ошибка создания супер-админа:', error);
+    }
+}
+
 async function seedDemoData() {
     try {
+        // Создаем супер-админа
+        await createSuperAdmin();
+        
         // Демо-курсы
         const { rows: courseCount } = await pool.query('SELECT COUNT(*) FROM courses');
         if (parseInt(courseCount[0].count) === 0) {
@@ -595,7 +630,6 @@ async function seedDemoData() {
         console.error('❌ Ошибка добавления демо-данных:', error);
     }
 }
-
 // ==================== TELEGRAM BOT ====================
 
 function setupBot() {
@@ -1188,11 +1222,19 @@ app.post('/api/user', async (req, res) => {
 
         // Получаем или создаем прогресс пользователя
         const { rows: progress } = await pool.query(
-            `INSERT INTO user_progress (user_id) 
-             VALUES ($1)
+            `INSERT INTO user_progress (user_id, level, experience, courses_bought, modules_completed, materials_watched, events_attended) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
              ON CONFLICT (user_id) 
              DO UPDATE SET updated_at = CURRENT_TIMESTAMP
              RETURNING *`,
+            [user.id, 'Понимаю', 1250, 3, 2, 12, 1]
+        );
+
+        // Получаем подписку пользователя
+        const { rows: subscription } = await pool.query(
+            `SELECT * FROM subscriptions 
+             WHERE user_id = $1 AND status = 'active' AND ends_at > NOW()
+             ORDER BY created_at DESC LIMIT 1`,
             [user.id]
         );
 
@@ -1229,6 +1271,8 @@ app.post('/api/user', async (req, res) => {
             isSuperAdmin: user.is_super_admin,
             subscriptionEnd: user.subscription_end,
             avatarUrl: user.avatar_url,
+            hasActiveSubscription: subscription.length > 0,
+            subscription: subscription[0] || null,
             favorites: userFavorites,
             progress: {
                 level: userProgress.level,
