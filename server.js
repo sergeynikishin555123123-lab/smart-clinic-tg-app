@@ -486,7 +486,8 @@ async function createTables() {
                 uploaded_by INTEGER REFERENCES users(id),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-        `            -- Таблица для навигационных кнопок
+
+            -- Таблица для навигационных кнопок
             CREATE TABLE IF NOT EXISTS navigation_items (
                 id SERIAL PRIMARY KEY,
                 title VARCHAR(255) NOT NULL,
@@ -498,6 +499,7 @@ async function createTables() {
                 is_active BOOLEAN DEFAULT true,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+        `);
         
         console.log('✅ Таблицы созданы');
     } catch (error) {
@@ -505,7 +507,6 @@ async function createTables() {
         throw error;
     }
 }
-
 async function checkTableStructure() {
     try {
         const tablesToCheck = [
