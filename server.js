@@ -203,52 +203,6 @@ async function initDatabase() {
     } catch (error) {
         console.error('❌ Ошибка инициализации БД:', error);
     }
-    async function seedDemoData() {
-    try {
-        // ... существующий код ...
-
-        console.log('✅ База данных готова к работе');
-        
-        // ==================== ДОБАВИТЬ ДЕМО-ПРЕПОДАВАТЕЛЕЙ ====================
-        const { rows: instructorCount } = await pool.query('SELECT COUNT(*) FROM instructors');
-        if (parseInt(instructorCount[0].count) === 0) {
-            console.log('👨‍🏫 Добавляем демо-преподавателей...');
-            await pool.query(`
-                INSERT INTO instructors (name, specialization, bio, experience_years, avatar_url, email, social_links) VALUES
-                ('Доктор Иванов А.В.', 'Неврология, Мануальная терапия', 'Ведущий специалист по мануальной терапии, автор методик лечения болей в спине. Опыт работы - 15 лет.', 15, '/webapp/assets/instructor1.jpg', 'ivanov@anb.ru', '{"telegram": "@ivanov_neuro", "instagram": "dr_ivanov"}'),
-                ('Профессор Петрова С.М.', 'Реабилитация, Физиотерапия', 'Эксперт по реабилитации пациентов с неврологическими нарушениями. Доктор медицинских наук.', 20, '/webapp/assets/instructor2.jpg', 'petrova@anb.ru', '{"telegram": "@petrova_rehab", "website": "petrova-clinic.ru"}'),
-                ('Доктор Сидоров К.Д.', 'Диагностика, Неврология', 'Специалист по современным методам диагностики неврологических заболеваний.', 12, '/webapp/assets/instructor3.jpg', 'sidorov@anb.ru', '{"telegram": "@sidorov_diagnostic"}')
-            `);
-        }
-
-        // ==================== ДОБАВИТЬ ДЕМО-ПЛАНЫ ПОДПИСОК ====================
-        const { rows: planCount } = await pool.query('SELECT COUNT(*) FROM subscription_plans');
-        if (parseInt(planCount[0].count) === 0) {
-            console.log('💰 Добавляем планы подписок...');
-            await pool.query(`
-                INSERT INTO subscription_plans (name, description, price_monthly, price_quarterly, price_yearly, features, is_active) VALUES
-                ('Базовый', 'Доступ к базовым курсам и материалам', 2900, 7500, 27000, '["Доступ к 5 базовым курсам", "Просмотр вебинаров", "База материалов", "Поддержка по email"]', true),
-                ('Профессиональный', 'Полный доступ ко всем курсам', 5900, 15000, 54000, '["Все курсы Академии", "Прямые эфиры", "Закрытый чат", "Персональная поддержка", "Сертификаты"]', true),
-                ('Премиум', 'Максимальные возможности + менторство', 9900, 27000, 99000, '["Все курсы + будущие", "Личное менторство", "Разбор кейсов", "Участие в воркшопах", "Премиум-поддержка"]', true)
-            `);
-        }
-
-        // ==================== ПРИВЯЗАТЬ ПРЕПОДАВАТЕЛЕЙ К КУРСАМ ====================
-        const { rows: existingLinks } = await pool.query('SELECT COUNT(*) FROM content_instructors');
-        if (parseInt(existingLinks[0].count) === 0) {
-            console.log('🔗 Привязываем преподавателей к курсам...');
-            await pool.query(`
-                INSERT INTO content_instructors (content_id, content_type, instructor_id, role) VALUES
-                (1, 'courses', 1, 'автор и ведущий'),
-                (1, 'courses', 2, 'соавтор'),
-                (2, 'courses', 3, 'ведущий'),
-                (3, 'courses', 1, 'ведущий')
-            `);
-        }
-
-    } catch (error) {
-        console.error('❌ Ошибка добавления демо-данных:', error);
-    }
 }
 
 async function createTables() {
@@ -600,6 +554,43 @@ async function seedDemoData() {
             `);
         }
 
+        // ==================== ДОБАВИТЬ ДЕМО-ПРЕПОДАВАТЕЛЕЙ ====================
+        const { rows: instructorCount } = await pool.query('SELECT COUNT(*) FROM instructors');
+        if (parseInt(instructorCount[0].count) === 0) {
+            console.log('👨‍🏫 Добавляем демо-преподавателей...');
+            await pool.query(`
+                INSERT INTO instructors (name, specialization, bio, experience_years, avatar_url, email, social_links) VALUES
+                ('Доктор Иванов А.В.', 'Неврология, Мануальная терапия', 'Ведущий специалист по мануальной терапии, автор методик лечения болей в спине. Опыт работы - 15 лет.', 15, '/webapp/assets/instructor1.jpg', 'ivanov@anb.ru', '{"telegram": "@ivanov_neuro", "instagram": "dr_ivanov"}'),
+                ('Профессор Петрова С.М.', 'Реабилитация, Физиотерапия', 'Эксперт по реабилитации пациентов с неврологическими нарушениями. Доктор медицинских наук.', 20, '/webapp/assets/instructor2.jpg', 'petrova@anb.ru', '{"telegram": "@petrova_rehab", "website": "petrova-clinic.ru"}'),
+                ('Доктор Сидоров К.Д.', 'Диагностика, Неврология', 'Специалист по современным методам диагностики неврологических заболеваний.', 12, '/webapp/assets/instructor3.jpg', 'sidorov@anb.ru', '{"telegram": "@sidorov_diagnostic"}')
+            `);
+        }
+
+        // ==================== ДОБАВИТЬ ДЕМО-ПЛАНЫ ПОДПИСОК ====================
+        const { rows: planCount } = await pool.query('SELECT COUNT(*) FROM subscription_plans');
+        if (parseInt(planCount[0].count) === 0) {
+            console.log('💰 Добавляем планы подписок...');
+            await pool.query(`
+                INSERT INTO subscription_plans (name, description, price_monthly, price_quarterly, price_yearly, features, is_active) VALUES
+                ('Базовый', 'Доступ к базовым курсам и материалам', 2900, 7500, 27000, '["Доступ к 5 базовым курсам", "Просмотр вебинаров", "База материалов", "Поддержка по email"]', true),
+                ('Профессиональный', 'Полный доступ ко всем курсам', 5900, 15000, 54000, '["Все курсы Академии", "Прямые эфиры", "Закрытый чат", "Персональная поддержка", "Сертификаты"]', true),
+                ('Премиум', 'Максимальные возможности + менторство', 9900, 27000, 99000, '["Все курсы + будущие", "Личное менторство", "Разбор кейсов", "Участие в воркшопах", "Премиум-поддержка"]', true)
+            `);
+        }
+
+        // ==================== ПРИВЯЗАТЬ ПРЕПОДАВАТЕЛЕЙ К КУРСАМ ====================
+        const { rows: existingLinks } = await pool.query('SELECT COUNT(*) FROM content_instructors');
+        if (parseInt(existingLinks[0].count) === 0) {
+            console.log('🔗 Привязываем преподавателей к курсам...');
+            await pool.query(`
+                INSERT INTO content_instructors (content_id, content_type, instructor_id, role) VALUES
+                (1, 'courses', 1, 'автор и ведущий'),
+                (1, 'courses', 2, 'соавтор'),
+                (2, 'courses', 3, 'ведущий'),
+                (3, 'courses', 1, 'ведущий')
+            `);
+        }
+
     } catch (error) {
         console.error('❌ Ошибка добавления демо-данных:', error);
     }
@@ -854,6 +845,168 @@ app.get('/api/db-health', async (req, res) => {
             database: 'disconnected',
             error: error.message 
         });
+    }
+});
+
+// ==================== ПРЕПОДАВАТЕЛИ API ====================
+
+// Получить всех преподавателей
+app.get('/api/instructors', async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT * FROM instructors 
+            WHERE is_active = true 
+            ORDER BY name
+        `);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Instructors API error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки преподавателей' });
+    }
+});
+
+// Получить преподавателя по ID
+app.get('/api/instructors/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { rows } = await pool.query('SELECT * FROM instructors WHERE id = $1', [id]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Преподаватель не найден' });
+        }
+
+        // Получить курсы преподавателя
+        const { rows: courses } = await pool.query(`
+            SELECT c.* 
+            FROM courses c
+            JOIN content_instructors ci ON c.id = ci.content_id AND ci.content_type = 'courses'
+            WHERE ci.instructor_id = $1 AND c.is_active = true
+        `, [id]);
+
+        res.json({ 
+            success: true, 
+            data: {
+                ...rows[0],
+                courses: courses
+            }
+        });
+    } catch (error) {
+        console.error('Instructor detail error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки преподавателя' });
+    }
+});
+
+// Получить преподавателей для контента
+app.get('/api/content/:type/:id/instructors', async (req, res) => {
+    try {
+        const { type, id } = req.params;
+        const { rows } = await pool.query(`
+            SELECT i.*, ci.role 
+            FROM instructors i
+            JOIN content_instructors ci ON i.id = ci.instructor_id
+            WHERE ci.content_id = $1 AND ci.content_type = $2 AND i.is_active = true
+            ORDER BY ci.id
+        `, [id, type]);
+
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Content instructors error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки преподавателей' });
+    }
+});
+
+// ==================== ПОДПИСКИ API ====================
+
+// Получить планы подписок
+app.get('/api/subscription/plans', async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT * FROM subscription_plans 
+            WHERE is_active = true 
+            ORDER BY price_monthly
+        `);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Subscription plans error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки планов' });
+    }
+});
+
+// Создать подписку (демо-режим)
+app.post('/api/subscription/create', async (req, res) => {
+    try {
+        const { userId, planId, planType } = req.body;
+        
+        // Найти план
+        const { rows: plans } = await pool.query('SELECT * FROM subscription_plans WHERE id = $1', [planId]);
+        if (plans.length === 0) {
+            return res.status(404).json({ success: false, error: 'План не найден' });
+        }
+
+        const plan = plans[0];
+        const priceField = `price_${planType}`;
+        const price = plan[priceField];
+
+        // Расчет даты окончания
+        const endsAt = new Date();
+        switch (planType) {
+            case 'monthly':
+                endsAt.setMonth(endsAt.getMonth() + 1);
+                break;
+            case 'quarterly':
+                endsAt.setMonth(endsAt.getMonth() + 3);
+                break;
+            case 'yearly':
+                endsAt.setFullYear(endsAt.getFullYear() + 1);
+                break;
+        }
+
+        // Создать подписку
+        const { rows: subscription } = await pool.query(`
+            INSERT INTO subscriptions (user_id, plan_type, price, status, ends_at, payment_data)
+            VALUES ($1, $2, $3, 'active', $4, $5)
+            RETURNING *
+        `, [userId, planType, price, endsAt, { demo: true, method: 'demo' }]);
+
+        // Обновить пользователя
+        await pool.query(
+            'UPDATE users SET subscription_end = $1 WHERE id = $2',
+            [endsAt, userId]
+        );
+
+        res.json({ 
+            success: true, 
+            data: subscription[0],
+            message: 'Подписка успешно активирована (демо-режим)'
+        });
+
+    } catch (error) {
+        console.error('Create subscription error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания подписки' });
+    }
+});
+
+// Проверить подписку пользователя
+app.get('/api/subscription/user/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { rows } = await pool.query(`
+            SELECT s.*, sp.name as plan_name 
+            FROM subscriptions s
+            LEFT JOIN subscription_plans sp ON s.plan_type = sp.name
+            WHERE s.user_id = $1 AND s.status = 'active' AND s.ends_at > NOW()
+            ORDER BY s.created_at DESC
+            LIMIT 1
+        `, [userId]);
+
+        res.json({ 
+            success: true, 
+            data: rows.length > 0 ? rows[0] : null,
+            hasActiveSubscription: rows.length > 0
+        });
+    } catch (error) {
+        console.error('User subscription error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка проверки подписки' });
     }
 });
 
@@ -1346,6 +1499,69 @@ app.get('/api/admin/stats', async (req, res) => {
     } catch (error) {
         console.error('Admin stats error:', error);
         res.status(500).json({ success: false, error: 'Ошибка загрузки статистики' });
+    }
+});
+
+// ==================== АДМИН API ДЛЯ ПРЕПОДАВАТЕЛЕЙ ====================
+
+// Получить всех преподавателей (админ)
+app.get('/api/admin/instructors', async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT * FROM instructors ORDER BY created_at DESC');
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Admin instructors error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки преподавателей' });
+    }
+});
+
+// Создать преподавателя
+app.post('/api/admin/instructors', upload.single('avatar'), async (req, res) => {
+    try {
+        const data = req.body;
+        let avatarUrl = null;
+
+        if (req.file) {
+            avatarUrl = `/uploads/${req.file.filename}`;
+        }
+
+        const { rows } = await pool.query(`
+            INSERT INTO instructors (name, specialization, bio, experience_years, avatar_url, email, social_links)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING *
+        `, [
+            data.name,
+            data.specialization,
+            data.bio,
+            parseInt(data.experience_years || 0),
+            data.avatar_url || avatarUrl,
+            data.email,
+            data.social_links ? JSON.parse(data.social_links) : null
+        ]);
+
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Create instructor error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания преподавателя' });
+    }
+});
+
+// Привязать преподавателя к контенту
+app.post('/api/admin/content/:type/:id/instructors', async (req, res) => {
+    try {
+        const { type, id } = req.params;
+        const { instructor_id, role } = req.body;
+
+        const { rows } = await pool.query(`
+            INSERT INTO content_instructors (content_id, content_type, instructor_id, role)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        `, [id, type, instructor_id, role]);
+
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Add instructor to content error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка привязки преподавателя' });
     }
 });
 
