@@ -572,6 +572,7 @@
                 <li><a href="#" onclick="showTab('users')">👥 Пользователи</a></li>
                 <li><a href="#" onclick="showTab('media')">📁 Медиа</a></li>
                 <li><a href="#" onclick="showTab('settings')">⚙️ Настройки</a></li>
+                <li><a href="#" onclick="showTab('navigation')">🧭 Навигация</a></li>
             </ul>
         </nav>
 
@@ -831,6 +832,24 @@
         </main>
     </div>
 
+<!-- Управление навигацией -->
+<div id="navigation-tab" class="tab-content">
+    <div class="content-section">
+        <div class="section-header">
+            <h2>🧭 Управление навигацией</h2>
+            <button class="btn btn-primary" onclick="showAddNavigationModal()">
+                ➕ Добавить кнопку
+            </button>
+        </div>
+        <div class="section-content">
+            <div class="loading" id="navigation-loading">
+                <div class="spinner"></div>
+            </div>
+            <div class="navigation-grid" id="navigation-grid" style="display: none;"></div>
+        </div>
+    </div>
+</div>
+    
     <!-- Модальное окно добавления контента -->
     <div id="add-modal" class="modal">
         <div class="modal-content">
