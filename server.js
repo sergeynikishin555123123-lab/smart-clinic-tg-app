@@ -695,7 +695,7 @@ async function seedDemoData() {
             `);
         }
 
-       // Демо-планы подписок
+      // Демо-планы подписок
 const { rows: planCount } = await pool.query('SELECT COUNT(*) FROM subscription_plans');
 if (parseInt(planCount[0].count) === 0) {
     console.log('💰 Добавляем планы подписок...');
@@ -706,7 +706,6 @@ if (parseInt(planCount[0].count) === 0) {
         ('Премиум', 'Максимальные возможности + менторство', 9900, 27000, 99000, '["Все курсы + будущие", "Личное менторство", "Разбор кейсов", "Участие в воркшопах", "Премиум-поддержка"]', true)
     `);
 }
-
         // Демо-навигация
         const { rows: navCount } = await pool.query('SELECT COUNT(*) FROM navigation_items');
         if (parseInt(navCount[0].count) === 0) {
@@ -1782,8 +1781,18 @@ app.delete('/api/admin/content/:type/:id', async (req, res) => {
 
 // ==================== SPA FALLBACK ====================
 
-// WebApp SPA
+// Логирование всех запросов
+app.use('*', (req, res, next) => {
+    console.log('📍 Запрос:', req.method, req.originalUrl);
+    next();
+});
+
+// Статические файлы (добавьте если нет)
+app.use(express.static(__dirname));
+
+// WebApp
 app.get('/webapp', (req, res) => {
+    console.log('📱 Отдаем WebApp...');
     res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
 
@@ -1791,8 +1800,9 @@ app.get('/webapp/*', (req, res) => {
     res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
 
-// Admin SPA
+// Admin
 app.get('/admin', (req, res) => {
+    console.log('🔧 Отдаем Admin...');
     res.sendFile(join(__dirname, 'admin', 'index.html'));
 });
 
@@ -1800,16 +1810,17 @@ app.get('/admin/*', (req, res) => {
     res.sendFile(join(__dirname, 'admin', 'index.html'));
 });
 
-// Корневой маршрут - отдаем webapp
+// Корневой маршрут
 app.get('/', (req, res) => {
+    console.log('🏠 Отдаем главную...');
     res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
 
 // Fallback для всех остальных маршрутов
 app.get('*', (req, res) => {
+    console.log('🔄 Fallback для:', req.originalUrl);
     res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
-
 // ==================== ЗАПУСК СЕРВЕРА ====================
 async function startServer() {
     try {
