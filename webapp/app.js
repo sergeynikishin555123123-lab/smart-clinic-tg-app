@@ -1,26 +1,29 @@
     createVideoCard(video) {
+        const videoUrl = video.video_url || '/webapp/assets/video-default.jpg';
+        const thumbnailUrl = video.thumbnail_url || '/webapp/assets/video-default.jpg';
+        
         return `
-            <div class="content-card video-card">
+            <div class="content-card video-card" onclick="app.openVideoDetail(${video.id})">
                 <div class="card-image">
-                    <img src="${video.thumbnail_url}" alt="${video.title}" 
-                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjM0Y0QTU1Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2Ij7QpNCw0LrRgtC+0YA8L3RleHQ+Cjwvc3ZnPgo='">
+                    <img src="${thumbnailUrl}" alt="${video.title}" 
+                         onerror="this.src='/webapp/assets/video-default.jpg'">
                     <div class="card-overlay">
                         <button class="favorite-btn ${this.isFavorite(video.id, 'videos') ? 'active' : ''}" 
                                 onclick="event.stopPropagation(); app.toggleFavorite(${video.id}, 'videos')">
                             ${this.isFavorite(video.id, 'videos') ? '❤️' : '🤍'}
                         </button>
-                        <button class="play-btn" onclick="app.previewContent('video', '${video.video_url}', {title: '${video.title}', id: ${video.id}})">
+                        <button class="play-btn" onclick="event.stopPropagation(); app.previewContent('video', '${videoUrl}', {title: '${this.escapeHtml(video.title)}', id: ${video.id}})">
                             ▶️
                         </button>
                     </div>
-                    <div class="video-duration">${video.duration}</div>
+                    <div class="video-duration">${video.duration || '00:00'}</div>
                 </div>
                 <div class="card-content">
-                    <div class="card-category">${video.category}</div>
+                    <div class="card-category">${video.category || 'Общее'}</div>
                     <h3 class="card-title">${video.title}</h3>
-                    <p class="card-description">${video.description}</p>
+                    <p class="card-description">${video.description || 'Описание видео'}</p>
                     <div class="card-meta">
-                        <span class="meta-item">👁️ ${video.views} просмотров</span>
+                        <span class="meta-item">👁️ ${video.views || 0} просмотров</span>
                     </div>
                 </div>
             </div>
@@ -28,29 +31,147 @@
     }
 
     createMaterialCard(material) {
+        const imageUrl = material.image_url || '/webapp/assets/material-default.jpg';
+        const fileUrl = material.file_url || '#';
+        
         return `
-            <div class="content-card material-card">
+            <div class="content-card material-card" onclick="app.openMaterialDetail(${material.id})">
                 <div class="card-image">
-                    <img src="${material.image_url}" alt="${material.title}" 
-                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjM0Y0QTU1Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2Ij7QpNCw0LrRgtC+0YA8L3RleHQ+Cjwvc3ZnPgo='">
+                    <img src="${imageUrl}" alt="${material.title}" 
+                         onerror="this.src='/webapp/assets/material-default.jpg'">
                     <div class="card-overlay">
                         <button class="favorite-btn ${this.isFavorite(material.id, 'materials') ? 'active' : ''}" 
                                 onclick="event.stopPropagation(); app.toggleFavorite(${material.id}, 'materials')">
                             ${this.isFavorite(material.id, 'materials') ? '❤️' : '🤍'}
                         </button>
-                        <button class="download-btn" onclick="app.downloadMaterial(${material.id})">
+                        <button class="download-btn" onclick="event.stopPropagation(); app.downloadMaterial(${material.id})">
                             📥
                         </button>
                     </div>
                     <div class="material-type">${this.getMaterialTypeIcon(material.material_type)}</div>
                 </div>
                 <div class="card-content">
-                    <div class="card-category">${material.category}</div>
+                    <div class="card-category">${material.category || 'Общее'}</div>
                     <h3 class="card-title">${material.title}</h3>
-                    <p class="card-description">${material.description}</p>
+                    <p class="card-description">${material.description || 'Описание материала'}</p>
                     <div class="card-meta">
                         <span class="meta-item">${this.getMaterialTypeName(material.material_type)}</span>
-                        <span class="meta-item">📥 ${material.downloads} загрузок</span>
+                        <span class="meta-item">📥 ${material.downloads || 0} загрузок</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createPodcastCard(podcast) {
+        const imageUrl = podcast.image_url || '/webapp/assets/podcast-default.jpg';
+        const audioUrl = podcast.audio_url || '#';
+        
+        return `
+            <div class="content-card podcast-card" onclick="app.openPodcastDetail(${podcast.id})">
+                <div class="card-image">
+                    <img src="${imageUrl}" alt="${podcast.title}" 
+                         onerror="this.src='/webapp/assets/podcast-default.jpg'">
+                    <div class="card-overlay">
+                        <button class="favorite-btn ${this.isFavorite(podcast.id, 'podcasts') ? 'active' : ''}" 
+                                onclick="event.stopPropagation(); app.toggleFavorite(${podcast.id}, 'podcasts')">
+                            ${this.isFavorite(podcast.id, 'podcasts') ? '❤️' : '🤍'}
+                        </button>
+                        <button class="play-btn" onclick="event.stopPropagation(); app.previewContent('audio', '${audioUrl}', {title: '${this.escapeHtml(podcast.title)}', cover: '${imageUrl}', id: ${podcast.id}})">
+                            ▶️
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-category">${podcast.category || 'Общее'}</div>
+                    <h3 class="card-title">${podcast.title}</h3>
+                    <p class="card-description">${podcast.description || 'Описание подкаста'}</p>
+                    <div class="card-meta">
+                        <span class="meta-item">⏱️ ${podcast.duration || '00:00'}</span>
+                        <span class="meta-item">🎧 ${podcast.listens || 0} прослушиваний</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createStreamCard(stream) {
+        const thumbnailUrl = stream.thumbnail_url || '/webapp/assets/stream-default.jpg';
+        const videoUrl = stream.video_url || '#';
+        
+        return `
+            <div class="content-card stream-card" onclick="app.openStreamDetail(${stream.id})">
+                <div class="card-image">
+                    <img src="${thumbnailUrl}" alt="${stream.title}" 
+                         onerror="this.src='/webapp/assets/stream-default.jpg'">
+                    <div class="card-overlay">
+                        <button class="favorite-btn ${this.isFavorite(stream.id, 'streams') ? 'active' : ''}" 
+                                onclick="event.stopPropagation(); app.toggleFavorite(${stream.id}, 'streams')">
+                            ${this.isFavorite(stream.id, 'streams') ? '❤️' : '🤍'}
+                        </button>
+                        <button class="play-btn" onclick="event.stopPropagation(); app.previewContent('video', '${videoUrl}', {title: '${this.escapeHtml(stream.title)}', id: ${stream.id}})">
+                            ▶️
+                        </button>
+                    </div>
+                    ${stream.is_live ? `<div class="live-badge">LIVE</div>` : ''}
+                </div>
+                <div class="card-content">
+                    <div class="card-category">${stream.category || 'Общее'}</div>
+                    <h3 class="card-title">${stream.title}</h3>
+                    <p class="card-description">${stream.description || 'Описание эфира'}</p>
+                    <div class="card-meta">
+                        <span class="meta-item">⏱️ ${stream.duration || '00:00'}</span>
+                        <span class="meta-item">👥 ${stream.participants || 0} участников</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createCourseCard(course) {
+        const imageUrl = course.image_url || '/webapp/assets/course-default.jpg';
+        const videoUrl = course.video_url || '#';
+        
+        return `
+            <div class="content-card course-card" onclick="app.openCourseDetail(${course.id})">
+                <div class="card-image">
+                    <img src="${imageUrl}" alt="${course.title}" 
+                         onerror="this.src='/webapp/assets/course-default.jpg'">
+                    <div class="card-overlay">
+                        <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
+                                onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
+                            ${this.isFavorite(course.id, 'courses') ? '❤️' : '🤍'}
+                        </button>
+                        ${videoUrl ? `
+                        <button class="preview-btn" onclick="event.stopPropagation(); app.previewContent('video', '${videoUrl}', {title: '${this.escapeHtml(course.title)}', id: ${course.id}})">
+                            👁️
+                        </button>
+                        ` : ''}
+                    </div>
+                    ${course.featured ? '<div class="featured-badge">Рекомендуем</div>' : ''}
+                    ${course.discount > 0 ? `<div class="discount-badge">-${course.discount}%</div>` : ''}
+                </div>
+                <div class="card-content">
+                    <div class="card-category">${course.category || 'Общее'}</div>
+                    <h3 class="card-title">${course.title}</h3>
+                    <p class="card-description">${course.description || 'Описание курса'}</p>
+                    <div class="card-meta">
+                        <span class="meta-item">📊 ${this.getLevelName(course.level)}</span>
+                        <span class="meta-item">⏱️ ${course.duration || 'Не указано'}</span>
+                        <span class="meta-item">🎯 ${course.modules || 0} модулей</span>
+                    </div>
+                    <div class="card-footer">
+                        <div class="price-section">
+                            ${course.discount > 0 ? `
+                                <span class="price-original">${this.formatPrice(course.price)}</span>
+                            ` : ''}
+                            <span class="price-current">
+                                ${this.formatPrice(course.discount > 0 ? course.price * (1 - course.discount/100) : course.price)}
+                            </span>
+                        </div>
+                        <button class="btn btn-primary btn-small" onclick="event.stopPropagation(); app.openCourseDetail(${course.id})">
+                            Подробнее
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2162,6 +2283,89 @@
         return this.allContent.courses?.filter(course => 
             course.instructors && course.instructors.some(i => i.id === instructorId)
         ).slice(0, 3) || [];
+    }
+
+    // Методы для открытия детальных страниц
+    async openCourseDetail(courseId) {
+        try {
+            const response = await this.safeApiCall(`/api/courses/${courseId}`);
+            if (response.success) {
+                this.currentSubPage = `course-${courseId}`;
+                this.renderPage('courses', `course-${courseId}`);
+            } else {
+                this.showNotification('Не удалось загрузить информацию о курсе', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading course:', error);
+            this.showNotification('Ошибка загрузки курса', 'error');
+        }
+    }
+
+    async openPodcastDetail(podcastId) {
+        try {
+            const response = await this.safeApiCall(`/api/podcasts/${podcastId}`);
+            if (response.success) {
+                this.currentSubPage = `podcast-${podcastId}`;
+                this.renderPage('podcasts', `podcast-${podcastId}`);
+            } else {
+                this.showNotification('Не удалось загрузить информацию о подкасте', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading podcast:', error);
+            this.showNotification('Ошибка загрузки подкаста', 'error');
+        }
+    }
+
+    async openVideoDetail(videoId) {
+        try {
+            const response = await this.safeApiCall(`/api/videos/${videoId}`);
+            if (response.success) {
+                this.currentSubPage = `video-${videoId}`;
+                this.renderPage('videos', `video-${videoId}`);
+            } else {
+                this.showNotification('Не удалось загрузить информацию о видео', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading video:', error);
+            this.showNotification('Ошибка загрузки видео', 'error');
+        }
+    }
+
+    async openMaterialDetail(materialId) {
+        try {
+            const response = await this.safeApiCall(`/api/materials/${materialId}`);
+            if (response.success) {
+                this.currentSubPage = `material-${materialId}`;
+                this.renderPage('materials', `material-${materialId}`);
+            } else {
+                this.showNotification('Не удалось загрузить информацию о материале', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading material:', error);
+            this.showNotification('Ошибка загрузки материала', 'error');
+        }
+    }
+
+    async openStreamDetail(streamId) {
+        try {
+            const response = await this.safeApiCall(`/api/streams/${streamId}`);
+            if (response.success) {
+                this.currentSubPage = `stream-${streamId}`;
+                this.renderPage('streams', `stream-${streamId}`);
+            } else {
+                this.showNotification('Не удалось загрузить информацию об эфире', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading stream:', error);
+            this.showNotification('Ошибка загрузки эфира', 'error');
+        }
+    }
+
+    // Вспомогательный метод для экранирования HTML
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     // ==================== БИЗНЕС-ЛОГИКА ====================
