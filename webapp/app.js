@@ -1429,6 +1429,23 @@ createStreamDetailPage(streamId) {
 showSubscriptionModal() {
     const modal = document.createElement('div');
     modal.className = 'media-modal active';
+    
+    // ФИКС: Безопасная обработка features
+    const getPlanFeatures = (plan) => {
+        try {
+            if (typeof plan.features === 'string') {
+                const features = JSON.parse(plan.features);
+                return Array.isArray(features) ? features : [plan.features];
+            } else if (Array.isArray(plan.features)) {
+                return plan.features;
+            }
+            return ['Доступ к курсам', 'Материалы', 'Поддержка'];
+        } catch (error) {
+            console.error('Error parsing features:', error);
+            return ['Доступ к курсам', 'Материалы', 'Поддержка'];
+        }
+    };
+
     modal.innerHTML = `
         <div class="modal-overlay" onclick="this.parentElement.remove()">
             <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 800px;">
@@ -1438,26 +1455,52 @@ showSubscriptionModal() {
                 </div>
                 <div class="modal-body">
                     <div class="subscription-plans">
-                        ${this.subscriptionPlans.map(plan => `
-                            <div class="subscription-plan" onclick="app.selectSubscriptionPlan(${plan.id})">
-                                <div class="plan-header">
-                                    <h4>${plan.name}</h4>
-                                    <div class="plan-price">
-                                        ${this.formatPrice(plan.price_monthly)}/мес
+                        ${this.subscriptionPlans.map(plan => {
+                            const features = getPlanFeatures(plan);
+                            return `
+                                <div class="subscription-plan ${this.subscriptionState.selectedPlan?.id === plan.id ? 'selected' : ''}" 
+                                     onclick="app.selectSubscriptionPlan(${plan.id})">
+                                    <div class="plan-header">
+                                        <h4>${plan.name}</h4>
+                                        <div class="plan-price">
+                                            ${this.formatPrice(plan.price_monthly)}/мес
+                                        </div>
+                                    </div>
+                                    <div class="plan-description">${plan.description}</div>
+                                    <ul class="plan-features">
+                                        ${features.map(feature => `
+                                            <li>✅ ${feature}</li>
+                                        `).join('')}
+                                    </ul>
+                                    <div class="plan-periods">
+                                        <label class="period-option ${this.subscriptionState.selectedPeriod === 'monthly' ? 'active' : ''}">
+                                            <input type="radio" name="period" value="monthly" 
+                                                   ${this.subscriptionState.selectedPeriod === 'monthly' ? 'checked' : ''}
+                                                   onchange="app.selectSubscriptionPeriod('monthly')">
+                                            Месяц - ${this.formatPrice(plan.price_monthly)}
+                                        </label>
+                                        <label class="period-option ${this.subscriptionState.selectedPeriod === 'quarterly' ? 'active' : ''}">
+                                            <input type="radio" name="period" value="quarterly" 
+                                                   ${this.subscriptionState.selectedPeriod === 'quarterly' ? 'checked' : ''}
+                                                   onchange="app.selectSubscriptionPeriod('quarterly')">
+                                            3 месяца - ${this.formatPrice(plan.price_quarterly)}
+                                        </label>
+                                        <label class="period-option ${this.subscriptionState.selectedPeriod === 'yearly' ? 'active' : ''}">
+                                            <input type="radio" name="period" value="yearly" 
+                                                   ${this.subscriptionState.selectedPeriod === 'yearly' ? 'checked' : ''}
+                                                   onchange="app.selectSubscriptionPeriod('yearly')">
+                                            Год - ${this.formatPrice(plan.price_yearly)}
+                                        </label>
                                     </div>
                                 </div>
-                                <div class="plan-description">${plan.description}</div>
-                                <ul class="plan-features">
-                                    ${JSON.parse(plan.features).map(feature => `
-                                        <li>✅ ${feature}</li>
-                                    `).join('')}
-                                </ul>
-                            </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
                 </div>
                 <div class="modal-actions">
-                    <button class="btn btn-primary btn-large" onclick="app.purchaseSubscription()">
+                    <button class="btn btn-primary btn-large" 
+                            onclick="app.purchaseSelectedSubscription()"
+                            ${!this.subscriptionState.selectedPlan ? 'disabled' : ''}>
                         💳 Оформить подписку
                     </button>
                     <button class="btn btn-outline" onclick="this.closest('.media-modal').remove()">
