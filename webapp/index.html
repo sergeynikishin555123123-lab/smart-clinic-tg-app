@@ -1851,6 +1851,512 @@
     font-size: 0.875rem;
     opacity: 0.9;
 }
+
+ /* ==================== СТИЛИ ДЛЯ ДЕТАЛЬНЫХ СТРАНИЦ ==================== */
+
+.detail-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.back-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.back-btn:hover {
+    background: var(--accent);
+    color: white;
+}
+
+.detail-container {
+    background: var(--bg-card);
+    border-radius: 1rem;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.detail-hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    padding: 2rem;
+}
+
+@media (max-width: 768px) {
+    .detail-hero {
+        grid-template-columns: 1fr;
+    }
+}
+
+.hero-image {
+    position: relative;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    height: 300px;
+}
+
+.hero-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.hero-image:hover .image-overlay {
+    opacity: 1;
+}
+
+.course-meta-large {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.category-badge, .level-badge, .rating-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.category-badge {
+    background: var(--accent);
+    color: white;
+}
+
+.level-badge {
+    background: var(--success);
+    color: white;
+}
+
+.rating-badge {
+    background: var(--warning);
+    color: white;
+}
+
+.course-subtitle {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.course-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat {
+    text-align: center;
+    padding: 1rem;
+    background: var(--bg-primary);
+    border-radius: 0.5rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--accent);
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.discount-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.original-price {
+    color: var(--text-secondary);
+    text-decoration: line-through;
+    font-size: 1.1rem;
+}
+
+.discount-amount {
+    background: var(--error);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+}
+
+/* Стили для преподавателей */
+.instructors-section {
+    padding: 2rem;
+    border-top: 1px solid var(--border);
+}
+
+.instructors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.instructor-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.instructor-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+}
+
+.instructor-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.instructor-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.instructor-info {
+    flex: 1;
+}
+
+.instructor-info h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+}
+
+.instructor-specialization {
+    color: var(--accent);
+    font-size: 0.9rem;
+    margin: 0 0 0.25rem 0;
+}
+
+.instructor-role {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin: 0 0 0.5rem 0;
+}
+
+.instructor-experience {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+/* Табы */
+.detail-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-btn:hover,
+.tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.tab-content {
+    display: none;
+    padding: 2rem;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Модули курса */
+.module-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.module-number {
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.module-duration {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.module-title {
+    font-weight: bold;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.module-lessons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.lesson {
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+}
+
+/* Отзывы */
+.review-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.reviewer-info {
+    flex: 1;
+}
+
+.reviewer-name {
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.reviewer-role {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.review-rating {
+    color: var(--warning);
+}
+
+.review-text {
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.review-date {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* Секция покупки */
+.purchase-section {
+    background: var(--bg-card);
+    border-radius: 1rem;
+    border: 1px solid var(--border);
+    padding: 2rem;
+}
+
+.pricing-card {
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.pricing-header {
+    margin-bottom: 2rem;
+}
+
+.discount-timer {
+    background: var(--error);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.875rem;
+    display: inline-block;
+    margin-top: 1rem;
+}
+
+.price-display {
+    margin-bottom: 2rem;
+}
+
+.current-price {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.features-list {
+    margin-bottom: 2rem;
+}
+
+.feature-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.feature-item:last-child {
+    border-bottom: none;
+}
+
+.purchase-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.guarantee-badge {
+    color: var(--success);
+    font-size: 0.875rem;
+}
+
+/* Детальная страница преподавателя */
+.instructor-detail {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.instructor-avatar-large {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.instructor-avatar-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.instructor-detail-info {
+    flex: 1;
+}
+
+.instructor-detail-info h2 {
+    margin: 0 0 0.5rem 0;
+}
+
+.instructor-stats {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+}
+
+.instructor-stats .stat {
+    background: var(--bg-primary);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.instructor-bio {
+    margin: 1.5rem 0;
+}
+
+.instructor-bio h4 {
+    margin-bottom: 0.5rem;
+}
+
+.instructor-bio p {
+    line-height: 1.6;
+}
+
+.instructor-social {
+    margin-top: 1.5rem;
+}
+
+.social-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.social-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.3s;
+}
+
+.social-link:hover {
+    background: var(--accent);
+    color: white;
+}       
     </style>
 </head>
 <body>
