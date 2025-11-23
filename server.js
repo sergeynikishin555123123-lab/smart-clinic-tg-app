@@ -283,10 +283,10 @@ async function createTables() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
-            -- Таблица прогресса пользователей
+            -- Таблица прогресса пользователей (ИСПРАВЛЕННАЯ - добавлен UNIQUE)
             CREATE TABLE IF NOT EXISTS user_progress (
                 id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id),
+                user_id INTEGER REFERENCES users(id) UNIQUE, -- ДОБАВЛЕН UNIQUE
                 level VARCHAR(50) DEFAULT 'Понимаю',
                 experience INTEGER DEFAULT 1250,
                 courses_bought INTEGER DEFAULT 3,
@@ -1321,7 +1321,7 @@ app.post('/api/user', async (req, res) => {
         // Проверяем, является ли пользователь супер-админом
         const isSuperAdmin = userToProcess.id === 898508164;
 
-        // ФИКС: Используем правильный ON CONFLICT
+        // ФИКС: Используем правильный подход без ON CONFLICT для user_progress
         const { rows: existingUsers } = await pool.query(
             'SELECT * FROM users WHERE telegram_id = $1',
             [userToProcess.id]
@@ -1363,15 +1363,26 @@ app.post('/api/user', async (req, res) => {
             userData = updatedUsers[0];
         }
 
-        // Получаем или создаем прогресс пользователя
-        const { rows: progress } = await pool.query(
-            `INSERT INTO user_progress (user_id, level, experience, courses_bought, modules_completed, materials_watched, events_attended) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
-             ON CONFLICT (user_id) 
-             DO UPDATE SET updated_at = CURRENT_TIMESTAMP
-             RETURNING *`,
-            [userData.id, 'Понимаю', 1250, 3, 2, 12, 1]
+        // ФИКС: Правильная работа с user_progress без ON CONFLICT
+        const { rows: existingProgress } = await pool.query(
+            'SELECT * FROM user_progress WHERE user_id = $1',
+            [userData.id]
         );
+
+        let userProgress;
+        if (existingProgress.length === 0) {
+            // Создаем прогресс
+            const { rows: progress } = await pool.query(
+                `INSERT INTO user_progress (user_id, level, experience, courses_bought, modules_completed, materials_watched, events_attended) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)
+                 RETURNING *`,
+                [userData.id, 'Понимаю', 1250, 3, 2, 12, 1]
+            );
+            userProgress = progress[0];
+        } else {
+            // Используем существующий прогресс
+            userProgress = existingProgress[0];
+        }
 
         // Получаем подписку пользователя
         const { rows: subscription } = await pool.query(
@@ -1394,15 +1405,6 @@ app.post('/api/user', async (req, res) => {
             videos: favorites.filter(f => f.content_type === 'videos').map(f => f.content_id),
             materials: favorites.filter(f => f.content_type === 'materials').map(f => f.content_id),
             events: favorites.filter(f => f.content_type === 'events').map(f => f.content_id)
-        };
-
-        const userProgress = progress[0] || {
-            level: 'Понимаю',
-            experience: 1250,
-            courses_bought: 3,
-            modules_completed: 2,
-            materials_watched: 12,
-            events_attended: 1
         };
 
         const responseData = {
