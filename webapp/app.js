@@ -567,6 +567,306 @@ createHomePage() {
         `;
     }
 
+// ==================== ГЛАВНАЯ СТРАНИЦА ====================
+
+createHomePage() {
+    // ... ваш существующий код главной страницы ...
+}
+
+// ==================== СТРАНИЦА КУРСОВ ====================
+
+createCoursesPage() {
+    const courses = this.allContent.courses || [];
+    
+    return `
+        <div class="page courses-page">
+            <div class="page-header">
+                <h2>📚 Все курсы</h2>
+                <p>Профессиональное обучение для врачей</p>
+            </div>
+            
+            <div class="content-grid">
+                ${courses.length > 0 ? courses.map(course => `
+                    <div class="content-card course-card" onclick="app.openCourseDetail(${course.id})">
+                        <div class="card-image">
+                            <img src="${course.image_url}" alt="${course.title}" onerror="this.src='/webapp/assets/course-default.jpg'">
+                            <div class="card-overlay">
+                                <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
+                                        onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
+                                    ${this.isFavorite(course.id, 'courses') ? '❤️' : '🤍'}
+                                </button>
+                            </div>
+                            ${course.featured ? `<div class="featured-badge">Рекомендуем</div>` : ''}
+                            ${course.discount > 0 ? `<div class="discount-badge">-${course.discount}%</div>` : ''}
+                        </div>
+                        <div class="card-content">
+                            <div class="card-category">${course.category}</div>
+                            <h3 class="card-title">${course.title}</h3>
+                            <p class="card-description">${course.description}</p>
+                            <div class="card-meta">
+                                <span class="meta-item">⏱️ ${course.duration}</span>
+                                <span class="meta-item">🎯 ${course.modules} модулей</span>
+                                <span class="meta-item">👥 ${course.students_count} студентов</span>
+                            </div>
+                            <div class="card-footer">
+                                <div class="price-section">
+                                    ${course.discount > 0 ? `
+                                        <div class="price-original">${this.formatPrice(course.price)}</div>
+                                        <div class="price-current">${this.formatPrice(course.price * (1 - course.discount/100))}</div>
+                                    ` : `
+                                        <div class="price-current">${this.formatPrice(course.price)}</div>
+                                    `}
+                                </div>
+                                <button class="btn btn-primary btn-small" onclick="event.stopPropagation(); app.openCourseDetail(${course.id})">
+                                    Подробнее
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') : this.createEmptyState('courses')}
+            </div>
+        </div>
+    `;
+}
+
+// ==================== СТРАНИЦА ПОДКАСТОВ ====================
+
+createPodcastsPage() {
+    const podcasts = this.allContent.podcasts || [];
+    
+    return `
+        <div class="page podcasts-page">
+            <div class="page-header">
+                <h2>🎧 АНБ FM</h2>
+                <p>Аудио подкасты и лекции от ведущих специалистов</p>
+            </div>
+            
+            <div class="content-grid">
+                ${podcasts.length > 0 ? podcasts.map(podcast => `
+                    <div class="content-card podcast-card">
+                        <div class="card-image">
+                            <img src="${podcast.image_url}" alt="${podcast.title}" onerror="this.src='/webapp/assets/podcast-default.jpg'">
+                            <div class="card-overlay">
+                                <button class="favorite-btn ${this.isFavorite(podcast.id, 'podcasts') ? 'active' : ''}" 
+                                        onclick="event.stopPropagation(); app.toggleFavorite(${podcast.id}, 'podcasts')">
+                                    ${this.isFavorite(podcast.id, 'podcasts') ? '❤️' : '🤍'}
+                                </button>
+                                <button class="play-btn" onclick="app.previewContent('audio', '${podcast.audio_url}', {title: '${podcast.title}', id: ${podcast.id}, cover: '${podcast.image_url}'})">
+                                    ▶️
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <div class="card-category">${podcast.category}</div>
+                            <h3 class="card-title">${podcast.title}</h3>
+                            <p class="card-description">${podcast.description}</p>
+                            <div class="card-meta">
+                                <span class="meta-item">⏱️ ${podcast.duration}</span>
+                                <span class="meta-item">👂 ${podcast.listens} прослушиваний</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') : this.createEmptyState('podcasts')}
+            </div>
+        </div>
+    `;
+}
+
+// ==================== СТРАНИЦА ВИДЕО ====================
+
+createVideosPage() {
+    const videos = this.allContent.videos || [];
+    
+    return `
+        <div class="page videos-page">
+            <div class="page-header">
+                <h2>🎯 Видео-шпаргалки</h2>
+                <p>Короткие обучающие видео для быстрого изучения</p>
+            </div>
+            
+            <div class="content-grid">
+                ${videos.length > 0 ? videos.map(video => `
+                    <div class="content-card video-card">
+                        <div class="card-image">
+                            <img src="${video.thumbnail_url}" alt="${video.title}" onerror="this.src='/webapp/assets/video-default.jpg'">
+                            <div class="card-overlay">
+                                <button class="favorite-btn ${this.isFavorite(video.id, 'videos') ? 'active' : ''}" 
+                                        onclick="event.stopPropagation(); app.toggleFavorite(${video.id}, 'videos')">
+                                    ${this.isFavorite(video.id, 'videos') ? '❤️' : '🤍'}
+                                </button>
+                                <button class="play-btn" onclick="app.previewContent('video', '${video.video_url}', {title: '${video.title}', id: ${video.id}})">
+                                    ▶️
+                                </button>
+                            </div>
+                            <div class="video-duration">${video.duration}</div>
+                        </div>
+                        <div class="card-content">
+                            <div class="card-category">${video.category}</div>
+                            <h3 class="card-title">${video.title}</h3>
+                            <p class="card-description">${video.description}</p>
+                            <div class="card-meta">
+                                <span class="meta-item">👁️ ${video.views} просмотров</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') : this.createEmptyState('videos')}
+            </div>
+        </div>
+    `;
+}
+
+// ==================== СТРАНИЦА МАТЕРИАЛОВ ====================
+
+createMaterialsPage() {
+    const materials = this.allContent.materials || [];
+    
+    return `
+        <div class="page materials-page">
+            <div class="page-header">
+                <h2>📋 Практические материалы</h2>
+                <p>Чек-листы, протоколы, методические рекомендации</p>
+            </div>
+            
+            <div class="content-grid">
+                ${materials.length > 0 ? materials.map(material => `
+                    <div class="content-card material-card">
+                        <div class="card-image">
+                            <img src="${material.image_url}" alt="${material.title}" onerror="this.src='/webapp/assets/material-default.jpg'">
+                            <div class="card-overlay">
+                                <button class="favorite-btn ${this.isFavorite(material.id, 'materials') ? 'active' : ''}" 
+                                        onclick="event.stopPropagation(); app.toggleFavorite(${material.id}, 'materials')">
+                                    ${this.isFavorite(material.id, 'materials') ? '❤️' : '🤍'}
+                                </button>
+                                <button class="download-btn" onclick="app.downloadMaterial(${material.id})">
+                                    📥
+                                </button>
+                            </div>
+                            <div class="material-type">${this.getMaterialTypeIcon(material.material_type)}</div>
+                        </div>
+                        <div class="card-content">
+                            <div class="card-category">${material.category}</div>
+                            <h3 class="card-title">${material.title}</h3>
+                            <p class="card-description">${material.description}</p>
+                            <div class="card-meta">
+                                <span class="meta-item">${this.getMaterialTypeName(material.material_type)}</span>
+                                <span class="meta-item">📥 ${material.downloads} загрузок</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') : this.createEmptyState('materials')}
+            </div>
+        </div>
+    `;
+}
+
+// ==================== СТРАНИЦА МЕРОПРИЯТИЙ ====================
+
+createEventsPage() {
+    const events = this.allContent.events || [];
+    return `
+        <div class="page events-page">
+            <div class="page-header">
+                <h2>🗺️ Карта мероприятий</h2>
+                <p>Онлайн и офлайн события Академии АНБ</p>
+            </div>
+            <div class="content-grid">
+                ${events.length > 0 ? events.map(event => `
+                    <div class="content-card event-card">
+                        <div class="card-image">
+                            <img src="${event.image_url}" alt="${event.title}" onerror="this.src='/webapp/assets/event-default.jpg'">
+                            <div class="card-overlay">
+                                <button class="favorite-btn ${this.isFavorite(event.id, 'events') ? 'active' : ''}" 
+                                        onclick="event.stopPropagation(); app.toggleFavorite(${event.id}, 'events')">
+                                    ${this.isFavorite(event.id, 'events') ? '❤️' : '🤍'}
+                                </button>
+                            </div>
+                            <div class="event-type">${event.event_type === 'online' ? '🌐 Онлайн' : '🏛️ Офлайн'}</div>
+                        </div>
+                        <div class="card-content">
+                            <div class="event-date">${new Date(event.event_date).toLocaleDateString('ru-RU')}</div>
+                            <h3 class="card-title">${event.title}</h3>
+                            <p class="card-description">${event.description}</p>
+                            <div class="card-meta">
+                                <span class="meta-item">📍 ${event.location}</span>
+                                <span class="meta-item">👥 ${event.participants} участников</span>
+                            </div>
+                            ${event.registration_url ? `
+                            <div class="event-actions">
+                                <button class="btn btn-primary btn-small" onclick="window.open('${event.registration_url}', '_blank')">
+                                    Зарегистрироваться
+                                </button>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('') : this.createEmptyState('events')}
+            </div>
+        </div>
+    `;
+}
+
+// ==================== СТРАНИЦА СООБЩЕСТВА ====================
+
+createCommunityPage() {
+    return `
+        <div class="page community-page">
+            <div class="page-header">
+                <h2>👥 О сообществе</h2>
+                <p>Правила и ценности Академии АНБ</p>
+            </div>
+
+            <div class="community-rules">
+                <h3>📜 Правила сообщества</h3>
+                <div class="rules-grid">
+                    ${this.communityRules.map((rule, index) => `
+                        <div class="rule-card">
+                            <div class="rule-number">${index + 1}</div>
+                            <div class="rule-content">
+                                <h4>${rule.title}</h4>
+                                <p>${rule.description}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="community-values">
+                <h3>💫 Наши ценности</h3>
+                <div class="values-list">
+                    <div class="value-item">
+                        <div class="value-icon">🎯</div>
+                        <div class="value-content">
+                            <h4>Профессионализм</h4>
+                            <p>Высокие стандарты медицинского образования</p>
+                        </div>
+                    </div>
+                    <div class="value-item">
+                        <div class="value-icon">🤝</div>
+                        <div class="value-content">
+                            <h4>Взаимопомощь</h4>
+                            <p>Поддерживаем друг друга в профессиональном росте</p>
+                        </div>
+                    </div>
+                    <div class="value-item">
+                        <div class="value-icon">🔬</div>
+                        <div class="value-content">
+                            <h4>Научный подход</h4>
+                            <p>Основано на доказательной медицине</p>
+                        </div>
+                    </div>
+                    <div class="value-item">
+                        <div class="value-icon">💡</div>
+                        <div class="value-content">
+                            <h4>Инновации</h4>
+                            <p>Используем современные методики обучения</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+   
 // ==================== ДЕТАЛЬНАЯ СТРАНИЦА КУРСА ====================
 
 createCourseDetailPage(courseId) {
