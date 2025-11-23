@@ -67,6 +67,29 @@ const upload = multer({
     }
 });
 
+// ==================== ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ MULTER ====================
+
+const contentStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = join(__dirname, 'uploads', 'content');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + '.' + file.originalname.split('.').pop();
+        cb(null, uniqueName);
+    }
+});
+
+const contentUpload = multer({
+    storage: contentStorage,
+    limits: {
+        fileSize: 100 * 1024 * 1024 // 100MB
+    }
+});
+
 // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
 
 let bot = null;
@@ -177,23 +200,6 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(compression());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(express.static(join(__dirname)));
-app.use('/uploads', express.static(join(__dirname, 'uploads')));
-app.use('/admin', express.static(join(__dirname, 'admin')));
-
-app.use((req, res, next) => {
-    if (!pool) {
-        return res.status(503).json({ 
-            success: false, 
-            error: 'База данных недоступна' 
-        });
-    }
-    next();
-});
-
 // ==================== ПЕРЕСОЗДАНИЕ ТАБЛИЦ ====================
 
 async function recreateTables() {
@@ -218,6 +224,8 @@ async function recreateTables() {
             'streams',
             'podcasts',
             'courses',
+            'categories',
+            'navigation_items',
             'users'
         ];
         
@@ -505,7 +513,7 @@ async function createTables() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
-            -- Таблица для навигационных кнопок
+            -- ==================== ТАБЛИЦА НАВИГАЦИИ ====================
             CREATE TABLE IF NOT EXISTS navigation_items (
                 id SERIAL PRIMARY KEY,
                 title VARCHAR(255) NOT NULL,
@@ -515,16 +523,35 @@ async function createTables() {
                 page VARCHAR(100) NOT NULL,
                 position INTEGER DEFAULT 0,
                 is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- ==================== ТАБЛИЦА КАТЕГОРИЙ ====================
+            CREATE TABLE IF NOT EXISTS categories (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                type VARCHAR(50) NOT NULL, -- courses, podcasts, etc
+                description TEXT,
+                is_active BOOLEAN DEFAULT true,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+
+            -- Индексы для производительности
+            CREATE INDEX IF NOT EXISTS idx_content_instructors_content ON content_instructors(content_id, content_type);
+            CREATE INDEX IF NOT EXISTS idx_favorites_user_content ON favorites(user_id, content_type);
+            CREATE INDEX IF NOT EXISTS idx_navigation_position ON navigation_items(position);
+            CREATE INDEX IF NOT EXISTS idx_courses_active ON courses(is_active, category);
+            CREATE INDEX IF NOT EXISTS idx_user_progress_user ON user_progress(user_id);
         `);
         
-        console.log('✅ Таблицы созданы');
+        console.log('✅ Таблицы и индексы созданы');
     } catch (error) {
         console.error('❌ Ошибка создания таблиц:', error);
         throw error;
     }
 }
+
 async function checkTableStructure() {
     try {
         const tablesToCheck = [
@@ -695,17 +722,18 @@ async function seedDemoData() {
             `);
         }
 
-      // Демо-планы подписок
-const { rows: planCount } = await pool.query('SELECT COUNT(*) FROM subscription_plans');
-if (parseInt(planCount[0].count) === 0) {
-    console.log('💰 Добавляем планы подписок...');
-    await pool.query(`
-        INSERT INTO subscription_plans (name, description, price_monthly, price_quarterly, price_yearly, features, is_active) VALUES
-        ('Базовый', 'Доступ к базовым курсам и материалам', 2900, 7500, 27000, '["Доступ к 5 базовым курсам", "Просмотр вебинаров", "База материалов", "Поддержка по email"]', true),
-        ('Профессиональный', 'Полный доступ ко всем курсам', 5900, 15000, 54000, '["Все курсы Академии", "Прямые эфиры", "Закрытый чат", "Персональная поддержка", "Сертификаты"]', true),
-        ('Премиум', 'Максимальные возможности + менторство', 9900, 27000, 99000, '["Все курсы + будущие", "Личное менторство", "Разбор кейсов", "Участие в воркшопах", "Премиум-поддержка"]', true)
-    `);
-}
+        // Демо-планы подписок
+        const { rows: planCount } = await pool.query('SELECT COUNT(*) FROM subscription_plans');
+        if (parseInt(planCount[0].count) === 0) {
+            console.log('💰 Добавляем планы подписок...');
+            await pool.query(`
+                INSERT INTO subscription_plans (name, description, price_monthly, price_quarterly, price_yearly, features, is_active) VALUES
+                ('Базовый', 'Доступ к базовым курсам и материалам', 2900, 7500, 27000, '["Доступ к 5 базовым курсам", "Просмотр вебинаров", "База материалов", "Поддержка по email"]', true),
+                ('Профессиональный', 'Полный доступ ко всем курсам', 5900, 15000, 54000, '["Все курсы Академии", "Прямые эфиры", "Закрытый чат", "Персональная поддержка", "Сертификаты"]', true),
+                ('Премиум', 'Максимальные возможности + менторство', 9900, 27000, 99000, '["Все курсы + будущие", "Личное менторство", "Разбор кейсов", "Участие в воркшопах", "Премиум-поддержка"]', true)
+            `);
+        }
+
         // Демо-навигация
         const { rows: navCount } = await pool.query('SELECT COUNT(*) FROM navigation_items');
         if (parseInt(navCount[0].count) === 0) {
@@ -720,6 +748,24 @@ if (parseInt(planCount[0].count) === 0) {
                 ('Мероприятия', 'Онлайн и офлайн события', '🗺️', 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop', 'events', 6, true),
                 ('Сообщество', 'Правила и ценности', '👥', 'https://images.unsplash.com/photo-1551836026-d5c55ac5d4c5?w=400&h=200&fit=crop', 'community', 7, true),
                 ('Избранное', 'Сохраненные материалы', '❤️', 'https://images.unsplash.com/photo-1579546929662-711aa81148cf?w=400&h=200&fit=crop', 'favorites', 8, true)
+            `);
+        }
+
+        // Демо-категории
+        const { rows: categoryCount } = await pool.query('SELECT COUNT(*) FROM categories');
+        if (parseInt(categoryCount[0].count) === 0) {
+            console.log('📂 Добавляем демо-категории...');
+            await pool.query(`
+                INSERT INTO categories (name, type, description) VALUES
+                ('Неврология', 'courses', 'Курсы по неврологии'),
+                ('Мануальные техники', 'courses', 'Курсы по мануальной терапии'),
+                ('Реабилитация', 'courses', 'Курсы по реабилитации'),
+                ('Неврология', 'podcasts', 'Подкасты по неврологии'),
+                ('Мануальные техники', 'podcasts', 'Подкасты по мануальной терапии'),
+                ('Диагностика', 'videos', 'Видео по диагностике'),
+                ('Лечение', 'videos', 'Видео по лечению'),
+                ('Чек-листы', 'materials', 'Чек-листы для врачей'),
+                ('Протоколы', 'materials', 'Протоколы лечения')
             `);
         }
 
@@ -740,6 +786,7 @@ if (parseInt(planCount[0].count) === 0) {
         console.error('❌ Ошибка добавления демо-данных:', error);
     }
 }
+
 // ==================== TELEGRAM BOT ====================
 
 function setupBot() {
@@ -1056,7 +1103,6 @@ app.get('/api/subscription/plans', async (req, res) => {
     }
 });
 
-// ДОБАВИТЬ ЭТОТ МАРШРУТ СЮДА:
 // Получить подписку пользователя
 app.get('/api/subscription/user/:userId', async (req, res) => {
     try {
@@ -1354,9 +1400,9 @@ app.post('/api/user', async (req, res) => {
     }
 });
 
-// ==================== API ДЛЯ НАВИГАЦИОННЫХ КНОПОК ====================
+// ==================== API ДЛЯ НАВИГАЦИИ ====================
 
-// Получить все навигационные кнопки
+// Получить навигацию
 app.get('/api/navigation', async (req, res) => {
     try {
         const { rows } = await pool.query(`
@@ -1368,6 +1414,318 @@ app.get('/api/navigation', async (req, res) => {
     } catch (error) {
         console.error('Navigation API error:', error);
         res.status(500).json({ success: false, error: 'Ошибка загрузки навигации' });
+    }
+});
+
+// Создать навигационную кнопку
+app.post('/api/admin/navigation', upload.single('image'), async (req, res) => {
+    try {
+        const { title, description, icon, page, position } = req.body;
+        let image_url = req.body.image_url;
+
+        if (req.file) {
+            image_url = `/uploads/${req.file.filename}`;
+        }
+
+        const { rows } = await pool.query(`
+            INSERT INTO navigation_items (title, description, icon, image_url, page, position)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *
+        `, [title, description, icon, image_url, page, parseInt(position || 0)]);
+
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Create navigation error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания навигации' });
+    }
+});
+
+// Обновить навигационную кнопку
+app.put('/api/admin/navigation/:id', upload.single('image'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description, icon, page, position, is_active } = req.body;
+        
+        let image_url = req.body.image_url;
+        if (req.file) {
+            image_url = `/uploads/${req.file.filename}`;
+        }
+
+        const { rows } = await pool.query(`
+            UPDATE navigation_items 
+            SET title = $1, description = $2, icon = $3, image_url = $4, page = $5, 
+                position = $6, is_active = $7, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $8
+            RETURNING *
+        `, [title, description, icon, image_url, page, parseInt(position || 0), is_active === 'true', id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Навигация не найдена' });
+        }
+
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Update navigation error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка обновления навигации' });
+    }
+});
+
+// Удалить навигационную кнопку
+app.delete('/api/admin/navigation/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const { rows } = await pool.query(`
+            DELETE FROM navigation_items 
+            WHERE id = $1 
+            RETURNING *
+        `, [id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Навигация не найдена' });
+        }
+
+        res.json({ success: true, message: 'Навигация удалена' });
+    } catch (error) {
+        console.error('Delete navigation error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка удаления навигации' });
+    }
+});
+
+// ==================== API ДЛЯ КАТЕГОРИЙ ====================
+
+// Получить категории по типу
+app.get('/api/categories/:type', async (req, res) => {
+    try {
+        const { type } = req.params;
+        const { rows } = await pool.query(`
+            SELECT * FROM categories 
+            WHERE type = $1 AND is_active = true 
+            ORDER BY name
+        `, [type]);
+        
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Categories API error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки категорий' });
+    }
+});
+
+// ==================== УЛУЧШЕННЫЙ API ДЛЯ КОНТЕНТА ====================
+
+// Универсальный обработчик создания контента
+app.post('/api/admin/content/:type', contentUpload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'video', maxCount: 1 },
+    { name: 'audio', maxCount: 1 },
+    { name: 'file', maxCount: 1 }
+]), async (req, res) => {
+    try {
+        const { type } = req.params;
+        const data = req.body;
+        
+        // Обработка загруженных файлов
+        const files = req.files || {};
+        const imageFile = files.image ? files.image[0] : null;
+        const videoFile = files.video ? files.video[0] : null;
+        const audioFile = files.audio ? files.audio[0] : null;
+        const fileFile = files.file ? files.file[0] : null;
+
+        let image_url = data.image_url;
+        let video_url = data.video_url;
+        let audio_url = data.audio_url;
+        let file_url = data.file_url;
+
+        if (imageFile) image_url = `/uploads/content/${imageFile.filename}`;
+        if (videoFile) video_url = `/uploads/content/${videoFile.filename}`;
+        if (audioFile) audio_url = `/uploads/content/${audioFile.filename}`;
+        if (fileFile) file_url = `/uploads/content/${fileFile.filename}`;
+
+        const contentQueries = {
+            'courses': {
+                query: `INSERT INTO courses (title, description, price, discount, duration, modules, category, level, students_count, rating, featured, image_url, video_url, is_active) 
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+                values: [
+                    data.title, data.description, 
+                    parseInt(data.price || 0), 
+                    parseInt(data.discount || 0), 
+                    data.duration, 
+                    parseInt(data.modules || 0), 
+                    data.category, 
+                    data.level,
+                    parseInt(data.students_count || 0),
+                    parseFloat(data.rating || 4.5),
+                    data.featured === 'true',
+                    image_url,
+                    video_url,
+                    data.is_active !== 'false'
+                ]
+            },
+            'podcasts': {
+                query: `INSERT INTO podcasts (title, description, duration, category, listens, image_url, audio_url, is_active) 
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+                values: [
+                    data.title, data.description, data.duration, data.category,
+                    parseInt(data.listens || 0), image_url, audio_url, data.is_active !== 'false'
+                ]
+            },
+            'videos': {
+                query: `INSERT INTO videos (title, description, duration, category, views, thumbnail_url, video_url, is_active) 
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+                values: [
+                    data.title, data.description, data.duration, data.category,
+                    parseInt(data.views || 0), image_url, video_url, data.is_active !== 'false'
+                ]
+            },
+            'materials': {
+                query: `INSERT INTO materials (title, description, category, material_type, downloads, image_url, file_url, is_active) 
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+                values: [
+                    data.title, data.description, data.category, data.material_type,
+                    parseInt(data.downloads || 0), image_url, file_url, data.is_active !== 'false'
+                ]
+            },
+            'streams': {
+                query: `INSERT INTO streams (title, description, duration, category, participants, is_live, thumbnail_url, video_url, is_active) 
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+                values: [
+                    data.title, data.description, data.duration, data.category,
+                    parseInt(data.participants || 0), data.is_live === 'true',
+                    image_url, video_url, data.is_active !== 'false'
+                ]
+            },
+            'events': {
+                query: `INSERT INTO events (title, description, event_type, event_date, location, participants, image_url, registration_url, is_active) 
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+                values: [
+                    data.title, data.description, data.event_type, data.event_date,
+                    data.location, parseInt(data.participants || 0), 
+                    image_url, data.registration_url, data.is_active !== 'false'
+                ]
+            },
+            'news': {
+                query: `INSERT INTO news (title, description, content, date, category, type, image_url, is_active) 
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+                values: [
+                    data.title, data.description, data.content, data.date,
+                    data.category, data.type, image_url, data.is_active !== 'false'
+                ]
+            }
+        };
+
+        if (!contentQueries[type]) {
+            return res.status(400).json({ success: false, error: 'Неверный тип контента' });
+        }
+
+        const { rows } = await pool.query(contentQueries[type].query, contentQueries[type].values);
+        
+        // Обработка преподавателей для курсов
+        if (type === 'courses' && data.instructors) {
+            try {
+                const instructors = JSON.parse(data.instructors);
+                for (const instructor of instructors) {
+                    await pool.query(`
+                        INSERT INTO content_instructors (content_id, content_type, instructor_id, role)
+                        VALUES ($1, $2, $3, $4)
+                    `, [rows[0].id, 'courses', instructor.id, instructor.role]);
+                }
+            } catch (e) {
+                console.log('No instructors to link');
+            }
+        }
+
+        // Логирование действия
+        await pool.query(
+            'INSERT INTO admin_actions (admin_id, action_type, description, target_id) VALUES ($1, $2, $3, $4)',
+            [data.adminId || 1, 'create', `Создан ${type}: ${data.title}`, rows[0].id]
+        );
+
+        res.json({ success: true, data: rows[0] });
+        
+    } catch (error) {
+        console.error('Admin content creation error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания контента: ' + error.message });
+    }
+});
+
+// ==================== API ДЛЯ ФИЛЬТРАЦИИ ====================
+
+// Получить контент с фильтрацией
+app.get('/api/content/:type', async (req, res) => {
+    try {
+        const { type } = req.params;
+        const { category, level, material_type, sort, page = 1, limit = 12 } = req.query;
+        
+        let query = `SELECT * FROM ${type} WHERE is_active = true`;
+        const values = [];
+        let paramCount = 0;
+
+        // Фильтрация по категории
+        if (category && category !== 'all') {
+            paramCount++;
+            query += ` AND category = $${paramCount}`;
+            values.push(category);
+        }
+
+        // Фильтрация по уровню (для курсов)
+        if (level && level !== 'all' && type === 'courses') {
+            paramCount++;
+            query += ` AND level = $${paramCount}`;
+            values.push(level);
+        }
+
+        // Фильтрация по типу материала
+        if (material_type && material_type !== 'all' && type === 'materials') {
+            paramCount++;
+            query += ` AND material_type = $${paramCount}`;
+            values.push(material_type);
+        }
+
+        // Сортировка
+        switch(sort) {
+            case 'price_asc':
+                query += ' ORDER BY price ASC';
+                break;
+            case 'price_desc':
+                query += ' ORDER BY price DESC';
+                break;
+            case 'popular':
+                if (type === 'courses') query += ' ORDER BY students_count DESC';
+                else if (type === 'podcasts') query += ' ORDER BY listens DESC';
+                else if (type === 'videos') query += ' ORDER BY views DESC';
+                else query += ' ORDER BY created_at DESC';
+                break;
+            case 'newest':
+            default:
+                query += ' ORDER BY created_at DESC';
+                break;
+        }
+
+        // Пагинация
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        query += ` LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
+        values.push(parseInt(limit), offset);
+
+        const { rows } = await pool.query(query, values);
+        
+        // Получаем общее количество для пагинации
+        const countQuery = query.replace('SELECT *', 'SELECT COUNT(*)').split(' LIMIT ')[0];
+        const countResult = await pool.query(countQuery, values.slice(0, -2));
+        const total = parseInt(countResult.rows[0].count);
+
+        res.json({ 
+            success: true, 
+            data: rows,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Filtered content error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки контента' });
     }
 });
 
@@ -1496,124 +1854,6 @@ app.post('/api/admin/content/:type/:id/instructors', async (req, res) => {
     } catch (error) {
         console.error('Add instructor to content error:', error);
         res.status(500).json({ success: false, error: 'Ошибка привязки преподавателя' });
-    }
-});
-
-// Создание контента
-app.post('/api/admin/content/:type', upload.single('file'), async (req, res) => {
-    try {
-        const { type } = req.params;
-        const data = req.body;
-        
-        let query = '';
-        let values = [];
-        let fileUrl = null;
-
-        if (req.file) {
-            fileUrl = `/uploads/${req.file.filename}`;
-        }
-
-        switch (type) {
-            case 'courses':
-                query = `INSERT INTO courses (title, description, price, discount, duration, modules, category, level, image_url, video_url) 
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`;
-                values = [
-                    data.title, 
-                    data.description, 
-                    parseInt(data.price), 
-                    parseInt(data.discount || 0), 
-                    data.duration, 
-                    parseInt(data.modules), 
-                    data.category, 
-                    data.level, 
-                    data.image_url || fileUrl, 
-                    data.video_url
-                ];
-                break;
-
-            case 'podcasts':
-                query = `INSERT INTO podcasts (title, description, duration, category, image_url, audio_url) 
-                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
-                values = [
-                    data.title, 
-                    data.description, 
-                    data.duration, 
-                    data.category, 
-                    data.image_url || fileUrl, 
-                    data.audio_url || fileUrl
-                ];
-                break;
-
-            case 'videos':
-                query = `INSERT INTO videos (title, description, duration, category, thumbnail_url, video_url) 
-                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
-                values = [
-                    data.title, 
-                    data.description, 
-                    data.duration, 
-                    data.category, 
-                    data.thumbnail_url || fileUrl, 
-                    data.video_url || fileUrl
-                ];
-                break;
-
-            case 'materials':
-                query = `INSERT INTO materials (title, description, category, material_type, image_url, file_url) 
-                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
-                values = [
-                    data.title, 
-                    data.description, 
-                    data.category, 
-                    data.material_type, 
-                    data.image_url || fileUrl, 
-                    data.file_url || fileUrl
-                ];
-                break;
-
-            case 'events':
-                query = `INSERT INTO events (title, description, event_type, event_date, location, image_url, registration_url) 
-                         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
-                values = [
-                    data.title, 
-                    data.description, 
-                    data.event_type, 
-                    data.event_date, 
-                    data.location, 
-                    data.image_url || fileUrl, 
-                    data.registration_url
-                ];
-                break;
-
-            case 'news':
-                query = `INSERT INTO news (title, description, content, date, category, type, image_url) 
-                         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
-                values = [
-                    data.title, 
-                    data.description, 
-                    data.content, 
-                    data.date, 
-                    data.category, 
-                    data.type, 
-                    data.image_url || fileUrl
-                ];
-                break;
-
-            default:
-                return res.status(400).json({ success: false, error: 'Неверный тип контента' });
-        }
-        
-        const { rows } = await pool.query(query, values);
-        
-        // Логируем действие админа
-        await pool.query(
-            'INSERT INTO admin_actions (admin_id, action_type, description, target_id) VALUES ($1, $2, $3, $4)',
-            [data.adminId, 'create', `Создан ${type}: ${data.title}`, rows[0].id]
-        );
-
-        res.json({ success: true, data: rows[0] });
-    } catch (error) {
-        console.error('Admin content creation error:', error);
-        res.status(500).json({ success: false, error: 'Ошибка создания контента' });
     }
 });
 
@@ -1821,6 +2061,7 @@ app.get('*', (req, res) => {
     console.log('🔄 Fallback для:', req.originalUrl);
     res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
+
 // ==================== ЗАПУСК СЕРВЕРА ====================
 async function startServer() {
     try {
