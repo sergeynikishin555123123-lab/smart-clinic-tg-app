@@ -148,31 +148,32 @@ class AcademyApp {
 
     // ==================== ОСНОВНЫЕ МЕТОДЫ ====================
 
-    async init() {
-        if (this.isInitialized) return;
+async init() {
+    if (this.isInitialized) return;
+    
+    console.log('🚀 Инициализация Академии АНБ...');
+    
+    try {
+        await this.safeInitializeTelegramWebApp();
+        await Promise.all([
+            this.loadUserData(),
+            this.loadContent(),
+            this.loadSubscriptionData(),
+            this.loadInstructors(),
+            this.loadNavigation() // ДОБАВИТЬ ЭТУ СТРОЧКУ
+        ]);
         
-        console.log('🚀 Инициализация Академии АНБ...');
+        this.renderPage('home');
+        this.setupEventListeners();
         
-        try {
-            await this.safeInitializeTelegramWebApp();
-            await Promise.all([
-                this.loadUserData(),
-                this.loadContent(),
-                this.loadSubscriptionData(), // ДОБАВИТЬ ЭТУ СТРОЧКУ
-                this.loadInstructors()       // ДОБАВИТЬ ЭТУ СТРОЧКУ
-            ]);
-            
-            this.renderPage('home');
-            this.setupEventListeners();
-            
-            this.isInitialized = true;
-            console.log('✅ Приложение готово к работе');
-            
-        } catch (error) {
-            console.error('❌ Ошибка инициализации:', error);
-            this.showFatalError('Не удалось загрузить приложение: ' + error.message);
-        }
+        this.isInitialized = true;
+        console.log('✅ Приложение готово к работе');
+        
+    } catch (error) {
+        console.error('❌ Ошибка инициализации:', error);
+        this.showFatalError('Не удалось загрузить приложение: ' + error.message);
     }
+}
 
     async safeInitializeTelegramWebApp() {
         return new Promise((resolve) => {
@@ -270,6 +271,28 @@ async loadUserData() {
             console.error('Ошибка загрузки контента:', error);
             this.createDemoContent();
         }
+       // Загрузка навигационных кнопок
+    async loadNavigation() {
+        try {
+            const response = await this.safeApiCall('/api/navigation');
+            if (response && response.success) {
+                this.navigationItems = response.data;
+            } else {
+                // Демо-навигация если API не работает
+                this.navigationItems = [
+                    { title: 'Курсы', description: 'Доступные курсы и обучение', icon: '📚', image_url: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop', page: 'courses' },
+                    { title: 'Подкасты', description: 'Аудио подкасты и лекции', icon: '🎧', image_url: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=200&fit=crop', page: 'podcasts' },
+                    { title: 'Эфиры', description: 'Прямые эфиры и разборы', icon: '📹', image_url: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=200&fit=crop', page: 'streams' },
+                    { title: 'Видео', description: 'Короткие обучающие видео', icon: '🎯', image_url: 'https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=400&h=200&fit=crop', page: 'videos' },
+                    { title: 'Материалы', description: 'Чек-листы и протоколы', icon: '📋', image_url: 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=400&h=200&fit=crop', page: 'materials' },
+                    { title: 'Мероприятия', description: 'Онлайн и офлайн события', icon: '🗺️', image_url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop', page: 'events' },
+                    { title: 'Сообщество', description: 'Правила и ценности', icon: '👥', image_url: 'https://images.unsplash.com/photo-1551836026-d5c55ac5d4c5?w=400&h=200&fit=crop', page: 'community' },
+                    { title: 'Избранное', description: 'Сохраненные материалы', icon: '❤️', image_url: 'https://images.unsplash.com/photo-1579546929662-711aa81148cf?w=400&h=200&fit=crop', page: 'favorites' }
+                ];
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки навигации:', error);
+        }
     }
 
     // ==================== РЕНДЕРИНГ СТРАНИЦ ====================
@@ -356,95 +379,21 @@ createHomePage() {
                 </div>
             </div>
 
-            <!-- Main Navigation Grid -->
-            <div class="main-navigation-grid">
-                <div class="nav-card-large" onclick="app.renderPage('courses')">
-                    <div class="nav-card-image">
-                        <img src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop" alt="Курсы">
-                        <div class="nav-card-overlay">
-                            <div class="nav-card-icon">📚</div>
-                            <h3>Курсы</h3>
-                            <p>${this.allContent.courses?.length || 0} доступных курсов</p>
+            <!-- Main Navigation Grid - 2 колонки -->
+            <div class="main-navigation-grid two-columns">
+                ${this.navigationItems.map(item => `
+                    <div class="nav-card-large" onclick="app.renderPage('${item.page}')">
+                        <div class="nav-card-image">
+                            <img src="${item.image_url}" alt="${item.title}" 
+                                 onerror="this.src='https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop'">
+                            <div class="nav-card-overlay">
+                                <div class="nav-card-icon">${item.icon}</div>
+                                <h3>${item.title}</h3>
+                                <p>${item.description}</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="nav-card-large" onclick="app.renderPage('podcasts')">
-                    <div class="nav-card-image">
-                        <img src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=200&fit=crop" alt="Подкасты">
-                        <div class="nav-card-overlay">
-                            <div class="nav-card-icon">🎧</div>
-                            <h3>АНБ FM</h3>
-                            <p>Аудио подкасты и лекции</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="nav-card-large" onclick="app.renderPage('streams')">
-                    <div class="nav-card-image">
-                        <img src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=200&fit=crop" alt="Эфиры">
-                        <div class="nav-card-overlay">
-                            <div class="nav-card-icon">📹</div>
-                            <h3>Эфиры</h3>
-                            <p>Прямые эфиры и разборы</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="nav-card-large" onclick="app.renderPage('videos')">
-                    <div class="nav-card-image">
-                        <img src="https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=400&h=200&fit=crop" alt="Видео">
-                        <div class="nav-card-overlay">
-                            <div class="nav-card-icon">🎯</div>
-                            <h3>Видео-шпаргалки</h3>
-                            <p>Короткие обучающие видео</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="nav-card-large" onclick="app.renderPage('materials')">
-                    <div class="nav-card-image">
-                        <img src="https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=400&h=200&fit=crop" alt="Материалы">
-                        <div class="nav-card-overlay">
-                            <div class="nav-card-icon">📋</div>
-                            <h3>Материалы</h3>
-                            <p>Чек-листы, протоколы, методички</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="nav-card-large" onclick="app.renderPage('events')">
-                    <div class="nav-card-image">
-                        <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop" alt="Мероприятия">
-                        <div class="nav-card-overlay">
-                            <div class="nav-card-icon">🗺️</div>
-                            <h3>Мероприятия</h3>
-                            <p>Онлайн и офлайн события</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="nav-card-large" onclick="app.renderPage('community')">
-                    <div class="nav-card-image">
-                        <img src="https://images.unsplash.com/photo-1551836026-d5c55ac5d4c5?w=400&h=200&fit=crop" alt="Сообщество">
-                        <div class="nav-card-overlay">
-                            <div class="nav-card-icon">👥</div>
-                            <h3>Сообщество</h3>
-                            <p>Правила и ценности АНБ</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="nav-card-large" onclick="app.renderPage('favorites')">
-                    <div class="nav-card-image">
-                        <img src="https://images.unsplash.com/photo-1579546929662-711aa81148cf?w=400&h=200&fit=crop" alt="Избранное">
-                        <div class="nav-card-overlay">
-                            <div class="nav-card-icon">❤️</div>
-                            <h3>Избранное</h3>
-                            <p>${this.getTotalFavorites()} сохраненных материалов</p>
-                        </div>
-                    </div>
-                </div>
+                `).join('')}
             </div>
 
             ${this.currentUser?.progress ? `
@@ -530,37 +479,6 @@ createHomePage() {
                                         Подробнее
                                     </button>
                                 </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-            ` : ''}
-
-            ${liveStreams.length > 0 ? `
-            <!-- Live Streams -->
-            <div class="live-section">
-                <div class="section-header">
-                    <h3 class="section-title">🔴 Прямой эфир</h3>
-                    <div class="live-indicator">
-                        <div class="live-dot"></div>
-                        LIVE
-                    </div>
-                </div>
-                <div class="live-streams">
-                    ${liveStreams.map(stream => `
-                        <div class="live-card" onclick="app.openStreamDetail(${stream.id})">
-                            <div class="live-badge">LIVE</div>
-                            <div class="stream-image">
-                                <img src="${stream.thumbnail_url}" alt="${stream.title}" onerror="this.src='https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=250&fit=crop'">
-                                <div class="stream-overlay">
-                                    <div class="play-button">▶️</div>
-                                    <div class="viewers">👥 ${stream.participants}</div>
-                                </div>
-                            </div>
-                            <div class="stream-info">
-                                <h4>${stream.title}</h4>
-                                <p>${stream.description}</p>
                             </div>
                         </div>
                     `).join('')}
