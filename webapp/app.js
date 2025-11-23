@@ -520,448 +520,229 @@ createHomePage() {
         `;
     }
 
-    // ==================== СТРАНИЦА КУРСОВ ====================
+// ==================== ДЕТАЛЬНАЯ СТРАНИЦА КУРСА ====================
 
-    createCoursesPage() {
-        const courses = this.allContent.courses || [];
-        const categories = [...new Set(courses.map(c => c.category))];
-        const levels = [...new Set(courses.map(c => c.level))];
-        
-        return `
-            <div class="page courses-page">
-                <div class="page-header">
-                    <h2>📚 Курсы</h2>
-                    <div class="header-actions">
-                        <div class="search-box">
-                            <input type="text" 
-                                   class="search-input" 
-                                   placeholder="Поиск курсов..." 
-                                   value="${this.state.searchQuery}"
-                                   oninput="app.handleSearch(event)"
-                                   onkeypress="if(event.key==='Enter') app.searchCourses()">
-                            <button class="search-btn" onclick="app.searchCourses()">
-                                🔍
-                            </button>
-                        </div>
-                        <div class="view-toggle">
-                            <button class="view-btn ${this.state.viewMode === 'grid' ? 'active' : ''}" 
-                                    onclick="app.toggleViewMode('grid')">
-                                ▦ Сетка
-                            </button>
-                            <button class="view-btn ${this.state.viewMode === 'list' ? 'active' : ''}" 
-                                    onclick="app.toggleViewMode('list')">
-                                ☰ Список
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="filters-section">
-                    <div class="filter-group">
-                        <label>Категория:</label>
-                        <select class="filter-select" onchange="app.applyFilter('category', this.value)">
-                            <option value="">Все категории</option>
-                            ${categories.map(cat => `
-                                <option value="${cat}" ${this.state.activeFilters.category === cat ? 'selected' : ''}>
-                                    ${cat}
-                                </option>
-                            `).join('')}
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label>Уровень:</label>
-                        <select class="filter-select" onchange="app.applyFilter('level', this.value)">
-                            <option value="">Все уровни</option>
-                            ${levels.map(level => `
-                                <option value="${level}" ${this.state.activeFilters.level === level ? 'selected' : ''}>
-                                    ${this.getLevelName(level)}
-                                </option>
-                            `).join('')}
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label>Сортировка:</label>
-                        <select class="filter-select" onchange="app.applySorting(this.value)">
-                            <option value="newest" ${this.state.sortBy === 'newest' ? 'selected' : ''}>Сначала новые</option>
-                            <option value="popular" ${this.state.sortBy === 'popular' ? 'selected' : ''}>По популярности</option>
-                            <option value="price_low" ${this.state.sortBy === 'price_low' ? 'selected' : ''}>Сначала дешевые</option>
-                            <option value="price_high" ${this.state.sortBy === 'price_high' ? 'selected' : ''}>Сначала дорогие</option>
-                            <option value="rating" ${this.state.sortBy === 'rating' ? 'selected' : ''}>По рейтингу</option>
-                        </select>
-                    </div>
-                    
-                    <button class="btn btn-outline reset-filters" onclick="app.resetFilters()">
-                        ❌ Сбросить
-                    </button>
-                </div>
-                
-                <div class="results-info">
-                    <div class="results-count">
-                        Найдено курсов: <strong>${this.getFilteredCourses().length}</strong>
-                    </div>
-                    ${this.state.searchQuery ? `
-                        <div class="search-query">
-                            По запросу: "${this.state.searchQuery}"
-                        </div>
-                    ` : ''}
-                </div>
-                
-                <div class="content-container ${this.state.viewMode}">
-                    ${courses.length > 0 ? 
-                        this.state.viewMode === 'grid' ? 
-                            this.renderCoursesGrid(this.getFilteredCourses()) : 
-                            this.renderCoursesList(this.getFilteredCourses()) : 
-                        this.createEmptyState('courses')
-                    }
-                </div>
-            </div>
-        `;
-    }
-
-    renderCoursesGrid(courses) {
-        if (courses.length === 0) {
-            return this.createEmptyState('courses', 'По вашему запросу ничего не найдено');
-        }
-        
-        return `
-            <div class="content-grid">
-                ${courses.map(course => `
-                    <div class="content-card course-card" onclick="app.openCourseDetail(${course.id})">
-                        ${course.featured ? `<div class="featured-badge">⭐ Рекомендуем</div>` : ''}
-                        ${course.discount > 0 ? `<div class="discount-badge">-${course.discount}%</div>` : ''}
-                        
-                        <div class="card-image">
-                            <img src="${course.image_url}" alt="${course.title}" onerror="this.src='/webapp/assets/course-default.jpg'">
-                            <div class="card-overlay">
-                                <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
-                                        onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
-                                    ${this.isFavorite(course.id, 'courses') ? '❤️' : '🤍'}
-                                </button>
-                                ${course.video_url ? `
-                                <button class="preview-btn" onclick="event.stopPropagation(); app.previewContent('video', '${course.video_url}', {title: '${course.title}', id: ${course.id}})">
-                                    👁️
-                                </button>
-                                ` : ''}
-                            </div>
-                        </div>
-                        
-                        <div class="card-content">
-                            <div class="card-category">${course.category}</div>
-                            <h3 class="card-title">${course.title}</h3>
-                            <p class="card-description">${course.description}</p>
-                            
-                            <div class="card-meta">
-                                <span class="meta-item">⏱️ ${course.duration}</span>
-                                <span class="meta-item">🎯 ${course.modules} модулей</span>
-                                <span class="meta-item">⭐ ${course.rating}</span>
-                                <span class="meta-item">👥 ${course.students_count}</span>
-                            </div>
-                            
-                            <div class="card-level">
-                                <span class="level-badge level-${course.level}">
-                                    ${this.getLevelName(course.level)}
-                                </span>
-                            </div>
-                            
-                            <div class="card-footer">
-                                <div class="price-section">
-                                    ${course.discount > 0 ? `
-                                        <div class="price-original">${this.formatPrice(course.price)}</div>
-                                        <div class="price-current">${this.formatPrice(course.price * (1 - course.discount/100))}</div>
-                                    ` : `
-                                        <div class="price-current">${this.formatPrice(course.price)}</div>
-                                    `}
-                                </div>
-                                <div class="card-actions">
-                                    <button class="btn btn-primary btn-small" 
-                                            onclick="event.stopPropagation(); app.openCourseDetail(${course.id})">
-                                        Подробнее
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    renderCoursesList(courses) {
-        if (courses.length === 0) {
-            return this.createEmptyState('courses', 'По вашему запросу ничего не найдено');
-        }
-        
-        return `
-            <div class="content-list">
-                ${courses.map(course => `
-                    <div class="list-item course-item" onclick="app.openCourseDetail(${course.id})">
-                        <div class="item-image">
-                            <img src="${course.image_url}" alt="${course.title}" onerror="this.src='/webapp/assets/course-default.jpg'">
-                        </div>
-                        <div class="item-content">
-                            <div class="item-header">
-                                <h3 class="item-title">${course.title}</h3>
-                                <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
-                                        onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
-                                    ${this.isFavorite(course.id, 'courses') ? '❤️' : '🤍'}
-                                </button>
-                            </div>
-                            <p class="item-description">${course.description}</p>
-                            <div class="item-meta">
-                                <span class="meta-item">${course.category}</span>
-                                <span class="meta-item">⏱️ ${course.duration}</span>
-                                <span class="meta-item">🎯 ${course.modules} модулей</span>
-                                <span class="meta-item level-${course.level}">${this.getLevelName(course.level)}</span>
-                            </div>
-                            <div class="item-footer">
-                                <div class="price-section">
-                                    ${course.discount > 0 ? `
-                                        <div class="price-original">${this.formatPrice(course.price)}</div>
-                                        <div class="price-current">${this.formatPrice(course.price * (1 - course.discount/100))}</div>
-                                    ` : `
-                                        <div class="price-current">${this.formatPrice(course.price)}</div>
-                                    `}
-                                </div>
-                                <div class="item-actions">
-                                    <button class="btn btn-primary btn-small" 
-                                            onclick="event.stopPropagation(); app.openCourseDetail(${course.id})">
-                                        Подробнее
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    // ==================== ДЕТАЛЬНАЯ СТРАНИЦА КУРСА ====================
-
-    createCourseDetailPage(courseId) {
-        const course = this.allContent.courses?.find(c => c.id == courseId) || this.getDemoCourse();
-        
-        return `
-            <div class="page course-detail-page">
-                <div class="detail-header">
-                    <button class="back-btn" onclick="app.renderPage('courses')">
-                        ← Назад к курсам
-                    </button>
-                    <h2>${course.title}</h2>
-                </div>
-
-                <div class="detail-container">
-                    <div class="detail-hero">
-                        <div class="hero-image">
-                            <img src="${course.image_url}" alt="${course.title}" onerror="this.src='/webapp/assets/course-default.jpg'">
-                            <div class="image-overlay">
-                                ${course.video_url ? `
-                                <button class="btn btn-primary btn-large play-btn" onclick="app.previewContent('video', '${course.video_url}', {title: '${course.title}', id: ${course.id}})">
-                                    ▶️ Предпросмотр
-                                </button>
-                                ` : ''}
-                            </div>
-                        </div>
-                        
-                        <div class="hero-content">
-                            <div class="course-meta-large">
-                                <span class="category-badge">${course.category}</span>
-                                <span class="level-badge level-${course.level}">${this.getLevelName(course.level)}</span>
-                                <span class="rating-badge">⭐ ${course.rating}</span>
-                            </div>
-                            
-                            <h1>${course.title}</h1>
-                            <p class="course-subtitle">${course.description}</p>
-                            
-                            <div class="course-stats">
-                                <div class="stat">
-                                    <div class="stat-value">${course.modules}</div>
-                                    <div class="stat-label">Модулей</div>
-                                </div>
-                                <div class="stat">
-                                    <div class="stat-value">${course.duration}</div>
-                                    <div class="stat-label">Длительность</div>
-                                </div>
-                                <div class="stat">
-                                    <div class="stat-value">${course.students_count}</div>
-                                    <div class="stat-label">Студентов</div>
-                                </div>
-                                <div class="stat">
-                                    <div class="stat-value">${course.rating}/5</div>
-                                    <div class="stat-label">Рейтинг</div>
-                                </div>
-                            </div>
-                            
-            <div class="action-buttons">
-                ${this.currentUser?.hasActiveSubscription ? `
-                    <button class="btn btn-success btn-large" onclick="app.startCourse(${course.id})">
-                        🎯 Начать обучение (доступно по подписке)
-                    </button>
-                ` : `
-                    <button class="btn btn-primary btn-large" onclick="app.showSubscriptionModal()">
-                        💎 Получить доступ по подписке
-                    </button>
-                    <button class="btn btn-outline" onclick="app.purchaseCourse(${course.id})">
-                        💳 Купить отдельно - ${this.formatPrice(course.discount > 0 ? course.price * (1 - course.discount/100) : course.price)}
-                    </button>
-                `}
-                
-                <button class="btn btn-outline" onclick="app.toggleFavorite(${course.id}, 'courses')">
-                    ${this.isFavorite(course.id, 'courses') ? '❤️ В избранном' : '🤍 В избранное'}
+createCourseDetailPage(courseId) {
+    const course = this.allContent.courses?.find(c => c.id == courseId) || this.getDemoCourse();
+    
+    return `
+        <div class="page course-detail-page">
+            <div class="detail-header">
+                <button class="back-btn" onclick="app.renderPage('courses')">
+                    ← Назад к курсам
                 </button>
+                <h2>${course.title}</h2>
             </div>
-                            
-                            ${course.discount > 0 ? `
-                            <div class="discount-info">
-                                <span class="original-price">${this.formatPrice(course.price)}</span>
-                                <span class="discount-amount">Экономия ${course.discount}%</span>
-                            </div>
-                            ` : ''}
-                        </div>
-                 </div>
 
-                        <!-- ДОБАВИТЬ СЕКЦИЮ ПРЕПОДАВАТЕЛЕЙ -->
-                        ${course.instructors && course.instructors.length > 0 ? 
-                            this.createInstructorsSection(course.instructors) : ''}
-
-                        <div class="detail-tabs">
-                        <button class="tab-btn active" onclick="app.switchCourseTab('about')">
-                            📋 О курсе
-                        </button>
-                        <button class="tab-btn" onclick="app.switchCourseTab('curriculum')">
-                            🎯 Программа
-                        </button>
-                        <button class="tab-btn" onclick="app.switchCourseTab('reviews')">
-                            💬 Отзывы
-                        </button>
-                    </div>
-
-                    <div class="tab-content active" id="about-tab">
-                        <div class="course-description-detailed">
-                            <h3>Что вы узнаете</h3>
-                            <ul class="learning-list">
-                                <li>Современные методики диагностики и лечения</li>
-                                <li>Практические навыки для ежедневной работы</li>
-                                <li>Разбор реальных клинических случаев</li>
-                                <li>Инструменты для профессионального роста</li>
-                            </ul>
-                            
-                            <h3>Для кого этот курс</h3>
-                            <ul class="audience-list">
-                                <li>Неврологи и реабилитологи</li>
-                                <li>Мануальные терапевты</li>
-                                <li>Врачи, желающие повысить квалификацию</li>
-                                <li>Студенты медицинских вузов</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="tab-content" id="curriculum-tab">
-                        <div class="curriculum-list">
-                            ${this.createCurriculumModules(course.modules)}
-                        </div>
-                    </div>
-
-                    <div class="tab-content" id="reviews-tab">
-                        <div class="reviews-list">
-                            ${this.createCourseReviews()}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="purchase-section">
-                    <div class="pricing-card">
-                        <div class="pricing-header">
-                            <h3>Начните обучение сегодня</h3>
-                            ${course.discount > 0 ? `
-                            <div class="discount-timer">
-                                ⏰ Скидка действует еще 2 дня
-                            </div>
-                            ` : ''}
-                        </div>
-                        
-                        <div class="price-display">
-                            ${course.discount > 0 ? `
-                                <div class="original-price">${this.formatPrice(course.price)}</div>
-                            ` : ''}
-                            <div class="current-price">
-                                ${this.formatPrice(course.discount > 0 ? course.price * (1 - course.discount/100) : course.price)}
-                            </div>
-                        </div>
-                        
-                        <div class="features-list">
-                            <div class="feature-item">✅ Полный доступ к курсу</div>
-                            <div class="feature-item">✅ Сертификат о прохождении</div>
-                            <div class="feature-item">✅ Поддержка куратора</div>
-                            <div class="feature-item">✅ Доступ в закрытый чат</div>
-                            <div class="feature-item">✅ Обновления курса</div>
-                        </div>
-                        
-                        <div class="purchase-actions">
-                            <button class="btn btn-primary btn-large" onclick="app.purchaseCourse(${course.id})">
-                                💳 Купить курс
+            <div class="detail-container">
+                <div class="detail-hero">
+                    <div class="hero-image">
+                        <img src="${course.image_url}" alt="${course.title}" onerror="this.src='/webapp/assets/course-default.jpg'">
+                        <div class="image-overlay">
+                            ${course.video_url ? `
+                            <button class="btn btn-primary btn-large play-btn" onclick="app.previewContent('video', '${course.video_url}', {title: '${course.title}', id: ${course.id}})">
+                                ▶️ Предпросмотр
                             </button>
-                            <button class="btn btn-outline" onclick="app.addToCart(${course.id})">
-                                🛒 В корзину
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="hero-content">
+                        <div class="course-meta-large">
+                            <span class="category-badge">${course.category}</span>
+                            <span class="level-badge level-${course.level}">${this.getLevelName(course.level)}</span>
+                            <span class="rating-badge">⭐ ${course.rating}</span>
+                        </div>
+                        
+                        <h1>${course.title}</h1>
+                        <p class="course-subtitle">${course.description}</p>
+                        
+                        <div class="course-stats">
+                            <div class="stat">
+                                <div class="stat-value">${course.modules}</div>
+                                <div class="stat-label">Модулей</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">${course.duration}</div>
+                                <div class="stat-label">Длительность</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">${course.students_count}</div>
+                                <div class="stat-label">Студентов</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">${course.rating}/5</div>
+                                <div class="stat-label">Рейтинг</div>
+                            </div>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            ${this.currentUser?.hasActiveSubscription ? `
+                                <button class="btn btn-success btn-large" onclick="app.startCourse(${course.id})">
+                                    🎯 Начать обучение (доступно по подписке)
+                                </button>
+                            ` : `
+                                <button class="btn btn-primary btn-large" onclick="app.showSubscriptionModal()">
+                                    💎 Получить доступ по подписке
+                                </button>
+                                <button class="btn btn-outline" onclick="app.purchaseCourse(${course.id})">
+                                    💳 Купить отдельно - ${this.formatPrice(course.discount > 0 ? course.price * (1 - course.discount/100) : course.price)}
+                                </button>
+                            `}
+                            
+                            <button class="btn btn-outline" onclick="app.toggleFavorite(${course.id}, 'courses')">
+                                ${this.isFavorite(course.id, 'courses') ? '❤️ В избранном' : '🤍 В избранное'}
                             </button>
                         </div>
                         
-                        <div class="guarantee-badge">
-                            ✅ 30-дневная гарантия возврата
+                        ${course.discount > 0 ? `
+                        <div class="discount-info">
+                            <span class="original-price">${this.formatPrice(course.price)}</span>
+                            <span class="discount-amount">Экономия ${course.discount}%</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- ДОБАВИТЬ СЕКЦИЮ ПРЕПОДАВАТЕЛЕЙ -->
+                ${course.instructors && course.instructors.length > 0 ? 
+                    this.createInstructorsSection(course.instructors) : ''}
+
+                <div class="detail-tabs">
+                    <button class="tab-btn active" onclick="app.switchCourseTab('about')">
+                        📋 О курсе
+                    </button>
+                    <button class="tab-btn" onclick="app.switchCourseTab('curriculum')">
+                        🎯 Программа
+                    </button>
+                    <button class="tab-btn" onclick="app.switchCourseTab('reviews')">
+                        💬 Отзывы
+                    </button>
+                </div>
+
+                <div class="tab-content active" id="about-tab">
+                    <div class="course-description-detailed">
+                        <h3>Что вы узнаете</h3>
+                        <ul class="learning-list">
+                            <li>Современные методики диагностики и лечения</li>
+                            <li>Практические навыки для ежедневной работы</li>
+                            <li>Разбор реальных клинических случаев</li>
+                            <li>Инструменты для профессионального роста</li>
+                        </ul>
+                        
+                        <h3>Для кого этот курс</h3>
+                        <ul class="audience-list">
+                            <li>Неврологи и реабилитологи</li>
+                            <li>Мануальные терапевты</li>
+                            <li>Врачи, желающие повысить квалификацию</li>
+                            <li>Студенты медицинских вузов</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="curriculum-tab">
+                    <div class="curriculum-list">
+                        ${this.createCurriculumModules(course.modules)}
+                    </div>
+                </div>
+
+                <div class="tab-content" id="reviews-tab">
+                    <div class="reviews-list">
+                        ${this.createCourseReviews()}
+                    </div>
+                </div>
+            </div>
+
+            <div class="purchase-section">
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Начните обучение сегодня</h3>
+                        ${course.discount > 0 ? `
+                        <div class="discount-timer">
+                            ⏰ Скидка действует еще 2 дня
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="price-display">
+                        ${course.discount > 0 ? `
+                            <div class="original-price">${this.formatPrice(course.price)}</div>
+                        ` : ''}
+                        <div class="current-price">
+                            ${this.formatPrice(course.discount > 0 ? course.price * (1 - course.discount/100) : course.price)}
                         </div>
                     </div>
+                    
+                    <div class="features-list">
+                        <div class="feature-item">✅ Полный доступ к курсу</div>
+                        <div class="feature-item">✅ Сертификат о прохождении</div>
+                        <div class="feature-item">✅ Поддержка куратора</div>
+                        <div class="feature-item">✅ Доступ в закрытый чат</div>
+                        <div class="feature-item">✅ Обновления курса</div>
+                    </div>
+                    
+                    <div class="purchase-actions">
+                        <button class="btn btn-primary btn-large" onclick="app.purchaseCourse(${course.id})">
+                            💳 Купить курс
+                        </button>
+                        <button class="btn btn-outline" onclick="app.addToCart(${course.id})">
+                            🛒 В корзину
+                        </button>
+                    </div>
+                    
+                    <div class="guarantee-badge">
+                        ✅ 30-дневная гарантия возврата
+                    </div>
                 </div>
             </div>
-        `;
-    }
-
-    createCurriculumModules(moduleCount) {
-        const modules = [];
-        for (let i = 1; i <= moduleCount; i++) {
-            modules.push(`
-                <div class="module-item">
-                    <div class="module-header">
-                        <div class="module-number">Модуль ${i}</div>
-                        <div class="module-duration">2-3 часа</div>
-                    </div>
-                    <div class="module-title">Тема модуля ${i}</div>
-                    <div class="module-lessons">
-                        <div class="lesson">🎯 Урок 1: Теоретическая основа</div>
-                        <div class="lesson">🎯 Урок 2: Практическое применение</div>
-                        <div class="lesson">🎯 Урок 3: Разбор кейсов</div>
-                        <div class="lesson">📋 Тестирование</div>
-                    </div>
+        </div>
+    `;
+}
+createCurriculumModules(moduleCount) {
+    const modules = [];
+    for (let i = 1; i <= moduleCount; i++) {
+        modules.push(`
+            <div class="module-item">
+                <div class="module-header">
+                    <div class="module-number">Модуль ${i}</div>
+                    <div class="module-duration">2-3 часа</div>
                 </div>
-            `);
-        }
-        return modules.join('');
-    }
-
-    createCourseReviews() {
-        const reviews = [
-            { name: 'Анна К.', role: 'Невролог', rating: 5, text: 'Отличный курс! Много практической информации.', date: '2 недели назад' },
-            { name: 'Михаил П.', role: 'Реабилитолог', rating: 4, text: 'Хорошая структура, полезные материалы.', date: '1 месяц назад' },
-            { name: 'Елена С.', role: 'Мануальный терапевт', rating: 5, text: 'Лучший курс по мануальным техникам!', date: '3 месяца назад' }
-        ];
-        
-        return reviews.map(review => `
-            <div class="review-item">
-                <div class="review-header">
-                    <div class="reviewer-info">
-                        <div class="reviewer-name">${review.name}</div>
-                        <div class="reviewer-role">${review.role}</div>
-                    </div>
-                    <div class="review-rating">
-                        ${'⭐'.repeat(review.rating)}
-                    </div>
+                <div class="module-title">Тема модуля ${i}</div>
+                <div class="module-lessons">
+                    <div class="lesson">🎯 Урок 1: Теоретическая основа</div>
+                    <div class="lesson">🎯 Урок 2: Практическое применение</div>
+                    <div class="lesson">🎯 Урок 3: Разбор кейсов</div>
+                    <div class="lesson">📋 Тестирование</div>
                 </div>
-                <div class="review-text">${review.text}</div>
-                <div class="review-date">${review.date}</div>
             </div>
-        `).join('');
+        `);
     }
+    return modules.join('');
+}
+
+createCourseReviews() {
+    const reviews = [
+        { name: 'Анна К.', role: 'Невролог', rating: 5, text: 'Отличный курс! Много практической информации.', date: '2 недели назад' },
+        { name: 'Михаил П.', role: 'Реабилитолог', rating: 4, text: 'Хорошая структура, полезные материалы.', date: '1 месяц назад' },
+        { name: 'Елена С.', role: 'Мануальный терапевт', rating: 5, text: 'Лучший курс по мануальным техникам!', date: '3 месяца назад' }
+    ];
+    
+    return reviews.map(review => `
+        <div class="review-item">
+            <div class="review-header">
+                <div class="reviewer-info">
+                    <div class="reviewer-name">${review.name}</div>
+                    <div class="reviewer-role">${review.role}</div>
+                </div>
+                <div class="review-rating">
+                    ${'⭐'.repeat(review.rating)}
+                </div>
+            </div>
+            <div class="review-text">${review.text}</div>
+            <div class="review-date">${review.date}</div>
+        </div>
+    `).join('');
+}
 
     // ==================== СТРАНИЦА ПОДКАСТОВ ====================
 
@@ -2753,10 +2534,10 @@ createDemoUser() {
 
     // ==================== ДЕТАЛЬНЫЕ СТРАНИЦЫ ====================
 
-    openCourseDetail(courseId) {
-        this.currentSubPage = `course-${courseId}`;
-        this.renderPage('courses', `course-${courseId}`);
-    }
+ openCourseDetail(courseId) {
+    this.currentSubPage = `course-${courseId}`;
+    this.renderPage('courses', `course-${courseId}`);
+}
 
     openStreamDetail(streamId) {
         this.currentSubPage = `stream-${streamId}`;
@@ -2768,40 +2549,38 @@ createDemoUser() {
         this.renderPage('instructors', `instructor-${instructorId}`);
     }
 
-    // Обновляем метод getPageHTML для поддержки детальных страниц
-    getPageHTML(page, subPage = '') {
-        // Обрабатываем детальные страницы
-        if (subPage.includes('course-')) {
-            const courseId = parseInt(subPage.split('-')[1]);
-            return this.createCourseDetailPage(courseId);
-        }
-        
-        if (subPage.includes('stream-')) {
-            const streamId = parseInt(subPage.split('-')[1]);
-            return this.createStreamDetailPage(streamId);
-        }
-        
-        if (subPage.includes('instructor-')) {
-            const instructorId = parseInt(subPage.split('-')[1]);
-            return this.createInstructorDetailPage(instructorId);
-        }
-
-        const pages = {
-            home: this.createHomePage(),
-            courses: this.createCoursesPage(),
-            podcasts: this.createPodcastsPage(),
-            streams: this.createStreamsPage(),
-            videos: this.createVideosPage(),
-            materials: this.createMaterialsPage(),
-            events: this.createEventsPage(),
-            favorites: this.createFavoritesPage(),
-            profile: this.createProfilePage(),
-            community: this.createCommunityPage()
-        };
-
-        return pages[page] || this.createNotFoundPage();
+   getPageHTML(page, subPage = '') {
+    // Обрабатываем детальные страницы
+    if (subPage.includes('course-')) {
+        const courseId = parseInt(subPage.split('-')[1]);
+        return this.createCourseDetailPage(courseId);
+    }
+    
+    if (subPage.includes('stream-')) {
+        const streamId = parseInt(subPage.split('-')[1]);
+        return this.createStreamDetailPage(streamId);
+    }
+    
+    if (subPage.includes('instructor-')) {
+        const instructorId = parseInt(subPage.split('-')[1]);
+        return this.createInstructorDetailPage(instructorId);
     }
 
+    const pages = {
+        home: this.createHomePage(),
+        courses: this.createCoursesPage(),
+        podcasts: this.createPodcastsPage(),
+        streams: this.createStreamsPage(),
+        videos: this.createVideosPage(),
+        materials: this.createMaterialsPage(),
+        events: this.createEventsPage(),
+        favorites: this.createFavoritesPage(),
+        profile: this.createProfilePage(),
+        community: this.createCommunityPage()
+    };
+
+    return pages[page] || this.createNotFoundPage();
+}
        
     createCourseDetailPage(courseId) {
         const course = this.allContent.courses?.find(c => c.id == courseId) || this.getDemoCourse();
