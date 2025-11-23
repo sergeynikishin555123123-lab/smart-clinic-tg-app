@@ -1557,6 +1557,212 @@
                 font-size: 0.6rem;
             }
         }
+
+        /* ==================== ОБНОВЛЕННАЯ ГЛАВНАЯ СТРАНИЦА ==================== */
+
+        .home-page {
+            padding-bottom: 100px;
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--accent), #1e40af);
+            border-radius: 1rem;
+            padding: 2rem 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800&h=400&fit=crop') center/cover;
+            opacity: 0.1;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .hero-stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        /* Основная навигационная сетка */
+        .main-navigation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .nav-card-large {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-card-large:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-card-image {
+            position: relative;
+            height: 160px;
+            overflow: hidden;
+        }
+
+        .nav-card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-card-large:hover .nav-card-image img {
+            transform: scale(1.05);
+        }
+
+        .nav-card-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(30, 64, 175, 0.8));
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            padding: 1.5rem;
+        }
+
+        .nav-card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .nav-card-overlay h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .nav-card-overlay p {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Адаптивность для главной страницы */
+        @media (max-width: 768px) {
+            .hero-content h1 {
+                font-size: 2rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1rem;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                max-width: 200px;
+            }
+
+            .main-navigation-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .nav-card-image {
+                height: 140px;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-section {
+                padding: 1.5rem 1rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .hero-content h1 {
+                font-size: 1.75rem;
+            }
+
+            .nav-card-overlay {
+                padding: 1rem;
+            }
+
+            .nav-card-overlay h3 {
+                font-size: 1.1rem;
+            }
+        }
         
     </style>
 </head>
