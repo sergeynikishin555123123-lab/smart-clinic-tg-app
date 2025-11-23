@@ -142,6 +142,14 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
+// ФИКС: Добавляем CORS для всех API routes
+app.use('/api/*', (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    next();
+});
+
 // Убираем X-Frame-Options для работы в iframe Telegram
 app.use((req, res, next) => {
     // Убираем заголовки, которые блокируют iframe
