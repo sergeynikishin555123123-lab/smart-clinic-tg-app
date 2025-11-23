@@ -1304,15 +1304,15 @@ app.post('/api/user', async (req, res) => {
     try {
         const { user: tgUser } = req.body;
         
-// ФИКС: Используем фиксированного супер-админа
-let userToProcess = tgUser;
-if (!userToProcess || !userToProcess.id) {
-    userToProcess = {
-        id: 898508164,
-        first_name: 'Главный Админ', 
-        username: 'superadmin'
-    };
-}
+        // ФИКС: Используем фиксированного супер-админа
+        let userToProcess = tgUser;
+        if (!userToProcess || !userToProcess.id) {
+            userToProcess = {
+                id: 898508164,
+                first_name: 'Главный Админ', 
+                username: 'superadmin'
+            };
+        }
 
         if (!userToProcess || !userToProcess.id) {
             return res.status(400).json({ success: false, error: 'Неверные данные пользователя' });
@@ -1321,49 +1321,47 @@ if (!userToProcess || !userToProcess.id) {
         // Проверяем, является ли пользователь супер-админом
         const isSuperAdmin = userToProcess.id === 898508164;
 
-// ФИКС: Используем правильный ON CONFLICT
-const { rows: existingUsers } = await pool.query(
-    'SELECT * FROM users WHERE telegram_id = $1',
-    [userToProcess.id]
-);
+        // ФИКС: Используем правильный ON CONFLICT
+        const { rows: existingUsers } = await pool.query(
+            'SELECT * FROM users WHERE telegram_id = $1',
+            [userToProcess.id]
+        );
 
-let user;
-if (existingUsers.length === 0) {
-    // Создаем нового пользователя
-    const { rows: newUsers } = await pool.query(
-        `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin, subscription_end) 
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING *`,
-        [
-            userToProcess.id, 
-            userToProcess.first_name, 
-            userToProcess.username, 
-            isSuperAdmin, 
-            isSuperAdmin,
-            '2025-12-31'
-        ]
-    );
-    user = newUsers[0];
-} else {
-    // Обновляем существующего пользователя
-    const { rows: updatedUsers } = await pool.query(
-        `UPDATE users 
-         SET first_name = $1, username = $2, is_admin = $3, is_super_admin = $4, subscription_end = $5
-         WHERE telegram_id = $6
-         RETURNING *`,
-        [
-            userToProcess.first_name,
-            userToProcess.username,
-            isSuperAdmin,
-            isSuperAdmin,
-            '2025-12-31',
-            userToProcess.id
-        ]
-    );
-    user = updatedUsers[0];
-}
-
-        const user = users[0];
+        let userData;
+        if (existingUsers.length === 0) {
+            // Создаем нового пользователя
+            const { rows: newUsers } = await pool.query(
+                `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin, subscription_end) 
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 RETURNING *`,
+                [
+                    userToProcess.id, 
+                    userToProcess.first_name, 
+                    userToProcess.username, 
+                    isSuperAdmin, 
+                    isSuperAdmin,
+                    '2025-12-31'
+                ]
+            );
+            userData = newUsers[0];
+        } else {
+            // Обновляем существующего пользователя
+            const { rows: updatedUsers } = await pool.query(
+                `UPDATE users 
+                 SET first_name = $1, username = $2, is_admin = $3, is_super_admin = $4, subscription_end = $5
+                 WHERE telegram_id = $6
+                 RETURNING *`,
+                [
+                    userToProcess.first_name,
+                    userToProcess.username,
+                    isSuperAdmin,
+                    isSuperAdmin,
+                    '2025-12-31',
+                    userToProcess.id
+                ]
+            );
+            userData = updatedUsers[0];
+        }
 
         // Получаем или создаем прогресс пользователя
         const { rows: progress } = await pool.query(
@@ -1372,7 +1370,7 @@ if (existingUsers.length === 0) {
              ON CONFLICT (user_id) 
              DO UPDATE SET updated_at = CURRENT_TIMESTAMP
              RETURNING *`,
-            [user.id, 'Понимаю', 1250, 3, 2, 12, 1]
+            [userData.id, 'Понимаю', 1250, 3, 2, 12, 1]
         );
 
         // Получаем подписку пользователя
@@ -1380,13 +1378,13 @@ if (existingUsers.length === 0) {
             `SELECT * FROM subscriptions 
              WHERE user_id = $1 AND status = 'active' AND ends_at > NOW()
              ORDER BY created_at DESC LIMIT 1`,
-            [user.id]
+            [userData.id]
         );
 
         // Получаем избранное пользователя
         const { rows: favorites } = await pool.query(
             'SELECT * FROM favorites WHERE user_id = $1',
-            [user.id]
+            [userData.id]
         );
 
         const userFavorites = {
@@ -1407,15 +1405,15 @@ if (existingUsers.length === 0) {
             events_attended: 1
         };
 
-        const userData = {
-            id: user.id,
-            telegramId: user.telegram_id,
-            firstName: user.first_name,
-            username: user.username,
-            isAdmin: user.is_admin,
-            isSuperAdmin: user.is_super_admin,
-            subscriptionEnd: user.subscription_end,
-            avatarUrl: user.avatar_url,
+        const responseData = {
+            id: userData.id,
+            telegramId: userData.telegram_id,
+            firstName: userData.first_name,
+            username: userData.username,
+            isAdmin: userData.is_admin,
+            isSuperAdmin: userData.is_super_admin,
+            subscriptionEnd: userData.subscription_end,
+            avatarUrl: userData.avatar_url,
             hasActiveSubscription: subscription.length > 0 || isSuperAdmin,
             subscription: subscription[0] || null,
             favorites: userFavorites,
@@ -1431,8 +1429,8 @@ if (existingUsers.length === 0) {
             }
         };
 
-        console.log(`✅ Пользователь загружен: ${userData.firstName}, Admin: ${userData.isAdmin}, SuperAdmin: ${userData.isSuperAdmin}`);
-        res.json({ success: true, user: userData });
+        console.log(`✅ Пользователь загружен: ${responseData.firstName}, Admin: ${responseData.isAdmin}, SuperAdmin: ${responseData.isSuperAdmin}`);
+        res.json({ success: true, user: responseData });
         
     } catch (error) {
         console.error('API User error:', error);
