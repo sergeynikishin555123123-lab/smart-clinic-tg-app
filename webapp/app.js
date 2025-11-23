@@ -431,8 +431,8 @@ createHomePage() {
                 ${navItems.map(item => `
                     <div class="nav-card-large" onclick="app.renderPage('${item.page}')">
                         <div class="nav-card-image">
-                            <img src="${item.image_url}" alt="${item.title}" 
-                                 onerror="this.src='https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop'">
+                           <img src="${item.image_url}" alt="${item.title}" 
+     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDQwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjM0Y0QTU1Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2Ij7QpNCw0LrRgtC+0YA8L3RleHQ+Cjwvc3ZnPgo='">
                             <div class="nav-card-overlay">
                                 <div class="nav-card-icon">${item.icon}</div>
                                 <h3>${item.title}</h3>
@@ -497,7 +497,8 @@ createHomePage() {
                             <div class="card-badge">Рекомендуем</div>
                             ${course.discount > 0 ? `<div class="discount-badge">-${course.discount}%</div>` : ''}
                             <div class="card-image">
-                                <img src="${course.image_url}" alt="${course.title}" onerror="this.src='https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop'">
+                                <img src="${course.image_url}" alt="${course.title}" 
+     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjM0Y0QTU1Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2Ij7QpNCw0LrRgtC+0YA8L3RleHQ+Cjwvc3ZnPgo='">
                                 <div class="card-overlay">
                                     <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
                                             onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
@@ -645,7 +646,8 @@ createPodcastsPage() {
                 ${podcasts.length > 0 ? podcasts.map(podcast => `
                     <div class="content-card podcast-card">
                         <div class="card-image">
-                            <img src="${podcast.image_url}" alt="${podcast.title}" onerror="this.src='/webapp/assets/podcast-default.jpg'">
+                          <img src="${podcast.image_url}" alt="${podcast.title}" 
+     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjM0Y0QTU1Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2Ij7QpNCw0LrRgtC+0YA8L3RleHQ+Cjwvc3ZnPgo='">
                             <div class="card-overlay">
                                 <button class="favorite-btn ${this.isFavorite(podcast.id, 'podcasts') ? 'active' : ''}" 
                                         onclick="event.stopPropagation(); app.toggleFavorite(${podcast.id}, 'podcasts')">
@@ -688,7 +690,8 @@ createVideosPage() {
                 ${videos.length > 0 ? videos.map(video => `
                     <div class="content-card video-card">
                         <div class="card-image">
-                            <img src="${video.thumbnail_url}" alt="${video.title}" onerror="this.src='/webapp/assets/video-default.jpg'">
+                          <img src="${video.thumbnail_url}" alt="${video.title}" 
+     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjM0Y0QTU1Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2Ij7QpNCw0LrRgtC+0YA8L3RleHQ+Cjwvc3ZnPgo='">
                             <div class="card-overlay">
                                 <button class="favorite-btn ${this.isFavorite(video.id, 'videos') ? 'active' : ''}" 
                                         onclick="event.stopPropagation(); app.toggleFavorite(${video.id}, 'videos')">
@@ -731,7 +734,8 @@ createMaterialsPage() {
                 ${materials.length > 0 ? materials.map(material => `
                     <div class="content-card material-card">
                         <div class="card-image">
-                            <img src="${material.image_url}" alt="${material.title}" onerror="this.src='/webapp/assets/material-default.jpg'">
+                           <img src="${material.image_url}" alt="${material.title}" 
+     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjM0Y0QTU1Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2Ij7QpNCw0LrRgtC+0YA8L3RleHQ+Cjwvc3ZnPgo='">
                             <div class="card-overlay">
                                 <button class="favorite-btn ${this.isFavorite(material.id, 'materials') ? 'active' : ''}" 
                                         onclick="event.stopPropagation(); app.toggleFavorite(${material.id}, 'materials')">
@@ -773,7 +777,8 @@ createEventsPage() {
                 ${events.length > 0 ? events.map(event => `
                     <div class="content-card event-card">
                         <div class="card-image">
-                            <img src="${event.image_url}" alt="${event.title}" onerror="this.src='/webapp/assets/event-default.jpg'">
+                            <img src="${event.image_url}" alt="${event.title}" 
+     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjM0Y0QTU1Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2Ij7QpNCw0LrRgtC+0YA8L3RleHQ+Cjwvc3ZnPgo='">
                             <div class="card-overlay">
                                 <button class="favorite-btn ${this.isFavorite(event.id, 'events') ? 'active' : ''}" 
                                         onclick="event.stopPropagation(); app.toggleFavorite(${event.id}, 'events')">
@@ -884,7 +889,8 @@ createCourseDetailPage(courseId) {
             <div class="detail-container">
                 <div class="detail-hero">
                     <div class="hero-image">
-                        <img src="${course.image_url}" alt="${course.title}" onerror="this.src='/webapp/assets/course-default.jpg'">
+                        <img src="${course.image_url}" alt="${course.title}" 
+     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDYwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI2MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjM0Y0QTU1Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjIwIj7QpNCw0LrRgtC+0YA8L3RleHQ+Cjwvc3ZnPgo='">
                         <div class="image-overlay">
                             ${course.video_url ? `
                             <button class="btn btn-primary btn-large play-btn" onclick="app.previewContent('video', '${course.video_url}', {title: '${course.title}', id: ${course.id}})">
@@ -1212,7 +1218,7 @@ createInstructorDetailPage(instructorId) {
                 <div class="instructor-hero">
                     <div class="instructor-avatar-large">
                         <img src="${instructor.avatar_url}" alt="${instructor.name}"
-                             onerror="this.src='https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&crop=face'">
+     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjM0Y0QTU1Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2Ij7QpNCw0LrRgtC+0YA8L3RleHQ+Cjwvc3ZnPgo='">
                     </div>
                     
                     <div class="instructor-hero-content">
@@ -2533,7 +2539,8 @@ createProfilePage() {
         return filteredNews.slice(0, 5).map(item => `
             <div class="news-item">
                 <div class="news-image">
-                    <img src="${item.image_url}" alt="${item.title}" onerror="this.src='/webapp/assets/news-default.jpg'">
+                  <img src="${item.image_url}" alt="${item.title}" 
+     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjM0Y0QTU1Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2Ij7QpNCw0LrRgtC+0YA8L3RleHQ+Cjwvc3ZnPgo='">
                 </div>
                 <div class="news-content">
                     <div class="news-category">${item.category}</div>
@@ -3403,8 +3410,8 @@ getPageHTML(page, subPage = '') {
                 <!-- Hero секция курса -->
                 <div class="course-hero">
                     <div class="course-hero-image">
-                        <img src="${course.image_url}" alt="${course.title}" 
-                             onerror="this.src='https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=600&h=400&fit=crop'">
+                       <img src="${course.image_url}" alt="${course.title}" 
+     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjM0Y0QTU1Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2Ij7QpNCw0LrRgtC+0YA8L3RleHQ+Cjwvc3ZnPgo='">
                         <div class="course-hero-overlay">
                             <button class="btn btn-primary btn-large play-btn" 
                                     onclick="app.previewContent('video', '${course.video_url}', {title: '${course.title}', id: ${course.id}})">
