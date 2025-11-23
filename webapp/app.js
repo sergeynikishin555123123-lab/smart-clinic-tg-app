@@ -327,183 +327,266 @@ async loadUserData() {
 
     // ==================== ГЛАВНАЯ СТРАНИЦА ====================
 
-    createHomePage() {
-        const stats = this.calculateHomeStats();
-        const recommendedCourses = this.getRecommendedCourses();
-        const liveStreams = this.getLiveStreams();
-        
-        return `
-            <div class="page home-page">
-                <div class="hero-section">
-                    <div class="hero-content">
-                        <h2>Академия АНБ</h2>
-                        <p>Современное образование для врачей</p>
-                        <div class="hero-stats">
-                            <div class="hero-stat">
-                                <div class="stat-value">${stats.courses}+</div>
-                                <div class="stat-label">Курсов</div>
-                            </div>
-                            <div class="hero-stat">
-                                <div class="stat-value">${stats.students}+</div>
-                                <div class="stat-label">Студентов</div>
-                            </div>
-                            <div class="hero-stat">
-                                <div class="stat-value">${stats.experts}</div>
-                                <div class="stat-label">Экспертов</div>
-                            </div>
+createHomePage() {
+    const stats = this.calculateHomeStats();
+    const recommendedCourses = this.getRecommendedCourses();
+    const liveStreams = this.getLiveStreams();
+    
+    return `
+        <div class="page home-page">
+            <!-- Hero Section -->
+            <div class="hero-section">
+                <div class="hero-content">
+                    <h1>Академия АНБ</h1>
+                    <p class="hero-subtitle">Современное образование для врачей</p>
+                    <div class="hero-stats">
+                        <div class="hero-stat">
+                            <div class="stat-value">${stats.courses}+</div>
+                            <div class="stat-label">Курсов</div>
                         </div>
-                    </div>
-                </div>
-
-                ${this.currentUser?.progress ? `
-                <div class="progress-section">
-                    <h3>🎯 Ваш прогресс</h3>
-                    <div class="progress-cards">
-                        <div class="progress-card">
-                            <div class="progress-icon">📚</div>
-                            <div class="progress-info">
-                                <div class="progress-value">${this.currentUser.progress.steps.coursesBought}</div>
-                                <div class="progress-label">Курсов</div>
-                            </div>
+                        <div class="hero-stat">
+                            <div class="stat-value">${stats.students}+</div>
+                            <div class="stat-label">Студентов</div>
                         </div>
-                        <div class="progress-card">
-                            <div class="progress-icon">🎯</div>
-                            <div class="progress-info">
-                                <div class="progress-value">${this.currentUser.progress.steps.modulesCompleted}</div>
-                                <div class="progress-label">Модулей</div>
-                            </div>
+                        <div class="hero-stat">
+                            <div class="stat-value">${stats.experts}</div>
+                            <div class="stat-label">Экспертов</div>
                         </div>
-                        <div class="progress-card">
-                            <div class="progress-icon">⏱️</div>
-                            <div class="progress-info">
-                                <div class="progress-value">${this.currentUser.progress.steps.materialsWatched}</div>
-                                <div class="progress-label">Материалов</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="level-progress">
-                        <div class="level-info">
-                            <span class="level-name">${this.currentUser.progress.level}</span>
-                            <span class="level-exp">${this.currentUser.progress.experience} XP</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${(this.currentUser.progress.experience / 2000) * 100}%"></div>
-                        </div>
-                    </div>
-                </div>
-                ` : ''}
-
-                <div class="navigation-grid">
-                    ${this.createNavCard('courses', '📚', 'Курсы', this.allContent.courses?.length || 0, 'Доступные курсы и обучение')}
-                    ${this.createNavCard('podcasts', '🎧', 'АНБ FM', this.allContent.podcasts?.length || 0, 'Аудио подкасты и лекции')}
-                    ${this.createNavCard('streams', '📹', 'Эфиры', this.allContent.streams?.length || 0, 'Прямые эфиры и разборы')}
-                    ${this.createNavCard('videos', '🎯', 'Видео-шпаргалки', this.allContent.videos?.length || 0, 'Короткие обучающие видео')}
-                    ${this.createNavCard('materials', '📋', 'Практические материалы', this.allContent.materials?.length || 0, 'МРТ, кейсы, чек-листы')}
-                    ${this.createNavCard('events', '🗺️', 'Карта мероприятий', this.allContent.events?.length || 0, 'Онлайн и офлайн события')}
-                    ${this.createNavCard('community', '👥', 'О сообществе', '', 'Правила и ценности')}
-                    ${this.createNavCard('favorites', '❤️', 'Избранное', this.getTotalFavorites(), 'Сохраненные материалы')}
-                </div>
-
-                ${recommendedCourses.length > 0 ? `
-                <div class="recommended-section">
-                    <div class="section-header">
-                        <h3>⭐ Рекомендуемые курсы</h3>
-                        <button class="btn btn-outline see-all" onclick="app.renderPage('courses')">
-                            Все курсы →
-                        </button>
-                    </div>
-                    <div class="recommended-grid">
-                        ${recommendedCourses.slice(0, 3).map(course => `
-                            <div class="course-card featured" onclick="app.openCourseDetail(${course.id})">
-                                <div class="card-badge">Рекомендуем</div>
-                                ${course.discount > 0 ? `<div class="discount-badge">-${course.discount}%</div>` : ''}
-                                <div class="card-image">
-                                    <img src="${course.image_url}" alt="${course.title}" onerror="this.src='/webapp/assets/course-default.jpg'">
-                                    <div class="card-overlay">
-                                        <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
-                                                onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
-                                            ${this.isFavorite(course.id, 'courses') ? '❤️' : '🤍'}
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="card-content">
-                                    <div class="card-category">${course.category}</div>
-                                    <h3 class="card-title">${course.title}</h3>
-                                    <p class="card-description">${course.description}</p>
-                                    <div class="card-meta">
-                                        <span class="meta-item">⏱️ ${course.duration}</span>
-                                        <span class="meta-item">🎯 ${course.modules} модулей</span>
-                                        <span class="meta-item">⭐ ${course.rating}</span>
-                                    </div>
-                                    <div class="card-footer">
-                                        <div class="price-section">
-                                            ${course.discount > 0 ? `
-                                                <div class="price-original">${this.formatPrice(course.price)}</div>
-                                                <div class="price-current">${this.formatPrice(course.price * (1 - course.discount/100))}</div>
-                                            ` : `
-                                                <div class="price-current">${this.formatPrice(course.price)}</div>
-                                            `}
-                                        </div>
-                                        <button class="btn btn-primary btn-small" onclick="event.stopPropagation(); app.openCourseDetail(${course.id})">
-                                            Подробнее
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                ` : ''}
-
-                ${liveStreams.length > 0 ? `
-                <div class="live-section">
-                    <div class="section-header">
-                        <h3>🔴 Прямой эфир</h3>
-                        <div class="live-indicator">
-                            <div class="live-dot"></div>
-                            LIVE
-                        </div>
-                    </div>
-                    <div class="live-streams">
-                        ${liveStreams.map(stream => `
-                            <div class="live-card" onclick="app.openStream(${stream.id})">
-                                <div class="live-badge">LIVE</div>
-                                <div class="stream-image">
-                                    <img src="${stream.thumbnail_url}" alt="${stream.title}" onerror="this.src='/webapp/assets/stream-default.jpg'">
-                                    <div class="stream-overlay">
-                                        <div class="play-button">▶️</div>
-                                        <div class="viewers">👥 ${stream.participants}</div>
-                                    </div>
-                                </div>
-                                <div class="stream-info">
-                                    <h4>${stream.title}</h4>
-                                    <p>${stream.description}</p>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                ` : ''}
-
-                <div class="news-section">
-                    <div class="section-header">
-                        <h3>📰 Лента новостей</h3>
-                        <div class="news-filter">
-                            <select class="filter-select" onchange="app.filterNews(this.value)">
-                                ${this.newsFilters.map(filter => `
-                                    <option value="${filter}" ${filter === this.currentNewsFilter ? 'selected' : ''}>${filter}</option>
-                                `).join('')}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="news-feed">
-                        ${this.createNewsItems()}
                     </div>
                 </div>
             </div>
-        `;
-    }
 
+            <!-- Main Navigation Grid -->
+            <div class="main-navigation-grid">
+                <div class="nav-card-large" onclick="app.renderPage('courses')">
+                    <div class="nav-card-image">
+                        <img src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop" alt="Курсы">
+                        <div class="nav-card-overlay">
+                            <div class="nav-card-icon">📚</div>
+                            <h3>Курсы</h3>
+                            <p>${this.allContent.courses?.length || 0} доступных курсов</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-card-large" onclick="app.renderPage('podcasts')">
+                    <div class="nav-card-image">
+                        <img src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=200&fit=crop" alt="Подкасты">
+                        <div class="nav-card-overlay">
+                            <div class="nav-card-icon">🎧</div>
+                            <h3>АНБ FM</h3>
+                            <p>Аудио подкасты и лекции</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-card-large" onclick="app.renderPage('streams')">
+                    <div class="nav-card-image">
+                        <img src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=200&fit=crop" alt="Эфиры">
+                        <div class="nav-card-overlay">
+                            <div class="nav-card-icon">📹</div>
+                            <h3>Эфиры</h3>
+                            <p>Прямые эфиры и разборы</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-card-large" onclick="app.renderPage('videos')">
+                    <div class="nav-card-image">
+                        <img src="https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=400&h=200&fit=crop" alt="Видео">
+                        <div class="nav-card-overlay">
+                            <div class="nav-card-icon">🎯</div>
+                            <h3>Видео-шпаргалки</h3>
+                            <p>Короткие обучающие видео</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-card-large" onclick="app.renderPage('materials')">
+                    <div class="nav-card-image">
+                        <img src="https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=400&h=200&fit=crop" alt="Материалы">
+                        <div class="nav-card-overlay">
+                            <div class="nav-card-icon">📋</div>
+                            <h3>Материалы</h3>
+                            <p>Чек-листы, протоколы, методички</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-card-large" onclick="app.renderPage('events')">
+                    <div class="nav-card-image">
+                        <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop" alt="Мероприятия">
+                        <div class="nav-card-overlay">
+                            <div class="nav-card-icon">🗺️</div>
+                            <h3>Мероприятия</h3>
+                            <p>Онлайн и офлайн события</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-card-large" onclick="app.renderPage('community')">
+                    <div class="nav-card-image">
+                        <img src="https://images.unsplash.com/photo-1551836026-d5c55ac5d4c5?w=400&h=200&fit=crop" alt="Сообщество">
+                        <div class="nav-card-overlay">
+                            <div class="nav-card-icon">👥</div>
+                            <h3>Сообщество</h3>
+                            <p>Правила и ценности АНБ</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-card-large" onclick="app.renderPage('favorites')">
+                    <div class="nav-card-image">
+                        <img src="https://images.unsplash.com/photo-1579546929662-711aa81148cf?w=400&h=200&fit=crop" alt="Избранное">
+                        <div class="nav-card-overlay">
+                            <div class="nav-card-icon">❤️</div>
+                            <h3>Избранное</h3>
+                            <p>${this.getTotalFavorites()} сохраненных материалов</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            ${this.currentUser?.progress ? `
+            <!-- Progress Section -->
+            <div class="progress-section">
+                <h3 class="section-title">🎯 Ваш прогресс</h3>
+                <div class="progress-cards">
+                    <div class="progress-card">
+                        <div class="progress-icon">📚</div>
+                        <div class="progress-info">
+                            <div class="progress-value">${this.currentUser.progress.steps.coursesBought}</div>
+                            <div class="progress-label">Курсов</div>
+                        </div>
+                    </div>
+                    <div class="progress-card">
+                        <div class="progress-icon">🎯</div>
+                        <div class="progress-info">
+                            <div class="progress-value">${this.currentUser.progress.steps.modulesCompleted}</div>
+                            <div class="progress-label">Модулей</div>
+                        </div>
+                    </div>
+                    <div class="progress-card">
+                        <div class="progress-icon">⏱️</div>
+                        <div class="progress-info">
+                            <div class="progress-value">${this.currentUser.progress.steps.materialsWatched}</div>
+                            <div class="progress-label">Материалов</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="level-progress">
+                    <div class="level-info">
+                        <span class="level-name">${this.currentUser.progress.level}</span>
+                        <span class="level-exp">${this.currentUser.progress.experience} XP</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${(this.currentUser.progress.experience / 2000) * 100}%"></div>
+                    </div>
+                </div>
+            </div>
+            ` : ''}
+
+            ${recommendedCourses.length > 0 ? `
+            <!-- Recommended Courses -->
+            <div class="recommended-section">
+                <div class="section-header">
+                    <h3 class="section-title">⭐ Рекомендуемые курсы</h3>
+                    <button class="btn btn-outline see-all" onclick="app.renderPage('courses')">
+                        Все курсы →
+                    </button>
+                </div>
+                <div class="recommended-grid">
+                    ${recommendedCourses.slice(0, 3).map(course => `
+                        <div class="course-card featured" onclick="app.openCourseDetail(${course.id})">
+                            <div class="card-badge">Рекомендуем</div>
+                            ${course.discount > 0 ? `<div class="discount-badge">-${course.discount}%</div>` : ''}
+                            <div class="card-image">
+                                <img src="${course.image_url}" alt="${course.title}" onerror="this.src='https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop'">
+                                <div class="card-overlay">
+                                    <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
+                                            onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
+                                        ${this.isFavorite(course.id, 'courses') ? '❤️' : '🤍'}
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-category">${course.category}</div>
+                                <h3 class="card-title">${course.title}</h3>
+                                <p class="card-description">${course.description}</p>
+                                <div class="card-meta">
+                                    <span class="meta-item">⏱️ ${course.duration}</span>
+                                    <span class="meta-item">🎯 ${course.modules} модулей</span>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="price-section">
+                                        ${course.discount > 0 ? `
+                                            <div class="price-original">${this.formatPrice(course.price)}</div>
+                                            <div class="price-current">${this.formatPrice(course.price * (1 - course.discount/100))}</div>
+                                        ` : `
+                                            <div class="price-current">${this.formatPrice(course.price)}</div>
+                                        `}
+                                    </div>
+                                    <button class="btn btn-primary btn-small" onclick="event.stopPropagation(); app.openCourseDetail(${course.id})">
+                                        Подробнее
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+
+            ${liveStreams.length > 0 ? `
+            <!-- Live Streams -->
+            <div class="live-section">
+                <div class="section-header">
+                    <h3 class="section-title">🔴 Прямой эфир</h3>
+                    <div class="live-indicator">
+                        <div class="live-dot"></div>
+                        LIVE
+                    </div>
+                </div>
+                <div class="live-streams">
+                    ${liveStreams.map(stream => `
+                        <div class="live-card" onclick="app.openStreamDetail(${stream.id})">
+                            <div class="live-badge">LIVE</div>
+                            <div class="stream-image">
+                                <img src="${stream.thumbnail_url}" alt="${stream.title}" onerror="this.src='https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=250&fit=crop'">
+                                <div class="stream-overlay">
+                                    <div class="play-button">▶️</div>
+                                    <div class="viewers">👥 ${stream.participants}</div>
+                                </div>
+                            </div>
+                            <div class="stream-info">
+                                <h4>${stream.title}</h4>
+                                <p>${stream.description}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+
+            <!-- News Section -->
+            <div class="news-section">
+                <div class="section-header">
+                    <h3 class="section-title">📰 Лента новостей</h3>
+                    <div class="news-filter">
+                        <select class="filter-select" onchange="app.filterNews(this.value)">
+                            ${this.newsFilters.map(filter => `
+                                <option value="${filter}" ${filter === this.currentNewsFilter ? 'selected' : ''}>${filter}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div class="news-feed">
+                    ${this.createNewsItems()}
+                </div>
+            </div>
+        </div>
+    `;
+}
     createNavCard(section, icon, title, count, description) {
         return `
             <div class="nav-card" onclick="app.renderPage('${section}')">
