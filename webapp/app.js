@@ -34,10 +34,19 @@ class AcademyApp {
             playingContent: null
         };
         
-        // Конфигурация
+                // Конфигурация
         this.config = {
             API_BASE_URL: window.location.origin,
             CACHE_DURATION: 5 * 60 * 1000
+        };
+
+        // ==================== НОВЫЕ СВОЙСТВА ДЛЯ ПОДПИСОК И ПРЕПОДАВАТЕЛЕЙ ====================
+        this.subscriptionPlans = [];
+        this.userSubscription = null;
+        this.instructors = [];
+        this.subscriptionState = {
+            selectedPlan: null,
+            selectedPeriod: 'monthly'
         };
         
         // Данные для ТЗ
@@ -148,7 +157,9 @@ class AcademyApp {
             await this.safeInitializeTelegramWebApp();
             await Promise.all([
                 this.loadUserData(),
-                this.loadContent()
+                this.loadContent(),
+                this.loadSubscriptionData(), // ДОБАВИТЬ ЭТУ СТРОЧКУ
+                this.loadInstructors()       // ДОБАВИТЬ ЭТУ СТРОЧКУ
             ]);
             
             this.renderPage('home');
@@ -777,14 +788,24 @@ class AcademyApp {
                                 </div>
                             </div>
                             
-                            <div class="action-buttons">
-                                <button class="btn btn-primary btn-large" onclick="app.purchaseCourse(${course.id})">
-                                    💳 Купить курс - ${this.formatPrice(course.discount > 0 ? course.price * (1 - course.discount/100) : course.price)}
-                                </button>
-                                <button class="btn btn-outline" onclick="app.toggleFavorite(${course.id}, 'courses')">
-                                    ${this.isFavorite(course.id, 'courses') ? '❤️ В избранном' : '🤍 В избранное'}
-                                </button>
-                            </div>
+            <div class="action-buttons">
+                ${this.currentUser?.hasActiveSubscription ? `
+                    <button class="btn btn-success btn-large" onclick="app.startCourse(${course.id})">
+                        🎯 Начать обучение (доступно по подписке)
+                    </button>
+                ` : `
+                    <button class="btn btn-primary btn-large" onclick="app.showSubscriptionModal()">
+                        💎 Получить доступ по подписке
+                    </button>
+                    <button class="btn btn-outline" onclick="app.purchaseCourse(${course.id})">
+                        💳 Купить отдельно - ${this.formatPrice(course.discount > 0 ? course.price * (1 - course.discount/100) : course.price)}
+                    </button>
+                `}
+                
+                <button class="btn btn-outline" onclick="app.toggleFavorite(${course.id}, 'courses')">
+                    ${this.isFavorite(course.id, 'courses') ? '❤️ В избранном' : '🤍 В избранное'}
+                </button>
+            </div>
                             
                             ${course.discount > 0 ? `
                             <div class="discount-info">
@@ -793,9 +814,13 @@ class AcademyApp {
                             </div>
                             ` : ''}
                         </div>
-                    </div>
+                 </div>
 
-                    <div class="detail-tabs">
+                        <!-- ДОБАВИТЬ СЕКЦИЮ ПРЕПОДАВАТЕЛЕЙ -->
+                        ${course.instructors && course.instructors.length > 0 ? 
+                            this.createInstructorsSection(course.instructors) : ''}
+
+                        <div class="detail-tabs">
                         <button class="tab-btn active" onclick="app.switchCourseTab('about')">
                             📋 О курсе
                         </button>
@@ -1213,11 +1238,11 @@ class AcademyApp {
                         </div>
                     </div>
                     
-                    <div class="subscription-status ${user?.subscriptionEnd ? 'active' : 'inactive'}">
-                        <span>${user?.subscriptionEnd ? '✅' : '❌'} Подписка ${user?.subscriptionEnd ? 'активна до ' + new Date(user.subscriptionEnd).toLocaleDateString('ru-RU') : 'не активна'}</span>
-                        <button class="btn btn-small ${user?.subscriptionEnd ? 'btn-outline' : 'btn-primary'}" 
-                                onclick="app.manageSubscription()">
-                            ${user?.subscriptionEnd ? 'Изменить' : 'Активировать'}
+                    <div class="subscription-status ${this.currentUser?.hasActiveSubscription ? 'active' : 'inactive'}">
+                        <span>${this.currentUser?.hasActiveSubscription ? '✅' : '❌'} Подписка ${this.currentUser?.hasActiveSubscription ? 'активна' : 'не активна'}</span>
+                        <button class="btn btn-small ${this.currentUser?.hasActiveSubscription ? 'btn-outline' : 'btn-primary'}" 
+                                onclick="app.showSubscriptionModal()">
+                            ${this.currentUser?.hasActiveSubscription ? 'Изменить' : 'Активировать'}
                         </button>
                     </div>
                 </div>
@@ -1265,6 +1290,33 @@ class AcademyApp {
                         }).join('')}
                     </div>
                 </div>
+
+                <!-- ДОБАВИТЬ СЕКЦИЮ ПОДПИСКИ -->
+                <div class="subscription-info-section">
+                    <h3>💎 Ваша подписка</h3>
+                    ${this.currentUser?.hasActiveSubscription ? `
+                        <div class="active-subscription">
+                            <div class="subscription-plan-info">
+                                <h4>${this.userSubscription?.plan_name || 'Профессиональный'}</h4>
+                                <p>Тариф: ${this.userSubscription?.plan_type || 'monthly'}</p>
+                                <p>Стоимость: ${this.formatPrice(this.userSubscription?.price || 5900)}</p>
+                                <p>Действует до: ${new Date(this.userSubscription?.ends_at).toLocaleDateString('ru-RU')}</p>
+                            </div>
+                            <button class="btn btn-primary" onclick="app.showSubscriptionModal()">
+                                💎 Изменить подписку
+                            </button>
+                        </div>
+                    ` : `
+                        <div class="no-subscription">
+                            <p>У вас нет активной подписки. Получите доступ ко всем курсам и материалам!</p>
+                            <button class="btn btn-primary btn-large" onclick="app.showSubscriptionModal()">
+                                💎 Выбрать подписку
+                            </button>
+                        </div>
+                    `}
+                </div>
+
+                <div class="profile-stats">
 
                 <div class="profile-stats">
                     <h3>📊 Статистика</h3>
@@ -2374,6 +2426,262 @@ class AcademyApp {
         };
     }
 
+    // ==================== СИСТЕМА ПОДПИСОК ====================
+
+    async loadSubscriptionData() {
+        try {
+            // Загрузить планы подписок
+            const plansResponse = await this.safeApiCall('/api/subscription/plans');
+            if (plansResponse.success) {
+                this.subscriptionPlans = plansResponse.data;
+            }
+
+            // Загручить подписку пользователя
+            if (this.currentUser) {
+                const subResponse = await this.safeApiCall(`/api/subscription/user/${this.currentUser.id}`);
+                if (subResponse.success) {
+                    this.userSubscription = subResponse.data;
+                    this.currentUser.hasActiveSubscription = subResponse.hasActiveSubscription;
+                }
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки данных подписки:', error);
+        }
+    }
+
+    async purchaseSubscription(planId, planType) {
+        try {
+            const response = await this.safeApiCall('/api/subscription/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: this.currentUser.id,
+                    planId: planId,
+                    planType: planType
+                })
+            });
+
+            if (response.success) {
+                this.showNotification('✅ Подписка успешно активирована!', 'success');
+                await this.loadSubscriptionData();
+                this.renderPage('profile');
+                return true;
+            } else {
+                throw new Error(response.error);
+            }
+        } catch (error) {
+            console.error('Ошибка покупки подписки:', error);
+            this.showNotification('❌ Ошибка активации подписки', 'error');
+            return false;
+        }
+    }
+
+    showSubscriptionModal() {
+        const modal = document.createElement('div');
+        modal.className = 'media-modal active';
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="this.parentElement.remove()">
+                <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 800px;">
+                    <div class="modal-header">
+                        <h3>💎 Выбор подписки</h3>
+                        <button class="modal-close" onclick="this.closest('.media-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="subscription-plans">
+                            ${this.subscriptionPlans.map(plan => `
+                                <div class="subscription-plan ${this.subscriptionState.selectedPlan?.id === plan.id ? 'selected' : ''}" 
+                                     onclick="app.selectSubscriptionPlan(${plan.id})">
+                                    <div class="plan-header">
+                                        <h4>${plan.name}</h4>
+                                        <div class="plan-price">
+                                            ${this.formatPrice(plan.price_monthly)}/мес
+                                        </div>
+                                    </div>
+                                    <div class="plan-description">${plan.description}</div>
+                                    <ul class="plan-features">
+                                        ${JSON.parse(plan.features).map(feature => `
+                                            <li>✅ ${feature}</li>
+                                        `).join('')}
+                                    </ul>
+                                    <div class="plan-periods">
+                                        <label class="period-option ${this.subscriptionState.selectedPeriod === 'monthly' ? 'active' : ''}">
+                                            <input type="radio" name="period" value="monthly" 
+                                                   ${this.subscriptionState.selectedPeriod === 'monthly' ? 'checked' : ''}
+                                                   onchange="app.selectSubscriptionPeriod('monthly')">
+                                            Месяц - ${this.formatPrice(plan.price_monthly)}
+                                        </label>
+                                        <label class="period-option ${this.subscriptionState.selectedPeriod === 'quarterly' ? 'active' : ''}">
+                                            <input type="radio" name="period" value="quarterly" 
+                                                   ${this.subscriptionState.selectedPeriod === 'quarterly' ? 'checked' : ''}
+                                                   onchange="app.selectSubscriptionPeriod('quarterly')">
+                                            3 месяца - ${this.formatPrice(plan.price_quarterly)}
+                                        </label>
+                                        <label class="period-option ${this.subscriptionState.selectedPeriod === 'yearly' ? 'active' : ''}">
+                                            <input type="radio" name="period" value="yearly" 
+                                                   ${this.subscriptionState.selectedPeriod === 'yearly' ? 'checked' : ''}
+                                                   onchange="app.selectSubscriptionPeriod('yearly')">
+                                            Год - ${this.formatPrice(plan.price_yearly)}
+                                        </label>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-primary btn-large" 
+                                onclick="app.purchaseSelectedSubscription()"
+                                ${!this.subscriptionState.selectedPlan ? 'disabled' : ''}>
+                            💳 Оформить подписку
+                        </button>
+                        <button class="btn btn-outline" onclick="this.closest('.media-modal').remove()">
+                            Отмена
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    selectSubscriptionPlan(planId) {
+        this.subscriptionState.selectedPlan = this.subscriptionPlans.find(p => p.id === planId);
+        this.updateSubscriptionModal();
+    }
+
+    selectSubscriptionPeriod(period) {
+        this.subscriptionState.selectedPeriod = period;
+        this.updateSubscriptionModal();
+    }
+
+    updateSubscriptionModal() {
+        const plans = document.querySelectorAll('.subscription-plan');
+        plans.forEach(plan => {
+            const planId = parseInt(plan.getAttribute('onclick').match(/\d+/)[0]);
+            plan.classList.toggle('selected', planId === this.subscriptionState.selectedPlan?.id);
+        });
+
+        const purchaseBtn = document.querySelector('.modal-actions .btn-primary');
+        if (purchaseBtn) {
+            purchaseBtn.disabled = !this.subscriptionState.selectedPlan;
+        }
+    }
+
+    async purchaseSelectedSubscription() {
+        if (!this.subscriptionState.selectedPlan) return;
+        
+        const success = await this.purchaseSubscription(
+            this.subscriptionState.selectedPlan.id,
+            this.subscriptionState.selectedPeriod
+        );
+        
+        if (success) {
+            document.querySelector('.media-modal')?.remove();
+        }
+    }
+
+    // ==================== СИСТЕМА ПРЕПОДАВАТЕЛЕЙ ====================
+
+    async loadInstructors() {
+        try {
+            const response = await this.safeApiCall('/api/instructors');
+            if (response.success) {
+                this.instructors = response.data;
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки преподавателей:', error);
+        }
+    }
+
+    createInstructorsSection(instructors) {
+        if (!instructors || instructors.length === 0) return '';
+        
+        return `
+            <div class="instructors-section">
+                <h3>👨‍🏫 Преподаватели</h3>
+                <div class="instructors-grid">
+                    ${instructors.map(instructor => `
+                        <div class="instructor-card" onclick="app.showInstructorDetail(${instructor.id})">
+                            <div class="instructor-avatar">
+                                <img src="${instructor.avatar_url || '/webapp/assets/instructor-default.jpg'}" 
+                                     alt="${instructor.name}"
+                                     onerror="this.src='/webapp/assets/instructor-default.jpg'">
+                            </div>
+                            <div class="instructor-info">
+                                <h4>${instructor.name}</h4>
+                                <p class="instructor-specialization">${instructor.specialization}</p>
+                                <p class="instructor-role">${instructor.role}</p>
+                                <div class="instructor-experience">
+                                    🕐 Опыт: ${instructor.experience_years} лет
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    showInstructorDetail(instructorId) {
+        const instructor = this.instructors.find(i => i.id === instructorId);
+        if (!instructor) return;
+
+        const modal = document.createElement('div');
+        modal.className = 'media-modal active';
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="this.parentElement.remove()">
+                <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h3>👨‍🏫 Профиль преподавателя</h3>
+                        <button class="modal-close" onclick="this.closest('.media-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="instructor-detail">
+                            <div class="instructor-avatar-large">
+                                <img src="${instructor.avatar_url || '/webapp/assets/instructor-default.jpg'}" 
+                                     alt="${instructor.name}"
+                                     onerror="this.src='/webapp/assets/instructor-default.jpg'">
+                            </div>
+                            <div class="instructor-detail-info">
+                                <h2>${instructor.name}</h2>
+                                <p class="instructor-specialization">${instructor.specialization}</p>
+                                <div class="instructor-stats">
+                                    <span class="stat">🕐 ${instructor.experience_years} лет опыта</span>
+                                    ${instructor.email ? `<span class="stat">📧 ${instructor.email}</span>` : ''}
+                                </div>
+                                <div class="instructor-bio">
+                                    <h4>О преподавателе:</h4>
+                                    <p>${instructor.bio || 'Информация о преподавателе скоро будет добавлена.'}</p>
+                                </div>
+                                ${instructor.social_links ? `
+                                <div class="instructor-social">
+                                    <h4>Контакты:</h4>
+                                    <div class="social-links">
+                                        ${Object.entries(JSON.parse(instructor.social_links)).map(([platform, link]) => `
+                                            <a href="${link}" class="social-link" target="_blank">${this.getSocialIcon(platform)} ${platform}</a>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    getSocialIcon(platform) {
+        const icons = {
+            'telegram': '📱',
+            'instagram': '📸',
+            'website': '🌐',
+            'youtube': '🎥',
+            'vk': '👥'
+        };
+        return icons[platform] || '🔗';
+    }
+   
     // ==================== БИЗНЕС-ЛОГИКА ====================
 
     purchaseCourse(courseId) {
