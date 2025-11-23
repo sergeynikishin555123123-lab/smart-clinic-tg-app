@@ -486,7 +486,19 @@ async function createTables() {
                 uploaded_by INTEGER REFERENCES users(id),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-        `);
+        `            -- Таблица для навигационных кнопок
+            CREATE TABLE IF NOT EXISTS navigation_items (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                icon VARCHAR(50),
+                image_url VARCHAR(500),
+                page VARCHAR(100) NOT NULL,
+                position INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        
         console.log('✅ Таблицы созданы');
     } catch (error) {
         console.error('❌ Ошибка создания таблиц:', error);
@@ -671,6 +683,23 @@ async function seedDemoData() {
                 ('Базовый', 'Доступ к базовым курсам и материалам', 2900, 7500, 27000, '["Доступ к 5 базовым курсам", "Просмотр вебинаров", "База материалов", "Поддержка по email"]', true),
                 ('Профессиональный', 'Полный доступ ко всем курсам', 5900, 15000, 54000, '["Все курсы Академии", "Прямые эфиры", "Закрытый чат", "Персональная поддержка", "Сертификаты"]', true),
                 ('Премиум', 'Максимальные возможности + менторство', 9900, 27000, 99000, '["Все курсы + будущие", "Личное менторство", "Разбор кейсов", "Участие в воркшопах", "Премиум-поддержка"]', true)
+            `);
+        }
+
+                // ==================== ДОБАВИТЬ ДЕМО-НАВИГАЦИЮ ====================
+        const { rows: navCount } = await pool.query('SELECT COUNT(*) FROM navigation_items');
+        if (parseInt(navCount[0].count) === 0) {
+            console.log('🧭 Добавляем демо-навигацию...');
+            await pool.query(`
+                INSERT INTO navigation_items (title, description, icon, image_url, page, position, is_active) VALUES
+                ('Курсы', 'Доступные курсы и обучение', '📚', 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop', 'courses', 1, true),
+                ('Подкасты', 'Аудио подкасты и лекции', '🎧', 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=200&fit=crop', 'podcasts', 2, true),
+                ('Эфиры', 'Прямые эфиры и разборы', '📹', 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=200&fit=crop', 'streams', 3, true),
+                ('Видео', 'Короткие обучающие видео', '🎯', 'https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=400&h=200&fit=crop', 'videos', 4, true),
+                ('Материалы', 'Чек-листы и протоколы', '📋', 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=400&h=200&fit=crop', 'materials', 5, true),
+                ('Мероприятия', 'Онлайн и офлайн события', '🗺️', 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop', 'events', 6, true),
+                ('Сообщество', 'Правила и ценности', '👥', 'https://images.unsplash.com/photo-1551836026-d5c55ac5d4c5?w=400&h=200&fit=crop', 'community', 7, true),
+                ('Избранное', 'Сохраненные материалы', '❤️', 'https://images.unsplash.com/photo-1579546929662-711aa81148cf?w=400&h=200&fit=crop', 'favorites', 8, true)
             `);
         }
 
@@ -1278,15 +1307,17 @@ app.post('/api/user', async (req, res) => {
         // Проверяем, является ли пользователь супер-админом
         const isSuperAdmin = userToProcess.id === 898508164;
 
+        // ФИКС: Используем правильный ON CONFLICT
         const { rows: users } = await pool.query(
             `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin, subscription_end) 
              VALUES ($1, $2, $3, $4, $5, $6)
              ON CONFLICT (telegram_id) 
              DO UPDATE SET 
-                 first_name = EXCLUDED.first_name, 
-                 username = EXCLUDED.username,
-                 is_admin = EXCLUDED.is_admin,
-                 is_super_admin = EXCLUDED.is_super_admin
+                 first_name = $2, 
+                 username = $3,
+                 is_admin = $4,
+                 is_super_admin = $5,
+                 subscription_end = $6
              RETURNING *`,
             [
                 userToProcess.id, 
@@ -1351,7 +1382,7 @@ app.post('/api/user', async (req, res) => {
             isSuperAdmin: user.is_super_admin,
             subscriptionEnd: user.subscription_end,
             avatarUrl: user.avatar_url,
-            hasActiveSubscription: subscription.length > 0 || isSuperAdmin, // Супер-админ всегда имеет подписку
+            hasActiveSubscription: subscription.length > 0 || isSuperAdmin,
             subscription: subscription[0] || null,
             favorites: userFavorites,
             progress: {
@@ -1371,6 +1402,57 @@ app.post('/api/user', async (req, res) => {
     } catch (error) {
         console.error('API User error:', error);
         res.status(500).json({ success: false, error: 'Ошибка загрузки пользователя' });
+    }
+// ==================== API ДЛЯ НАВИГАЦИОННЫХ КНОПОК ====================
+
+// Получить все навигационные кнопки
+app.get('/api/navigation', async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT * FROM navigation_items 
+            WHERE is_active = true 
+            ORDER BY position ASC
+        `);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Navigation API error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки навигации' });
+    }
+});
+
+// Создать/обновить навигационную кнопку
+app.post('/api/admin/navigation', upload.single('image'), async (req, res) => {
+    try {
+        const { id, title, description, icon, page, position, is_active } = req.body;
+        let imageUrl = null;
+
+        if (req.file) {
+            imageUrl = `/uploads/${req.file.filename}`;
+        }
+
+        if (id) {
+            // Обновление существующей кнопки
+            const { rows } = await pool.query(`
+                UPDATE navigation_items 
+                SET title = $1, description = $2, icon = $3, image_url = $4, page = $5, position = $6, is_active = $7
+                WHERE id = $8
+                RETURNING *
+            `, [title, description, icon, imageUrl || req.body.image_url, page, position, is_active === 'true', id]);
+            
+            res.json({ success: true, data: rows[0] });
+        } else {
+            // Создание новой кнопки
+            const { rows } = await pool.query(`
+                INSERT INTO navigation_items (title, description, icon, image_url, page, position, is_active)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING *
+            `, [title, description, icon, imageUrl, page, position, is_active === 'true']);
+            
+            res.json({ success: true, data: rows[0] });
+        }
+    } catch (error) {
+        console.error('Navigation create error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка сохранения навигации' });
     }
 });
 
