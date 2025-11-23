@@ -580,12 +580,14 @@ async function createSuperAdmin() {
     }
 }
 
+// ==================== ЗАПОЛНЕНИЕ ДЕМО-ДАННЫМИ ====================
+
 async function seedDemoData() {
     try {
         // Создаем супер-админа
         await createSuperAdmin();
         
-                // Демо-курсы
+        // Демо-курсы
         const { rows: courseCount } = await pool.query('SELECT COUNT(*) FROM courses');
         if (parseInt(courseCount[0].count) === 0) {
             console.log('📚 Добавляем демо-курсы...');
@@ -597,7 +599,7 @@ async function seedDemoData() {
             `);
         }
 
-               // Демо-подкасты
+        // Демо-подкасты
         const { rows: podcastCount } = await pool.query('SELECT COUNT(*) FROM podcasts');
         if (parseInt(podcastCount[0].count) === 0) {
             console.log('🎧 Добавляем демо-подкасты...');
@@ -619,7 +621,7 @@ async function seedDemoData() {
             `);
         }
 
-               // Демо-видео
+        // Демо-видео
         const { rows: videoCount } = await pool.query('SELECT COUNT(*) FROM videos');
         if (parseInt(videoCount[0].count) === 0) {
             console.log('🎯 Добавляем демо-видео...');
@@ -630,7 +632,7 @@ async function seedDemoData() {
             `);
         }
 
-                // Демо-материалы
+        // Демо-материалы
         const { rows: materialCount } = await pool.query('SELECT COUNT(*) FROM materials');
         if (parseInt(materialCount[0].count) === 0) {
             console.log('📋 Добавляем демо-материалы...');
@@ -641,7 +643,7 @@ async function seedDemoData() {
             `);
         }
 
-                // Демо-мероприятия
+        // Демо-мероприятия
         const { rows: eventCount } = await pool.query('SELECT COUNT(*) FROM events');
         if (parseInt(eventCount[0].count) === 0) {
             console.log('🗺️ Добавляем демо-мероприятия...');
@@ -652,7 +654,7 @@ async function seedDemoData() {
             `);
         }
 
-                // Демо-новости
+        // Демо-новости
         const { rows: newsCount } = await pool.query('SELECT COUNT(*) FROM news');
         if (parseInt(newsCount[0].count) === 0) {
             console.log('📰 Добавляем демо-новости...');
@@ -663,10 +665,10 @@ async function seedDemoData() {
             `);
         }
 
-        // ==================== ДОБАВИТЬ ДЕМО-ПРЕПОДАВАТЕЛЕЙ ====================
+        // Демо-преподаватели
         const { rows: instructorCount } = await pool.query('SELECT COUNT(*) FROM instructors');
         if (parseInt(instructorCount[0].count) === 0) {
-            console.log('👨‍🏫 Добавляем демо-преподавателей...');
+            console.log('👨‍🏫 Добавляем демо-преподаватели...');
             await pool.query(`
                 INSERT INTO instructors (name, specialization, bio, experience_years, avatar_url, email, social_links) VALUES
                 ('Доктор Иванов А.В.', 'Неврология, Мануальная терапия', 'Ведущий специалист по мануальной терапии, автор методик лечения болей в спине. Опыт работы - 15 лет.', 15, 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=200&fit=crop&crop=face', 'ivanov@anb.ru', '{"telegram": "@ivanov_neuro", "instagram": "dr_ivanov"}'),
@@ -675,7 +677,7 @@ async function seedDemoData() {
             `);
         }
 
-        // ==================== ДОБАВИТЬ ДЕМО-ПЛАНЫ ПОДПИСОК ====================
+        // Демо-планы подписок
         const { rows: planCount } = await pool.query('SELECT COUNT(*) FROM subscription_plans');
         if (parseInt(planCount[0].count) === 0) {
             console.log('💰 Добавляем планы подписок...');
@@ -687,7 +689,7 @@ async function seedDemoData() {
             `);
         }
 
-                // ==================== ДОБАВИТЬ ДЕМО-НАВИГАЦИЮ ====================
+        // Демо-навигация
         const { rows: navCount } = await pool.query('SELECT COUNT(*) FROM navigation_items');
         if (parseInt(navCount[0].count) === 0) {
             console.log('🧭 Добавляем демо-навигацию...');
@@ -704,7 +706,7 @@ async function seedDemoData() {
             `);
         }
 
-        // ==================== ПРИВЯЗАТЬ ПРЕПОДАВАТЕЛЕЙ К КУРСАМ ====================
+        // Привязка преподавателей к курсам
         const { rows: existingLinks } = await pool.query('SELECT COUNT(*) FROM content_instructors');
         if (parseInt(existingLinks[0].count) === 0) {
             console.log('🔗 Привязываем преподавателей к курсам...');
@@ -1400,10 +1402,13 @@ app.post('/api/user', async (req, res) => {
 
         console.log(`✅ Пользователь загружен: ${userData.firstName}, Admin: ${userData.isAdmin}, SuperAdmin: ${userData.isSuperAdmin}`);
         res.json({ success: true, user: userData });
+        
     } catch (error) {
         console.error('API User error:', error);
         res.status(500).json({ success: false, error: 'Ошибка загрузки пользователя' });
     }
+});
+
 // ==================== API ДЛЯ НАВИГАЦИОННЫХ КНОПОК ====================
 
 // Получить все навигационные кнопки
@@ -1514,8 +1519,6 @@ app.get('/api/favorites/:userId', async (req, res) => {
     }
 });
 
-
-    
 // ==================== АДМИН API ====================
 
 // Получение статистики для админ-панели
