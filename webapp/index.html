@@ -2356,7 +2356,148 @@
 .social-link:hover {
     background: var(--accent);
     color: white;
-}       
+}    
+
+      /* Детальная страница преподавателя - дополнительные стили */
+.instructor-hero {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2rem;
+    padding: 2rem;
+    align-items: start;
+}
+
+@media (max-width: 768px) {
+    .instructor-hero {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+}
+
+.instructor-hero-content h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+}
+
+.instructor-specialization-large {
+    color: var(--accent);
+    font-size: 1.2rem;
+    margin: 0 0 2rem 0;
+    font-weight: 500;
+}
+
+.instructor-stats-large {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.instructor-stat-large {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.stat-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--accent);
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.instructor-contacts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--bg-primary);
+    border-radius: 0.5rem;
+}
+
+.contact-icon {
+    font-size: 1.2rem;
+}
+
+.contact-text {
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.contact-text:hover {
+    color: var(--accent);
+}
+
+.instructor-bio-section {
+    padding: 2rem;
+    border-top: 1px solid var(--border);
+}
+
+.instructor-bio-content {
+    line-height: 1.7;
+}
+
+.instructor-bio-content p {
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+}
+
+.instructor-achievements {
+    margin-top: 2rem;
+}
+
+.instructor-achievements h4 {
+    margin-bottom: 1rem;
+    color: var(--accent);
+}
+
+.instructor-achievements ul {
+    list-style: none;
+    padding: 0;
+}
+
+.instructor-achievements li {
+    padding: 0.5rem 0;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.instructor-achievements li:before {
+    content: '✅';
+    position: absolute;
+    left: 0;
+}
+
+.instructor-courses-section {
+    padding: 2rem;
+    border-top: 1px solid var(--border);
+}
+
+.courses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}  
     </style>
 </head>
 <body>
