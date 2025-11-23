@@ -1767,19 +1767,19 @@ createProfilePage() {
     }
 
     setupEventListeners() {
+        // Обработчики для нижней навигации
+        document.querySelectorAll('.bottom-nav .nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const page = btn.dataset.page;
+                this.renderPage(page);
+            });
+        });
+
         // Глобальные обработчики событий
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.handleBackButton();
             }
-        });
-
-        // Обработчики навигации
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const page = btn.dataset.page;
-                this.renderPage(page);
-            });
         });
 
         console.log('✅ Обработчики событий установлены');
