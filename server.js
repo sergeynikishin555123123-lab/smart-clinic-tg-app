@@ -1039,6 +1039,183 @@ app.get('/api/db-health', async (req, res) => {
     }
 });
 
+// ==================== API ДЛЯ КОНТЕНТА ПО ТИПАМ ====================
+
+// Получить контент по типу с пагинацией
+app.get('/api/content/:type', async (req, res) => {
+    try {
+        const { type } = req.params;
+        const { page = 1, limit = 12, category, level } = req.query;
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+
+        let query = `SELECT * FROM ${type} WHERE is_active = true`;
+        let countQuery = `SELECT COUNT(*) FROM ${type} WHERE is_active = true`;
+        const queryParams = [];
+        let paramCount = 0;
+
+        // Фильтрация по категории
+        if (category && category !== 'all') {
+            paramCount++;
+            query += ` AND category = $${paramCount}`;
+            countQuery += ` AND category = $${paramCount}`;
+            queryParams.push(category);
+        }
+
+        // Фильтрация по уровню (для курсов)
+        if (level && level !== 'all' && type === 'courses') {
+            paramCount++;
+            query += ` AND level = $${paramCount}`;
+            countQuery += ` AND level = $${paramCount}`;
+            queryParams.push(level);
+        }
+
+        // Сортировка и пагинация
+        query += ` ORDER BY created_at DESC LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
+        queryParams.push(parseInt(limit), offset);
+
+        const [contentResult, countResult] = await Promise.all([
+            pool.query(query, queryParams),
+            pool.query(countQuery, queryParams.slice(0, -2))
+        ]);
+
+        res.json({
+            success: true,
+            data: contentResult.rows,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total: parseInt(countResult.rows[0].count),
+                pages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error(`API ${type} error:`, error);
+        res.status(500).json({ success: false, error: `Ошибка загрузки ${type}` });
+    }
+});
+
+// Получить детальную информацию о курсе
+app.get('/api/courses/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const courseResult = await pool.query('SELECT * FROM courses WHERE id = $1', [id]);
+        if (courseResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Курс не найден' });
+        }
+
+        const course = courseResult.rows[0];
+
+        // Получаем преподавателей курса
+        const instructorsResult = await pool.query(`
+            SELECT i.*, ci.role 
+            FROM instructors i 
+            JOIN content_instructors ci ON i.id = ci.instructor_id 
+            WHERE ci.content_id = $1 AND ci.content_type = 'courses'
+        `, [id]);
+
+        // Получаем модули курса (демо-данные)
+        const modules = Array.from({ length: course.modules }, (_, i) => ({
+            id: i + 1,
+            title: `Модуль ${i + 1}: ${course.title}`,
+            duration: '2-3 часа',
+            lessons: [
+                { title: 'Теоретическая основа', type: 'video', duration: '45 мин' },
+                { title: 'Практическое применение', type: 'practice', duration: '1 час' },
+                { title: 'Разбор кейсов', type: 'case', duration: '30 мин' },
+                { title: 'Тестирование', type: 'test', duration: '15 мин' }
+            ]
+        }));
+
+        res.json({
+            success: true,
+            data: {
+                ...course,
+                instructors: instructorsResult.rows,
+                modules: modules,
+                features: [
+                    'Полный доступ к курсу',
+                    'Сертификат о прохождении', 
+                    'Поддержка куратора',
+                    'Доступ в закрытый чат',
+                    'Обновления курса'
+                ]
+            }
+        });
+    } catch (error) {
+        console.error('Course detail error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки курса' });
+    }
+});
+
+// Получить детальную информацию о подкасте
+app.get('/api/podcasts/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await pool.query('SELECT * FROM podcasts WHERE id = $1', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Подкаст не найден' });
+        }
+
+        res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+        console.error('Podcast detail error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки подкаста' });
+    }
+});
+
+// Получить детальную информацию о видео
+app.get('/api/videos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await pool.query('SELECT * FROM videos WHERE id = $1', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Видео не найден' });
+        }
+
+        res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+        console.error('Video detail error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки видео' });
+    }
+});
+
+// Получить детальную информацию о материале
+app.get('/api/materials/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await pool.query('SELECT * FROM materials WHERE id = $1', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Материал не найден' });
+        }
+
+        res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+        console.error('Material detail error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки материала' });
+    }
+});
+
+// Получить детальную информацию о потоке
+app.get('/api/streams/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await pool.query('SELECT * FROM streams WHERE id = $1', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Поток не найден' });
+        }
+
+        res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+        console.error('Stream detail error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки потока' });
+    }
+});
+
 // ==================== ПРЕПОДАВАТЕЛИ API ====================
 
 // Получить всех преподавателей
@@ -1052,7 +1229,30 @@ app.get('/api/instructors', async (req, res) => {
         res.json({ success: true, data: rows });
     } catch (error) {
         console.error('Instructors API error:', error);
-        res.status(500).json({ success: false, error: 'Ошибка загрузки преподавателей' });
+        // Возвращаем демо-данные если БД недоступна
+        const demoInstructors = [
+            {
+                id: 1,
+                name: 'Доктор Иванов А.В.',
+                specialization: 'Неврология, Мануальная терапия',
+                bio: 'Ведущий специалист по мануальной терапии, автор методик лечения болей в спине. Опыт работы - 15 лет.',
+                experience_years: 15,
+                avatar_url: '/uploads/instructors/doctor1.jpg',
+                email: 'ivanov@anb.ru',
+                social_links: { telegram: '@ivanov_neuro', instagram: 'dr_ivanov' }
+            },
+            {
+                id: 2,
+                name: 'Профессор Петрова С.М.',
+                specialization: 'Реабилитация, Физиотерапия',
+                bio: 'Эксперт по реабилитации пациентов с неврологическими нарушениями. Доктор медицинских наук.',
+                experience_years: 20,
+                avatar_url: '/uploads/instructors/doctor2.jpg',
+                email: 'petrova@anb.ru',
+                social_links: { telegram: '@petrova_rehab', website: 'petrova-clinic.ru' }
+            }
+        ];
+        res.json({ success: true, data: demoInstructors });
     }
 });
 
@@ -1208,6 +1408,52 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         res.status(500).json({ success: false, error: 'Ошибка загрузки файла' });
     }
 });
+
+// Получить список медиа файлов
+app.get('/api/media', async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT * FROM media_files 
+            ORDER BY created_at DESC
+        `);
+        res.json({ success: true, files: rows });
+    } catch (error) {
+        console.error('Media API error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки медиа' });
+    }
+});
+
+// Удалить медиа файл
+app.delete('/api/media/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Сначала получаем информацию о файле
+        const { rows } = await pool.query('SELECT * FROM media_files WHERE id = $1', [id]);
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Файл не найден' });
+        }
+
+        const file = rows[0];
+        
+        // Удаляем физический файл
+        const filePath = join(__dirname, file.url);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+
+        // Удаляем запись из БД
+        await pool.query('DELETE FROM media_files WHERE id = $1', [id]);
+
+        res.json({ success: true, message: 'Файл удален' });
+    } catch (error) {
+        console.error('Delete media error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка удаления файла' });
+    }
+});
+
+// Статический доступ к загруженным файлам
+app.use('/uploads', express.static(join(__dirname, 'uploads')));
 
 // ==================== КОНТЕНТ API ====================
 
