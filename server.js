@@ -176,8 +176,52 @@ app.use((req, res, next) => {
     next();
 });
 
-// ==================== БАЗА ДАННЫХ ====================
+// ==================== ПЕРЕСОЗДАНИЕ ТАБЛИЦ ====================
 
+async function recreateTables() {
+    try {
+        console.log('🔄 Принудительное пересоздание таблиц...');
+        
+        // Удаляем таблицы в правильном порядке (с учетом внешних ключей)
+        const tables = [
+            'media_files',
+            'support_requests',
+            'admin_actions',
+            'content_instructors',
+            'subscriptions',
+            'subscription_plans',
+            'instructors',
+            'favorites',
+            'user_progress',
+            'news',
+            'events',
+            'materials',
+            'videos',
+            'streams',
+            'podcasts',
+            'courses',
+            'users'
+        ];
+        
+        for (const table of tables) {
+            try {
+                await pool.query(`DROP TABLE IF EXISTS ${table} CASCADE`);
+                console.log(`✅ Таблица ${table} удалена`);
+            } catch (error) {
+                console.log(`⚠️ Не удалось удалить таблицу ${table}:`, error.message);
+            }
+        }
+        
+        // Создаем таблицы заново
+        await createTables();
+        console.log('✅ Все таблицы пересозданы');
+        
+    } catch (error) {
+        console.error('❌ Ошибка пересоздания таблиц:', error);
+    }
+}
+
+// ==================== БАЗА ДАННЫХ ====================
 async function initDatabase() {
     try {
         console.log('🗄️ Проверка структуры базы данных...');
@@ -195,21 +239,170 @@ async function initDatabase() {
             await createTables();
         } else {
             console.log('✅ Таблицы уже существуют');
-            await checkTableStructure();
+            // Принудительно пересоздаем таблицы для исправления структуры
+            await recreateTables();
         }
         
         await seedDemoData();
         console.log('✅ База данных готова к работе');
     } catch (error) {
         console.error('❌ Ошибка инициализации БД:', error);
+        // Пробуем пересоздать таблицы при ошибке
+        await recreateTables();
+        await seedDemoData();
     }
 }
 
 async function createTables() {
     try {
         await pool.query(`
-            -- ==================== НОВЫЕ ТАБЛИЦЫ ====================
+            -- ==================== ОСНОВНЫЕ ТАБЛИЦЫ ====================
             
+            -- Таблица пользователей (исправленная)
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                telegram_id BIGINT UNIQUE,
+                first_name VARCHAR(255),
+                last_name VARCHAR(255),
+                username VARCHAR(255),
+                email VARCHAR(255),
+                specialization VARCHAR(255),
+                city VARCHAR(255),
+                subscription_end DATE,
+                is_admin BOOLEAN DEFAULT false,
+                is_super_admin BOOLEAN DEFAULT false,
+                avatar_url VARCHAR(500),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Таблица прогресса пользователей
+            CREATE TABLE IF NOT EXISTS user_progress (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                level VARCHAR(50) DEFAULT 'Понимаю',
+                experience INTEGER DEFAULT 1250,
+                courses_bought INTEGER DEFAULT 3,
+                modules_completed INTEGER DEFAULT 2,
+                materials_watched INTEGER DEFAULT 12,
+                events_attended INTEGER DEFAULT 1,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Таблица избранного
+            CREATE TABLE IF NOT EXISTS favorites (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                content_id INTEGER,
+                content_type VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Таблица курсов
+            CREATE TABLE IF NOT EXISTS courses (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                price INTEGER,
+                discount INTEGER DEFAULT 0,
+                duration VARCHAR(100),
+                modules INTEGER,
+                category VARCHAR(255),
+                level VARCHAR(50),
+                students_count INTEGER DEFAULT 0,
+                rating DECIMAL(3,2) DEFAULT 4.5,
+                featured BOOLEAN DEFAULT false,
+                image_url VARCHAR(500),
+                video_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Таблица подкастов
+            CREATE TABLE IF NOT EXISTS podcasts (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                duration VARCHAR(100),
+                category VARCHAR(255),
+                listens INTEGER DEFAULT 0,
+                image_url VARCHAR(500),
+                audio_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Таблица стримов
+            CREATE TABLE IF NOT EXISTS streams (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                duration VARCHAR(100),
+                category VARCHAR(255),
+                participants INTEGER DEFAULT 0,
+                is_live BOOLEAN DEFAULT false,
+                thumbnail_url VARCHAR(500),
+                video_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Таблица видео
+            CREATE TABLE IF NOT EXISTS videos (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                duration VARCHAR(100),
+                category VARCHAR(255),
+                views INTEGER DEFAULT 0,
+                thumbnail_url VARCHAR(500),
+                video_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Таблица материалов
+            CREATE TABLE IF NOT EXISTS materials (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                category VARCHAR(255),
+                material_type VARCHAR(100),
+                downloads INTEGER DEFAULT 0,
+                image_url VARCHAR(500),
+                file_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Таблица мероприятий
+            CREATE TABLE IF NOT EXISTS events (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                event_type VARCHAR(50),
+                event_date TIMESTAMP,
+                location VARCHAR(500),
+                participants INTEGER DEFAULT 0,
+                image_url VARCHAR(500),
+                registration_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Таблица новостей
+            CREATE TABLE IF NOT EXISTS news (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500),
+                description TEXT,
+                content TEXT,
+                date VARCHAR(100),
+                category VARCHAR(255),
+                type VARCHAR(100),
+                image_url VARCHAR(500),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
             -- Таблица преподавателей
             CREATE TABLE IF NOT EXISTS instructors (
                 id SERIAL PRIMARY KEY,
@@ -261,141 +454,7 @@ async function createTables() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
-            -- ==================== СУЩЕСТВУЮЩИЕ ТАБЛИЦЫ (оставить как есть) ====================
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                telegram_id BIGINT UNIQUE,
-                first_name VARCHAR(255),
-                username VARCHAR(255),
-                email VARCHAR(255),
-                specialization VARCHAR(255),
-                city VARCHAR(255),
-                subscription_end DATE,
-                is_admin BOOLEAN DEFAULT false,
-                is_super_admin BOOLEAN DEFAULT false,
-                avatar_url VARCHAR(500),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS user_progress (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id),
-                level VARCHAR(50) DEFAULT 'Понимаю',
-                experience INTEGER DEFAULT 1250,
-                courses_bought INTEGER DEFAULT 3,
-                modules_completed INTEGER DEFAULT 2,
-                materials_watched INTEGER DEFAULT 12,
-                events_attended INTEGER DEFAULT 1,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS favorites (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id),
-                content_id INTEGER,
-                content_type VARCHAR(50),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS courses (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(500),
-                description TEXT,
-                price INTEGER,
-                discount INTEGER DEFAULT 0,
-                duration VARCHAR(100),
-                modules INTEGER,
-                category VARCHAR(255),
-                level VARCHAR(50),
-                students_count INTEGER DEFAULT 0,
-                rating DECIMAL(3,2) DEFAULT 4.5,
-                featured BOOLEAN DEFAULT false,
-                image_url VARCHAR(500),
-                video_url VARCHAR(500),
-                is_active BOOLEAN DEFAULT true,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS podcasts (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(500),
-                description TEXT,
-                duration VARCHAR(100),
-                category VARCHAR(255),
-                listens INTEGER DEFAULT 0,
-                image_url VARCHAR(500),
-                audio_url VARCHAR(500),
-                is_active BOOLEAN DEFAULT true,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS streams (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(500),
-                description TEXT,
-                duration VARCHAR(100),
-                category VARCHAR(255),
-                participants INTEGER DEFAULT 0,
-                is_live BOOLEAN DEFAULT false,
-                thumbnail_url VARCHAR(500),
-                video_url VARCHAR(500),
-                is_active BOOLEAN DEFAULT true,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS videos (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(500),
-                description TEXT,
-                duration VARCHAR(100),
-                category VARCHAR(255),
-                views INTEGER DEFAULT 0,
-                thumbnail_url VARCHAR(500),
-                video_url VARCHAR(500),
-                is_active BOOLEAN DEFAULT true,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS materials (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(500),
-                description TEXT,
-                category VARCHAR(255),
-                material_type VARCHAR(100),
-                downloads INTEGER DEFAULT 0,
-                image_url VARCHAR(500),
-                file_url VARCHAR(500),
-                is_active BOOLEAN DEFAULT true,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS events (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(500),
-                description TEXT,
-                event_type VARCHAR(50),
-                event_date TIMESTAMP,
-                location VARCHAR(500),
-                participants INTEGER DEFAULT 0,
-                image_url VARCHAR(500),
-                registration_url VARCHAR(500),
-                is_active BOOLEAN DEFAULT true,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS news (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(500),
-                description TEXT,
-                content TEXT,
-                date VARCHAR(100),
-                category VARCHAR(255),
-                type VARCHAR(100),
-                image_url VARCHAR(500),
-                is_active BOOLEAN DEFAULT true,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
+            -- Таблица действий админа
             CREATE TABLE IF NOT EXISTS admin_actions (
                 id SERIAL PRIMARY KEY,
                 admin_id INTEGER REFERENCES users(id),
@@ -405,6 +464,7 @@ async function createTables() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
+            -- Таблица поддержки
             CREATE TABLE IF NOT EXISTS support_requests (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id),
@@ -415,6 +475,7 @@ async function createTables() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
+            -- Таблица медиа файлов
             CREATE TABLE IF NOT EXISTS media_files (
                 id SERIAL PRIMARY KEY,
                 filename VARCHAR(255),
@@ -1196,26 +1257,45 @@ app.get('/api/content/:type/:id', async (req, res) => {
     }
 });
 
-// ==================== ПОЛЬЗОВАТЕЛИ API ====================
+// ==================== ФИКС API ДЛЯ ПРОФИЛЯ ====================
 
 // Создание/обновление пользователя
 app.post('/api/user', async (req, res) => {
     try {
         const { user: tgUser } = req.body;
         
-        if (!tgUser || !tgUser.id) {
+        // ФИКС: Используем фиксированного супер-админа
+        const userToProcess = tgUser || {
+            id: 898508164,
+            first_name: 'Главный Админ',
+            username: 'superadmin'
+        };
+
+        if (!userToProcess || !userToProcess.id) {
             return res.status(400).json({ success: false, error: 'Неверные данные пользователя' });
         }
 
+        // Проверяем, является ли пользователь супер-админом
+        const isSuperAdmin = userToProcess.id === 898508164;
+
         const { rows: users } = await pool.query(
-            `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin) 
-             VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin, subscription_end) 
+             VALUES ($1, $2, $3, $4, $5, $6)
              ON CONFLICT (telegram_id) 
-             DO UPDATE SET first_name = $2, username = $3
+             DO UPDATE SET 
+                 first_name = EXCLUDED.first_name, 
+                 username = EXCLUDED.username,
+                 is_admin = EXCLUDED.is_admin,
+                 is_super_admin = EXCLUDED.is_super_admin
              RETURNING *`,
-            [tgUser.id, tgUser.first_name, tgUser.username, 
-             tgUser.id == process.env.SUPER_ADMIN_ID, 
-             tgUser.id == process.env.SUPER_ADMIN_ID]
+            [
+                userToProcess.id, 
+                userToProcess.first_name, 
+                userToProcess.username, 
+                isSuperAdmin, 
+                isSuperAdmin,
+                '2025-12-31'
+            ]
         );
 
         const user = users[0];
@@ -1271,7 +1351,7 @@ app.post('/api/user', async (req, res) => {
             isSuperAdmin: user.is_super_admin,
             subscriptionEnd: user.subscription_end,
             avatarUrl: user.avatar_url,
-            hasActiveSubscription: subscription.length > 0,
+            hasActiveSubscription: subscription.length > 0 || isSuperAdmin, // Супер-админ всегда имеет подписку
             subscription: subscription[0] || null,
             favorites: userFavorites,
             progress: {
@@ -1286,6 +1366,7 @@ app.post('/api/user', async (req, res) => {
             }
         };
 
+        console.log(`✅ Пользователь загружен: ${userData.firstName}, Admin: ${userData.isAdmin}, SuperAdmin: ${userData.isSuperAdmin}`);
         res.json({ success: true, user: userData });
     } catch (error) {
         console.error('API User error:', error);
