@@ -1296,12 +1296,15 @@ app.post('/api/user', async (req, res) => {
     try {
         const { user: tgUser } = req.body;
         
-        // ФИКС: Используем фиксированного супер-админа
-        const userToProcess = tgUser || {
-            id: 898508164,
-            first_name: 'Главный Админ',
-            username: 'superadmin'
-        };
+// ФИКС: Используем фиксированного супер-админа
+let userToProcess = tgUser;
+if (!userToProcess || !userToProcess.id) {
+    userToProcess = {
+        id: 898508164,
+        first_name: 'Главный Админ', 
+        username: 'superadmin'
+    };
+}
 
         if (!userToProcess || !userToProcess.id) {
             return res.status(400).json({ success: false, error: 'Неверные данные пользователя' });
@@ -1310,27 +1313,47 @@ app.post('/api/user', async (req, res) => {
         // Проверяем, является ли пользователь супер-админом
         const isSuperAdmin = userToProcess.id === 898508164;
 
-        // ФИКС: Используем правильный ON CONFLICT
-        const { rows: users } = await pool.query(
-            `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin, subscription_end) 
-             VALUES ($1, $2, $3, $4, $5, $6)
-             ON CONFLICT (telegram_id) 
-             DO UPDATE SET 
-                 first_name = $2, 
-                 username = $3,
-                 is_admin = $4,
-                 is_super_admin = $5,
-                 subscription_end = $6
-             RETURNING *`,
-            [
-                userToProcess.id, 
-                userToProcess.first_name, 
-                userToProcess.username, 
-                isSuperAdmin, 
-                isSuperAdmin,
-                '2025-12-31'
-            ]
-        );
+// ФИКС: Используем правильный ON CONFLICT
+const { rows: existingUsers } = await pool.query(
+    'SELECT * FROM users WHERE telegram_id = $1',
+    [userToProcess.id]
+);
+
+let user;
+if (existingUsers.length === 0) {
+    // Создаем нового пользователя
+    const { rows: newUsers } = await pool.query(
+        `INSERT INTO users (telegram_id, first_name, username, is_admin, is_super_admin, subscription_end) 
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING *`,
+        [
+            userToProcess.id, 
+            userToProcess.first_name, 
+            userToProcess.username, 
+            isSuperAdmin, 
+            isSuperAdmin,
+            '2025-12-31'
+        ]
+    );
+    user = newUsers[0];
+} else {
+    // Обновляем существующего пользователя
+    const { rows: updatedUsers } = await pool.query(
+        `UPDATE users 
+         SET first_name = $1, username = $2, is_admin = $3, is_super_admin = $4, subscription_end = $5
+         WHERE telegram_id = $6
+         RETURNING *`,
+        [
+            userToProcess.first_name,
+            userToProcess.username,
+            isSuperAdmin,
+            isSuperAdmin,
+            '2025-12-31',
+            userToProcess.id
+        ]
+    );
+    user = updatedUsers[0];
+}
 
         const user = users[0];
 
