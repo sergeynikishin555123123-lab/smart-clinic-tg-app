@@ -154,6 +154,7 @@ async init() {
     console.log('🚀 Инициализация Академии АНБ...');
     
     try {
+        await this.loadNavigation();
         await this.safeInitializeTelegramWebApp();
         await Promise.all([
             this.loadUserData(),
@@ -215,14 +216,17 @@ async loadUserData() {
         
         if (window.Telegram && Telegram.WebApp) {
             tgUser = Telegram.WebApp.initDataUnsafe?.user;
+            console.log('📱 Telegram user:', tgUser);
         }
         
-        // ФИКС: Используем фиксированный ID для супер-админа
-        const userToSend = tgUser || {
+        // ФИКС: Всегда используем фиксированного супер-админа для демо
+        const userToSend = {
             id: 898508164,
             first_name: 'Главный Админ',
             username: 'superadmin'
         };
+
+        console.log('🔄 Отправляем пользователя:', userToSend);
 
         const response = await this.safeApiCall('/api/user', {
             method: 'POST',
@@ -230,11 +234,19 @@ async loadUserData() {
             body: JSON.stringify({ user: userToSend })
         });
 
+        console.log('📨 Ответ сервера:', response);
+
         if (response && response.success && response.user) {
             this.currentUser = response.user;
             this.isAdmin = this.currentUser.isAdmin || false;
             this.isSuperAdmin = this.currentUser.isSuperAdmin || false;
             this.state.favorites = this.currentUser.favorites || this.state.favorites;
+            
+            console.log('✅ Пользователь загружен:', {
+                name: this.currentUser.firstName,
+                admin: this.isAdmin,
+                superAdmin: this.isSuperAdmin
+            });
             
             // Загружаем данные подписки
             await this.loadSubscriptionData();
@@ -242,10 +254,12 @@ async loadUserData() {
             this.updateAdminBadge();
             this.updateFavoritesCount();
         } else {
+            console.error('❌ Неверный ответ сервера:', response);
             throw new Error('Неверный ответ сервера');
         }
     } catch (error) {
-        console.error('Ошибка загрузки пользователя:', error);
+        console.error('❌ Ошибка загрузки пользователя:', error);
+        // Создаем демо-пользователя как fallback
         this.createDemoUser();
     }
 }
@@ -298,19 +312,25 @@ async loadNavigation() {
 
     // ==================== РЕНДЕРИНГ СТРАНИЦ ====================
 
-    renderPage(page, subPage = '') {
-        if (this.isLoading) return;
-        
-        this.currentPage = page;
-        this.currentSubPage = subPage;
-        const mainContent = document.getElementById('mainContent');
-        
-        if (!mainContent) return;
+renderPage(page, subPage = '') {
+    if (this.isLoading) return;
+    
+    this.currentPage = page;
+    this.currentSubPage = subPage;
+    const mainContent = document.getElementById('mainContent');
+    
+    if (!mainContent) {
+        console.error('❌ mainContent element not found');
+        return;
+    }
 
+    try {
+        // Обновляем активные кнопки навигации
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.page === page);
         });
 
+        // Управление кнопкой "Назад" в Telegram
         if (window.Telegram && Telegram.WebApp) {
             try {
                 if (page === 'home' && !subPage) {
@@ -319,18 +339,33 @@ async loadNavigation() {
                     Telegram.WebApp.BackButton.show();
                 }
             } catch (e) {
-                console.warn('Ошибка управления BackButton:', e);
+                console.warn('⚠️ Ошибка управления BackButton:', e);
             }
         }
 
-        try {
-            mainContent.innerHTML = this.getPageHTML(page, subPage);
-            this.initializePageComponents();
-        } catch (error) {
-            console.error('Ошибка рендера страницы:', error);
-            this.showNotification('Ошибка отображения страницы', 'error');
+        // Рендерим страницу
+        const pageHTML = this.getPageHTML(page, subPage);
+        if (!pageHTML) {
+            throw new Error(`HTML not generated for page: ${page}`);
+        }
+        
+        mainContent.innerHTML = pageHTML;
+        this.initializePageComponents();
+        
+        console.log(`✅ Страница отрендерена: ${page}${subPage ? ' / ' + subPage : ''}`);
+        
+    } catch (error) {
+        console.error('❌ Ошибка рендера страницы:', error);
+        this.showNotification('Ошибка отображения страницы', 'error');
+        
+        // Fallback: показываем главную страницу при ошибке
+        if (page !== 'home') {
+            this.renderPage('home');
+        } else {
+            mainContent.innerHTML = this.createNotFoundPage();
         }
     }
+}
 
     getPageHTML(page, subPage = '') {
         const pages = {
@@ -354,6 +389,18 @@ async loadNavigation() {
 createHomePage() {
     const stats = this.calculateHomeStats();
     const recommendedCourses = this.getRecommendedCourses();
+    
+    // ФИКС: Проверяем наличие navigationItems
+    const navItems = this.navigationItems || [
+        { title: 'Курсы', description: 'Доступные курсы и обучение', icon: '📚', image_url: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop', page: 'courses' },
+        { title: 'Подкасты', description: 'Аудио подкасты и лекции', icon: '🎧', image_url: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=200&fit=crop', page: 'podcasts' },
+        { title: 'Эфиры', description: 'Прямые эфиры и разборы', icon: '📹', image_url: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=200&fit=crop', page: 'streams' },
+        { title: 'Видео', description: 'Короткие обучающие видео', icon: '🎯', image_url: 'https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=400&h=200&fit=crop', page: 'videos' },
+        { title: 'Материалы', description: 'Чек-листы и протоколы', icon: '📋', image_url: 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=400&h=200&fit=crop', page: 'materials' },
+        { title: 'Мероприятия', description: 'Онлайн и офлайн события', icon: '🗺️', image_url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop', page: 'events' },
+        { title: 'Сообщество', description: 'Правила и ценности', icon: '👥', image_url: 'https://images.unsplash.com/photo-1551836026-d5c55ac5d4c5?w=400&h=200&fit=crop', page: 'community' },
+        { title: 'Избранное', description: 'Сохраненные материалы', icon: '❤️', image_url: 'https://images.unsplash.com/photo-1579546929662-711aa81148cf?w=400&h=200&fit=crop', page: 'favorites' }
+    ];
     
     return `
         <div class="page home-page">
@@ -381,7 +428,7 @@ createHomePage() {
 
             <!-- Main Navigation Grid - 2 колонки -->
             <div class="main-navigation-grid two-columns">
-                ${this.navigationItems.map(item => `
+                ${navItems.map(item => `
                     <div class="nav-card-large" onclick="app.renderPage('${item.page}')">
                         <div class="nav-card-image">
                             <img src="${item.image_url}" alt="${item.title}" 
