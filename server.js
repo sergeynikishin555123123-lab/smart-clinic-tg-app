@@ -134,35 +134,45 @@ function initializeDatabase() {
 
 // ==================== MIDDLEWARE ====================
 
-// Убираем Helmet и настраиваем CORS для TimeWeb
 app.use(cors({
-    origin: true, // Разрешаем все источники
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// ФИКС: Добавляем CORS для всех API routes
 app.use('/api/*', (req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
     next();
 });
 
-// Убираем X-Frame-Options для работы в iframe Telegram
 app.use((req, res, next) => {
-    // Убираем заголовки, которые блокируют iframe
     res.removeHeader('X-Frame-Options');
     res.removeHeader('Content-Security-Policy');
-    
-    // Разрешаем iframe для Telegram
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+    next();
+});
+
+app.use(compression());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// СТАТИЧЕСКИЕ ФАЙЛЫ
+app.use(express.static(join(__dirname)));
+app.use('/uploads', express.static(join(__dirname, 'uploads')));
+app.use('/webapp', express.static(join(__dirname, 'webapp')));
+app.use('/admin', express.static(join(__dirname, 'admin')));
+
+app.use((req, res, next) => {
+    if (!pool) {
+        return res.status(503).json({ 
+            success: false, 
+            error: 'База данных недоступна' 
+        });
     }
     next();
 });
@@ -1010,7 +1020,6 @@ app.get('/api/instructors/:id', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Преподаватель не найден' });
         }
 
-        // Получить курсы преподавателя
         const { rows: courses } = await pool.query(`
             SELECT c.* 
             FROM courses c
@@ -1031,25 +1040,6 @@ app.get('/api/instructors/:id', async (req, res) => {
     }
 });
 
-// Получить преподавателей для контента
-app.get('/api/content/:type/:id/instructors', async (req, res) => {
-    try {
-        const { type, id } = req.params;
-        const { rows } = await pool.query(`
-            SELECT i.*, ci.role 
-            FROM instructors i
-            JOIN content_instructors ci ON i.id = ci.instructor_id
-            WHERE ci.content_id = $1 AND ci.content_type = $2 AND i.is_active = true
-            ORDER BY ci.id
-        `, [id, type]);
-
-        res.json({ success: true, data: rows });
-    } catch (error) {
-        console.error('Content instructors error:', error);
-        res.status(500).json({ success: false, error: 'Ошибка загрузки преподавателей' });
-    }
-});
-
 // ==================== ПОДПИСКИ API ====================
 
 // Получить планы подписок
@@ -1064,84 +1054,6 @@ app.get('/api/subscription/plans', async (req, res) => {
     } catch (error) {
         console.error('Subscription plans error:', error);
         res.status(500).json({ success: false, error: 'Ошибка загрузки планов' });
-    }
-});
-
-// Создать подписку (демо-режим)
-app.post('/api/subscription/create', async (req, res) => {
-    try {
-        const { userId, planId, planType } = req.body;
-        
-        // Найти план
-        const { rows: plans } = await pool.query('SELECT * FROM subscription_plans WHERE id = $1', [planId]);
-        if (plans.length === 0) {
-            return res.status(404).json({ success: false, error: 'План не найден' });
-        }
-
-        const plan = plans[0];
-        const priceField = `price_${planType}`;
-        const price = plan[priceField];
-
-        // Расчет даты окончания
-        const endsAt = new Date();
-        switch (planType) {
-            case 'monthly':
-                endsAt.setMonth(endsAt.getMonth() + 1);
-                break;
-            case 'quarterly':
-                endsAt.setMonth(endsAt.getMonth() + 3);
-                break;
-            case 'yearly':
-                endsAt.setFullYear(endsAt.getFullYear() + 1);
-                break;
-        }
-
-        // Создать подписку
-        const { rows: subscription } = await pool.query(`
-            INSERT INTO subscriptions (user_id, plan_type, price, status, ends_at, payment_data)
-            VALUES ($1, $2, $3, 'active', $4, $5)
-            RETURNING *
-        `, [userId, planType, price, endsAt, { demo: true, method: 'demo' }]);
-
-        // Обновить пользователя
-        await pool.query(
-            'UPDATE users SET subscription_end = $1 WHERE id = $2',
-            [endsAt, userId]
-        );
-
-        res.json({ 
-            success: true, 
-            data: subscription[0],
-            message: 'Подписка успешно активирована (демо-режим)'
-        });
-
-    } catch (error) {
-        console.error('Create subscription error:', error);
-        res.status(500).json({ success: false, error: 'Ошибка создания подписки' });
-    }
-});
-
-// Проверить подписку пользователя
-app.get('/api/subscription/user/:userId', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const { rows } = await pool.query(`
-            SELECT s.*, sp.name as plan_name 
-            FROM subscriptions s
-            LEFT JOIN subscription_plans sp ON s.plan_type = sp.name
-            WHERE s.user_id = $1 AND s.status = 'active' AND s.ends_at > NOW()
-            ORDER BY s.created_at DESC
-            LIMIT 1
-        `, [userId]);
-
-        res.json({ 
-            success: true, 
-            data: rows.length > 0 ? rows[0] : null,
-            hasActiveSubscription: rows.length > 0
-        });
-    } catch (error) {
-        console.error('User subscription error:', error);
-        res.status(500).json({ success: false, error: 'Ошибка проверки подписки' });
     }
 });
 
@@ -1169,40 +1081,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     } catch (error) {
         console.error('Upload error:', error);
         res.status(500).json({ success: false, error: 'Ошибка загрузки файла' });
-    }
-});
-
-// Получение списка медиа файлов
-app.get('/api/media', async (req, res) => {
-    try {
-        const { rows } = await pool.query('SELECT * FROM media_files ORDER BY created_at DESC');
-        res.json({ success: true, files: rows });
-    } catch (error) {
-        console.error('Media list error:', error);
-        res.status(500).json({ success: false, error: 'Ошибка загрузки медиа' });
-    }
-});
-
-// Удаление медиа файла
-app.delete('/api/media/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { rows } = await pool.query('SELECT * FROM media_files WHERE id = $1', [id]);
-        
-        if (rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Файл не найден' });
-        }
-
-        const filePath = join(__dirname, 'uploads', rows[0].filename);
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-        }
-
-        await pool.query('DELETE FROM media_files WHERE id = $1', [id]);
-        res.json({ success: true, message: 'Файл удален' });
-    } catch (error) {
-        console.error('Delete media error:', error);
-        res.status(500).json({ success: false, error: 'Ошибка удаления файла' });
     }
 });
 
@@ -1250,49 +1128,6 @@ app.get('/api/content', async (req, res) => {
         res.json({ success: true, data: content });
     } catch (error) {
         console.error('API Content error:', error);
-        res.status(500).json({ success: false, error: 'Ошибка загрузки контента' });
-    }
-});
-
-// Получение конкретного контента по ID и типу
-app.get('/api/content/:type/:id', async (req, res) => {
-    try {
-        const { type, id } = req.params;
-        const tableMap = {
-            'courses': 'courses',
-            'podcasts': 'podcasts',
-            'streams': 'streams',
-            'videos': 'videos',
-            'materials': 'materials',
-            'events': 'events',
-            'news': 'news'
-        };
-
-        const table = tableMap[type];
-        if (!table) {
-            return res.status(400).json({ success: false, error: 'Неверный тип контента' });
-        }
-
-        const { rows } = await pool.query(`SELECT * FROM ${table} WHERE id = $1 AND is_active = true`, [id]);
-        
-        if (rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Контент не найден' });
-        }
-
-        // Получить преподавателей для этого контента
-        const { rows: instructors } = await pool.query(`
-            SELECT i.*, ci.role 
-            FROM instructors i
-            JOIN content_instructors ci ON i.id = ci.instructor_id
-            WHERE ci.content_id = $1 AND ci.content_type = $2 AND i.is_active = true
-        `, [id, type]);
-
-        const content = rows[0];
-        content.instructors = instructors;
-
-        res.json({ success: true, data: content });
-    } catch (error) {
-        console.error('Content detail error:', error);
         res.status(500).json({ success: false, error: 'Ошибка загрузки контента' });
     }
 });
@@ -1457,42 +1292,6 @@ app.get('/api/navigation', async (req, res) => {
     }
 });
 
-// Создать/обновить навигационную кнопку
-app.post('/api/admin/navigation', upload.single('image'), async (req, res) => {
-    try {
-        const { id, title, description, icon, page, position, is_active } = req.body;
-        let imageUrl = null;
-
-        if (req.file) {
-            imageUrl = `/uploads/${req.file.filename}`;
-        }
-
-        if (id) {
-            // Обновление существующей кнопки
-            const { rows } = await pool.query(`
-                UPDATE navigation_items 
-                SET title = $1, description = $2, icon = $3, image_url = $4, page = $5, position = $6, is_active = $7
-                WHERE id = $8
-                RETURNING *
-            `, [title, description, icon, imageUrl || req.body.image_url, page, position, is_active === 'true', id]);
-            
-            res.json({ success: true, data: rows[0] });
-        } else {
-            // Создание новой кнопки
-            const { rows } = await pool.query(`
-                INSERT INTO navigation_items (title, description, icon, image_url, page, position, is_active)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
-                RETURNING *
-            `, [title, description, icon, imageUrl, page, position, is_active === 'true']);
-            
-            res.json({ success: true, data: rows[0] });
-        }
-    } catch (error) {
-        console.error('Navigation create error:', error);
-        res.status(500).json({ success: false, error: 'Ошибка сохранения навигации' });
-    }
-});
-
 // ==================== ИЗБРАННОЕ API ====================
 
 // Переключение избранного
@@ -1521,32 +1320,6 @@ app.post('/api/favorites/toggle', async (req, res) => {
     } catch (error) {
         console.error('Toggle favorite error:', error);
         res.status(500).json({ success: false, error: 'Ошибка обновления избранного' });
-    }
-});
-
-// Получение избранного пользователя
-app.get('/api/favorites/:userId', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        
-        const { rows: favorites } = await pool.query(
-            'SELECT * FROM favorites WHERE user_id = $1',
-            [userId]
-        );
-
-        const userFavorites = {
-            courses: favorites.filter(f => f.content_type === 'courses').map(f => f.content_id),
-            podcasts: favorites.filter(f => f.content_type === 'podcasts').map(f => f.content_id),
-            streams: favorites.filter(f => f.content_type === 'streams').map(f => f.content_id),
-            videos: favorites.filter(f => f.content_type === 'videos').map(f => f.content_id),
-            materials: favorites.filter(f => f.content_type === 'materials').map(f => f.content_id),
-            events: favorites.filter(f => f.content_type === 'events').map(f => f.content_id)
-        };
-
-        res.json({ success: true, favorites: userFavorites });
-    } catch (error) {
-        console.error('Get favorites error:', error);
-        res.status(500).json({ success: false, error: 'Ошибка загрузки избранного' });
     }
 });
 
@@ -1929,16 +1702,32 @@ app.delete('/api/admin/content/:type/:id', async (req, res) => {
 
 // ==================== SPA FALLBACK ====================
 
-app.get('/webapp*', (req, res) => {
+// WebApp SPA
+app.get('/webapp', (req, res) => {
     res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
 
-app.get('/admin*', (req, res) => {
+app.get('/webapp/*', (req, res) => {
+    res.sendFile(join(__dirname, 'webapp', 'index.html'));
+});
+
+// Admin SPA
+app.get('/admin', (req, res) => {
     res.sendFile(join(__dirname, 'admin', 'index.html'));
 });
 
+app.get('/admin/*', (req, res) => {
+    res.sendFile(join(__dirname, 'admin', 'index.html'));
+});
+
+// Корневой маршрут - перенаправляем на webapp
+app.get('/', (req, res) => {
+    res.redirect('/webapp');
+});
+
+// Fallback для всех остальных маршрутов
 app.get('*', (req, res) => {
-    res.sendFile(join(__dirname, 'webapp', 'index.html'));
+    res.redirect('/webapp');
 });
 
 // ==================== ЗАПУСК СЕРВЕРА ====================
