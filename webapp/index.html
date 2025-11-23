@@ -1774,7 +1774,83 @@
                 font-size: 1.1rem;
             }
         }
-        
+
+        /* 2-колоночная сетка для навигации */
+.main-navigation-grid.two-columns {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 768px) {
+    .main-navigation-grid.two-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Стили для больших навигационных карточек */
+.nav-card-large {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.nav-card-large:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.nav-card-image {
+    position: relative;
+    height: 160px;
+    overflow: hidden;
+}
+
+.nav-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.nav-card-large:hover .nav-card-image img {
+    transform: scale(1.05);
+}
+
+.nav-card-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(30, 64, 175, 0.8));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.nav-card-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.nav-card-overlay h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+.nav-card-overlay p {
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
     </style>
 </head>
 <body>
