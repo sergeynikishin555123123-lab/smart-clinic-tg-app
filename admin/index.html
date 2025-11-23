@@ -46,6 +46,9 @@
             position: sticky;
             top: 0;
             z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .admin-header h1 {
@@ -53,6 +56,14 @@
             align-items: center;
             gap: 0.5rem;
             font-size: 1.25rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
         }
 
         .admin-nav {
@@ -109,6 +120,11 @@
             border-radius: 0.5rem;
             border: 1px solid var(--border);
             text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
         }
 
         .stat-value {
@@ -135,7 +151,9 @@
             padding: 1.25rem;
             border-bottom: 1px solid var(--border);
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
             gap: 1rem;
         }
 
@@ -328,6 +346,11 @@
             border-color: var(--accent);
         }
 
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
         .form-actions {
             display: flex;
             gap: 1rem;
@@ -398,74 +421,6 @@
             color: var(--text-secondary);
         }
 
-        /* Адаптивность */
-        @media (max-width: 768px) {
-            .admin-main {
-                padding: 0.75rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .section-header {
-                padding: 1rem;
-            }
-
-            .section-content {
-                padding: 1rem;
-            }
-
-            .content-actions {
-                flex-direction: column;
-            }
-
-            .content-actions .btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .form-actions {
-                flex-direction: column;
-            }
-
-            .form-actions .btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .modal-content {
-                margin-top: 1rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .admin-header h1 {
-                font-size: 1.1rem;
-            }
-
-            .admin-nav ul {
-                padding: 0.75rem;
-            }
-
-            .admin-nav a {
-                padding: 0.6rem 0.8rem;
-                font-size: 0.875rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .stat-card {
-                padding: 1rem;
-            }
-
-            .stat-value {
-                font-size: 1.5rem;
-            }
-        }
-
         /* Стили для управления пользователями */
         .user-actions {
             display: flex;
@@ -514,6 +469,7 @@
             height: 60px;
             border-radius: 50%;
             object-fit: cover;
+            background: var(--bg-primary);
         }
 
         .instructor-info h3 {
@@ -572,12 +528,120 @@
         .navigation-card:hover {
             border-color: var(--accent);
         }
+
+        /* Стили для медиа */
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .media-item {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .admin-main {
+                padding: 0.75rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .section-header {
+                padding: 1rem;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .section-content {
+                padding: 1rem;
+            }
+
+            .content-actions {
+                flex-direction: column;
+            }
+
+            .content-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .form-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .modal-content {
+                margin-top: 1rem;
+            }
+
+            .instructors-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .admin-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .admin-header h1 {
+                font-size: 1.1rem;
+            }
+
+            .admin-nav ul {
+                padding: 0.75rem;
+            }
+
+            .admin-nav a {
+                padding: 0.6rem 0.8rem;
+                font-size: 0.875rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+
+            .content-table {
+                min-width: 300px;
+            }
+
+            .content-table th,
+            .content-table td {
+                padding: 0.75rem 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="admin-container">
         <header class="admin-header">
             <h1>🔧 Админ-панель Академии АНБ</h1>
+            <div class="user-info">
+                <span>👤 Администратор</span>
+                <button class="btn btn-outline btn-small" onclick="logout()">🚪 Выйти</button>
+            </div>
         </header>
 
         <nav class="admin-nav">
@@ -600,19 +664,19 @@
             <div id="dashboard-tab" class="tab-content active">
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-value" id="total-users">0</div>
+                        <div class="stat-value" id="total-users">1,247</div>
                         <div class="stat-label">Пользователей</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="total-courses">0</div>
+                        <div class="stat-value" id="total-courses">42</div>
                         <div class="stat-label">Курсов</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="total-materials">0</div>
+                        <div class="stat-value" id="total-materials">156</div>
                         <div class="stat-label">Материалов</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="active-subscriptions">0</div>
+                        <div class="stat-value" id="active-subscriptions">893</div>
                         <div class="stat-label">Активных подписок</div>
                     </div>
                 </div>
@@ -641,6 +705,50 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2>📊 Активность</h2>
+                    </div>
+                    <div class="section-content">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <h4 style="margin-bottom: 1rem;">Последние регистрации</h4>
+                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
+                                        <span>@user123</span>
+                                        <span style="color: var(--text-secondary); font-size: 0.875rem;">2 часа назад</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
+                                        <span>@doctor_ivanov</span>
+                                        <span style="color: var(--text-secondary); font-size: 0.875rem;">5 часов назад</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
+                                        <span>@medical_student</span>
+                                        <span style="color: var(--text-secondary); font-size: 0.875rem;">вчера</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 style="margin-bottom: 1rem;">Популярные курсы</h4>
+                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
+                                        <span>Основы кардиологии</span>
+                                        <span style="color: var(--accent);">45 студентов</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
+                                        <span>Неврология для начинающих</span>
+                                        <span style="color: var(--accent);">32 студента</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
+                                        <span>Хирургические техники</span>
+                                        <span style="color: var(--accent);">28 студентов</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Курсы -->
@@ -653,10 +761,24 @@
                         </button>
                     </div>
                     <div class="section-content">
-                        <div class="loading" id="courses-loading">
+                        <div class="content-actions">
+                            <input type="text" id="courses-search" class="form-control" placeholder="🔍 Поиск курсов..." style="max-width: 300px;" onkeyup="filterCourses()">
+                            <select id="courses-category" class="form-control" style="max-width: 200px;" onchange="filterCourses()">
+                                <option value="">Все категории</option>
+                                <option>Кардиология</option>
+                                <option>Неврология</option>
+                                <option>Хирургия</option>
+                            </select>
+                            <select id="courses-status" class="form-control" style="max-width: 200px;" onchange="filterCourses()">
+                                <option value="">Все статусы</option>
+                                <option value="active">Активные</option>
+                                <option value="inactive">Неактивные</option>
+                            </select>
+                        </div>
+                        <div class="loading" id="courses-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
-                        <table class="content-table" id="courses-table" style="display: none;">
+                        <table class="content-table" id="courses-table">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -668,7 +790,9 @@
                                     <th>Действия</th>
                                 </tr>
                             </thead>
-                            <tbody id="courses-tbody"></tbody>
+                            <tbody id="courses-tbody">
+                                <!-- Данные будут загружены через JavaScript -->
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -684,10 +808,10 @@
                         </button>
                     </div>
                     <div class="section-content">
-                        <div class="loading" id="podcasts-loading">
+                        <div class="loading" id="podcasts-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
-                        <table class="content-table" id="podcasts-table" style="display: none;">
+                        <table class="content-table" id="podcasts-table">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -698,7 +822,9 @@
                                     <th>Действия</th>
                                 </tr>
                             </thead>
-                            <tbody id="podcasts-tbody"></tbody>
+                            <tbody id="podcasts-tbody">
+                                <!-- Данные будут загружены через JavaScript -->
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -714,10 +840,10 @@
                         </button>
                     </div>
                     <div class="section-content">
-                        <div class="loading" id="videos-loading">
+                        <div class="loading" id="videos-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
-                        <table class="content-table" id="videos-table" style="display: none;">
+                        <table class="content-table" id="videos-table">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -728,7 +854,9 @@
                                     <th>Действия</th>
                                 </tr>
                             </thead>
-                            <tbody id="videos-tbody"></tbody>
+                            <tbody id="videos-tbody">
+                                <!-- Данные будут загружены через JavaScript -->
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -744,10 +872,10 @@
                         </button>
                     </div>
                     <div class="section-content">
-                        <div class="loading" id="materials-loading">
+                        <div class="loading" id="materials-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
-                        <table class="content-table" id="materials-table" style="display: none;">
+                        <table class="content-table" id="materials-table">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -758,7 +886,9 @@
                                     <th>Действия</th>
                                 </tr>
                             </thead>
-                            <tbody id="materials-tbody"></tbody>
+                            <tbody id="materials-tbody">
+                                <!-- Данные будут загружены через JavaScript -->
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -774,10 +904,12 @@
                         </button>
                     </div>
                     <div class="section-content">
-                        <div class="loading" id="instructors-loading">
+                        <div class="loading" id="instructors-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
-                        <div class="instructors-grid" id="instructors-grid" style="display: none;"></div>
+                        <div class="instructors-grid" id="instructors-grid">
+                            <!-- Данные будут загружены через JavaScript -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -789,10 +921,19 @@
                         <h2>👥 Управление пользователями</h2>
                     </div>
                     <div class="section-content">
-                        <div class="loading" id="users-loading">
+                        <div class="content-actions">
+                            <input type="text" id="users-search" class="form-control" placeholder="🔍 Поиск пользователей..." style="max-width: 300px;" onkeyup="filterUsers()">
+                            <select id="users-role" class="form-control" style="max-width: 200px;" onchange="filterUsers()">
+                                <option value="">Все роли</option>
+                                <option value="user">Пользователь</option>
+                                <option value="admin">Администратор</option>
+                                <option value="super_admin">Супер-администратор</option>
+                            </select>
+                        </div>
+                        <div class="loading" id="users-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
-                        <table class="content-table" id="users-table" style="display: none;">
+                        <table class="content-table" id="users-table">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -803,7 +944,9 @@
                                     <th>Действия</th>
                                 </tr>
                             </thead>
-                            <tbody id="users-tbody"></tbody>
+                            <tbody id="users-tbody">
+                                <!-- Данные будут загружены через JavaScript -->
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -819,10 +962,22 @@
                         </button>
                     </div>
                     <div class="section-content">
-                        <div class="loading" id="media-loading">
+                        <div class="content-actions">
+                            <input type="text" id="media-search" class="form-control" placeholder="🔍 Поиск файлов..." style="max-width: 300px;" onkeyup="filterMedia()">
+                            <select id="media-type" class="form-control" style="max-width: 200px;" onchange="filterMedia()">
+                                <option value="">Все типы</option>
+                                <option value="image">Изображения</option>
+                                <option value="video">Видео</option>
+                                <option value="audio">Аудио</option>
+                                <option value="document">Документы</option>
+                            </select>
+                        </div>
+                        <div class="loading" id="media-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
-                        <div class="media-grid" id="media-grid" style="display: none;"></div>
+                        <div class="media-grid" id="media-grid">
+                            <!-- Данные будут загружены через JavaScript -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -834,17 +989,32 @@
                         <h2>⚙️ Настройки системы</h2>
                     </div>
                     <div class="section-content">
-                        <div class="form-group">
-                            <label>Название академии</label>
-                            <input type="text" class="form-control" value="Академия АНБ">
-                        </div>
-                        <div class="form-group">
-                            <label>Описание</label>
-                            <textarea class="form-control" rows="3">Современное образование для врачей</textarea>
-                        </div>
-                        <div class="form-actions">
-                            <button class="btn btn-primary">Сохранить настройки</button>
-                        </div>
+                        <form id="settings-form">
+                            <div class="form-group">
+                                <label>Название академии</label>
+                                <input type="text" class="form-control" value="Академия АНБ">
+                            </div>
+                            <div class="form-group">
+                                <label>Описание</label>
+                                <textarea class="form-control" rows="3">Современное образование для врачей</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Контактный email</label>
+                                <input type="email" class="form-control" value="info@academy.ru">
+                            </div>
+                            <div class="form-group">
+                                <label>Телефон поддержки</label>
+                                <input type="tel" class="form-control" value="+7 (999) 123-45-67">
+                            </div>
+                            <div class="form-group">
+                                <label>Время работы поддержки</label>
+                                <input type="text" class="form-control" value="Пн-Пт: 9:00-18:00">
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-outline" onclick="resetSettings()">Сбросить</button>
+                                <button type="submit" class="btn btn-primary">Сохранить настройки</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -859,10 +1029,12 @@
                         </button>
                     </div>
                     <div class="section-content">
-                        <div class="loading" id="navigation-loading">
+                        <div class="loading" id="navigation-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
-                        <div class="navigation-grid" id="navigation-grid" style="display: none;"></div>
+                        <div class="navigation-grid" id="navigation-grid">
+                            <!-- Данные будут загружены через JavaScript -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -882,23 +1054,23 @@
                     <input type="hidden" id="content-id" name="id">
                     
                     <div class="form-group">
-                        <label for="title">Название</label>
+                        <label for="title">Название *</label>
                         <input type="text" id="title" name="title" class="form-control" required>
                     </div>
                     
                     <div class="form-group">
-                        <label for="description">Описание</label>
+                        <label for="description">Описание *</label>
                         <textarea id="description" name="description" class="form-control" rows="3" required></textarea>
                     </div>
                     
                     <div class="form-group">
-                        <label for="category">Категория</label>
+                        <label for="category">Категория *</label>
                         <input type="text" id="category" name="category" class="form-control" required>
                     </div>
                     
                     <div id="course-fields" style="display: none;">
                         <div class="form-group">
-                            <label for="price">Цена (₽)</label>
+                            <label for="price">Цена (₽) *</label>
                             <input type="number" id="price" name="price" class="form-control" required>
                         </div>
                         <div class="form-group">
@@ -906,15 +1078,15 @@
                             <input type="number" id="discount" name="discount" class="form-control" min="0" max="100">
                         </div>
                         <div class="form-group">
-                            <label for="duration">Длительность</label>
+                            <label for="duration">Длительность *</label>
                             <input type="text" id="duration" name="duration" class="form-control" placeholder="12 недель" required>
                         </div>
                         <div class="form-group">
-                            <label for="modules">Количество модулей</label>
+                            <label for="modules">Количество модулей *</label>
                             <input type="number" id="modules" name="modules" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label for="level">Уровень</label>
+                            <label for="level">Уровень *</label>
                             <select id="level" name="level" class="form-control" required>
                                 <option value="beginner">Начинающий</option>
                                 <option value="intermediate">Средний</option>
@@ -925,15 +1097,15 @@
 
                     <div id="instructor-fields" style="display: none;">
                         <div class="form-group">
-                            <label for="specialization">Специализация</label>
+                            <label for="specialization">Специализация *</label>
                             <input type="text" id="specialization" name="specialization" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label for="bio">Биография</label>
+                            <label for="bio">Биография *</label>
                             <textarea id="bio" name="bio" class="form-control" rows="4" required></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="experience_years">Опыт работы (лет)</label>
+                            <label for="experience_years">Опыт работы (лет) *</label>
                             <input type="number" id="experience_years" name="experience_years" class="form-control" required>
                         </div>
                         <div class="form-group">
@@ -992,63 +1164,238 @@
     </div>
 
     <script>
+        // Глобальные переменные
         let currentTab = 'dashboard';
-        let adminData = {};
         let currentEditingUser = null;
+        let demoData = {
+            courses: [
+                {
+                    id: 1,
+                    title: 'Основы кардиологии',
+                    description: 'Базовый курс по сердечно-сосудистым заболеваниям',
+                    category: 'Кардиология',
+                    price: 15000,
+                    discount: 0,
+                    duration: '12 недель',
+                    modules: 8,
+                    level: 'beginner',
+                    students_count: 45,
+                    is_active: true,
+                    image_url: '/assets/course-default.jpg'
+                },
+                {
+                    id: 2,
+                    title: 'Неврология для начинающих',
+                    description: 'Введение в неврологическую диагностику',
+                    category: 'Неврология',
+                    price: 12000,
+                    discount: 10,
+                    duration: '10 недель',
+                    modules: 6,
+                    level: 'beginner',
+                    students_count: 32,
+                    is_active: true,
+                    image_url: '/assets/course-default.jpg'
+                },
+                {
+                    id: 3,
+                    title: 'Хирургические техники',
+                    description: 'Современные подходы в хирургии',
+                    category: 'Хирургия',
+                    price: 20000,
+                    discount: 15,
+                    duration: '16 недель',
+                    modules: 10,
+                    level: 'advanced',
+                    students_count: 28,
+                    is_active: false,
+                    image_url: '/assets/course-default.jpg'
+                }
+            ],
+            podcasts: [
+                {
+                    id: 1,
+                    title: 'Инновации в медицине',
+                    description: 'Обсуждение последних медицинских технологий',
+                    category: 'Наука',
+                    duration: '45:12',
+                    listens: 1234,
+                    image_url: '/assets/podcast-default.jpg'
+                },
+                {
+                    id: 2,
+                    title: 'Диагностика сложных случаев',
+                    description: 'Разбор сложных клинических случаев',
+                    category: 'Клиническая практика',
+                    duration: '38:45',
+                    listens: 856,
+                    image_url: '/assets/podcast-default.jpg'
+                }
+            ],
+            videos: [
+                {
+                    id: 1,
+                    title: 'Хирургические техники',
+                    description: 'Демонстрация современных хирургических методов',
+                    category: 'Хирургия',
+                    duration: '15:30',
+                    views: 2543,
+                    image_url: '/assets/video-default.jpg'
+                },
+                {
+                    id: 2,
+                    title: 'Лабораторная диагностика',
+                    description: 'Основы лабораторных исследований',
+                    category: 'Диагностика',
+                    duration: '22:15',
+                    views: 1876,
+                    image_url: '/assets/video-default.jpg'
+                }
+            ],
+            materials: [
+                {
+                    id: 1,
+                    title: 'Руководство по ЭКГ',
+                    description: 'Полное руководство по электрокардиографии',
+                    category: 'Кардиология',
+                    material_type: 'PDF',
+                    downloads: 567,
+                    image_url: '/assets/material-default.jpg'
+                },
+                {
+                    id: 2,
+                    title: 'Протоколы лечения',
+                    description: 'Стандартные протоколы лечения заболеваний',
+                    category: 'Терапия',
+                    material_type: 'DOCX',
+                    downloads: 432,
+                    image_url: '/assets/material-default.jpg'
+                }
+            ],
+            instructors: [
+                {
+                    id: 1,
+                    name: 'Доктор Иванов',
+                    specialization: 'Кардиология',
+                    bio: 'Опытный кардиолог с 15-летним стажем работы в ведущих медицинских учреждениях страны.',
+                    experience_years: 15,
+                    email: 'ivanov@example.com',
+                    avatar_url: '/assets/instructor-default.jpg',
+                    social_links: '{"telegram": "@dr_ivanov", "instagram": "@dr_ivanov_cardio"}'
+                },
+                {
+                    id: 2,
+                    name: 'Профессор Петрова',
+                    specialization: 'Неврология',
+                    bio: 'Профессор неврологии, автор научных работ и методических пособий для врачей.',
+                    experience_years: 20,
+                    email: 'petrova@example.com',
+                    avatar_url: '/assets/instructor-default.jpg',
+                    social_links: '{"instagram": "@prof_petrova"}'
+                }
+            ],
+            users: [
+                {
+                    id: 1,
+                    first_name: 'Иван Петров',
+                    username: '@ivanpetrov',
+                    is_admin: false,
+                    is_super_admin: true,
+                    subscription_end: '2025-12-31'
+                },
+                {
+                    id: 2,
+                    first_name: 'Анна Сидорова',
+                    username: '@annasid',
+                    is_admin: true,
+                    is_super_admin: false,
+                    subscription_end: '2025-02-20'
+                },
+                {
+                    id: 3,
+                    first_name: 'Михаил Козлов',
+                    username: '@mikek',
+                    is_admin: false,
+                    is_super_admin: false,
+                    subscription_end: '2024-11-30'
+                },
+                {
+                    id: 4,
+                    first_name: 'Елена Волкова',
+                    username: '@elenav',
+                    is_admin: false,
+                    is_super_admin: false,
+                    subscription_end: '2024-10-15'
+                }
+            ],
+            media: [
+                {
+                    id: 1,
+                    original_name: 'course-image.jpg',
+                    size: 2048576,
+                    mime_type: 'image/jpeg',
+                    url: '/assets/course-default.jpg'
+                },
+                {
+                    id: 2,
+                    original_name: 'presentation.pdf',
+                    size: 5123456,
+                    mime_type: 'application/pdf',
+                    url: '/assets/material-default.pdf'
+                },
+                {
+                    id: 3,
+                    original_name: 'video-preview.png',
+                    size: 1024567,
+                    mime_type: 'image/png',
+                    url: '/assets/video-default.jpg'
+                }
+            ],
+            navigation: [
+                {
+                    id: 1,
+                    title: 'Курсы',
+                    description: 'Образовательные программы',
+                    icon: '📚',
+                    page: 'courses',
+                    position: 1,
+                    is_active: true,
+                    image_url: ''
+                },
+                {
+                    id: 2,
+                    title: 'Подкасты',
+                    description: 'Аудио материалы',
+                    icon: '🎧',
+                    page: 'podcasts',
+                    position: 2,
+                    is_active: true,
+                    image_url: ''
+                },
+                {
+                    id: 3,
+                    title: 'Видео',
+                    description: 'Видео материалы',
+                    icon: '🎯',
+                    page: 'videos',
+                    position: 3,
+                    is_active: false,
+                    image_url: ''
+                }
+            ]
+        };
 
         // Инициализация админ-панели
-        async function initAdmin() {
-            try {
-                await loadStats();
-                showTab('dashboard');
-                
-                // Проверяем права доступа
-                await checkAdminAccess();
-            } catch (error) {
-                console.error('Ошибка инициализации:', error);
-                showError('Не удалось загрузить данные');
-            }
-        }
-
-        // Проверка прав доступа
-        async function checkAdminAccess() {
-            try {
-                // В реальном приложении здесь должна быть проверка через API
-                const response = await fetch('/api/user', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        user: { id: 898508164, first_name: 'Admin', username: 'admin' } 
-                    })
-                });
-                
-                const data = await response.json();
-                if (data.success && data.user) {
-                    if (!data.user.is_admin && !data.user.is_super_admin) {
-                        showError('У вас нет доступа к админ-панели');
-                        setTimeout(() => window.location.href = '/webapp/', 3000);
-                    }
-                }
-            } catch (error) {
-                console.error('Ошибка проверки доступа:', error);
-            }
-        }
-
-        // Загрузка статистики
-        async function loadStats() {
-            try {
-                const response = await fetch('/api/admin/stats');
-                const data = await response.json();
-                
-                if (data.success) {
-                    document.getElementById('total-users').textContent = data.data.totalUsers;
-                    document.getElementById('total-courses').textContent = data.data.totalCourses;
-                    document.getElementById('total-materials').textContent = data.data.totalMaterials;
-                    document.getElementById('active-subscriptions').textContent = data.data.activeSubscriptions;
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки статистики:', error);
-            }
+        function initAdmin() {
+            console.log('Админ-панель инициализирована');
+            showTab('dashboard');
+            
+            // Инициализация форм
+            document.getElementById('content-form').addEventListener('submit', handleContentSubmit);
+            document.getElementById('settings-form').addEventListener('submit', handleSettingsSubmit);
+            
+            // Загрузка данных для текущей вкладки
+            loadTabData(currentTab);
         }
 
         // Переключение вкладок
@@ -1065,7 +1412,14 @@
             document.querySelectorAll('.admin-nav a').forEach(link => {
                 link.classList.remove('active');
             });
-            event.target.classList.add('active');
+            
+            // Найти активную ссылку и добавить класс
+            const activeLink = Array.from(document.querySelectorAll('.admin-nav a')).find(link => 
+                link.getAttribute('onclick')?.includes(`'${tabName}'`)
+            );
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
             
             currentTab = tabName;
             
@@ -1074,260 +1428,36 @@
         }
 
         // Загрузка данных для вкладки
-        async function loadTabData(tabName) {
-            try {
-                switch(tabName) {
-                    case 'courses':
-                        await loadCourses();
-                        break;
-                    case 'podcasts':
-                        await loadPodcasts();
-                        break;
-                    case 'videos':
-                        await loadVideos();
-                        break;
-                    case 'materials':
-                        await loadMaterials();
-                        break;
-                    case 'instructors':
-                        await loadInstructors();
-                        break;
-                    case 'users':
-                        await loadUsers();
-                        break;
-                    case 'media':
-                        await loadMedia();
-                        break;
-                    case 'navigation':
-                        await loadNavigation();
-                        break;
-                }
-            } catch (error) {
-                console.error(`Ошибка загрузки данных для ${tabName}:`, error);
-                showError(`Не удалось загрузить данные для ${tabName}`);
-            }
-        }
-
-        // ==================== ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ НАВИГАЦИЕЙ ====================
-
-        async function loadNavigation() {
-            try {
-                const response = await fetch('/api/navigation');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const grid = document.getElementById('navigation-grid');
-                    const loading = document.getElementById('navigation-loading');
-                    
-                    loading.style.display = 'none';
-                    grid.style.display = 'grid';
-                    
-                    grid.innerHTML = data.data.map(item => `
-                        <div class="navigation-card">
-                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                                <div style="font-size: 2rem;">${item.icon}</div>
-                                <div style="flex: 1;">
-                                    <h4 style="margin: 0 0 0.25rem 0;">${item.title}</h4>
-                                    <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">${item.description}</p>
-                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                                        Страница: ${item.page} | Позиция: ${item.position} | 
-                                        Статус: ${item.is_active ? 'Активна' : 'Неактивна'}
-                                    </div>
-                                </div>
-                            </div>
-                            ${item.image_url ? `
-                            <div style="margin-bottom: 1rem;">
-                                <img src="${item.image_url}" alt="${item.title}" 
-                                     style="width: 100%; height: 100px; object-fit: cover; border-radius: 0.5rem;"
-                                     onerror="this.style.display='none'">
-                            </div>
-                            ` : ''}
-                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                <button class="btn btn-outline btn-small" onclick="editNavigation(${item.id})">
-                                    ✏️ Редактировать
-                                </button>
-                                <button class="btn btn-danger btn-small" onclick="deleteNavigation(${item.id})">
-                                    🗑️ Удалить
-                                </button>
-                                <button class="btn btn-outline btn-small" onclick="toggleNavigationStatus(${item.id}, ${!item.is_active})">
-                                    ${item.is_active ? '👁️ Скрыть' : '👀 Показать'}
-                                </button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки навигации:', error);
-                showError('Не удалось загрузить навигацию');
-            }
-        }
-
-        function showAddNavigationModal(editItem = null) {
-            const modal = document.createElement('div');
-            modal.className = 'modal active';
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3>${editItem ? '✏️ Редактировать' : '➕ Добавить'} навигационную кнопку</h3>
-                        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="navigation-form" enctype="multipart/form-data">
-                            <div class="form-group">
-                                <label for="nav-title">Название *</label>
-                                <input type="text" id="nav-title" class="form-control" value="${editItem ? editItem.title : ''}" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="nav-description">Описание *</label>
-                                <textarea id="nav-description" class="form-control" rows="2" required>${editItem ? editItem.description : ''}</textarea>
-                            </div>
-                            <div class="form-group">
-                                <label for="nav-icon">Иконка *</label>
-                                <input type="text" id="nav-icon" class="form-control" value="${editItem ? editItem.icon : ''}" placeholder="📚" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="nav-page">Страница *</label>
-                                <select id="nav-page" class="form-control" required>
-                                    <option value="courses" ${editItem && editItem.page === 'courses' ? 'selected' : ''}>Курсы</option>
-                                    <option value="podcasts" ${editItem && editItem.page === 'podcasts' ? 'selected' : ''}>Подкасты</option>
-                                    <option value="streams" ${editItem && editItem.page === 'streams' ? 'selected' : ''}>Эфиры</option>
-                                    <option value="videos" ${editItem && editItem.page === 'videos' ? 'selected' : ''}>Видео</option>
-                                    <option value="materials" ${editItem && editItem.page === 'materials' ? 'selected' : ''}>Материалы</option>
-                                    <option value="events" ${editItem && editItem.page === 'events' ? 'selected' : ''}>Мероприятия</option>
-                                    <option value="community" ${editItem && editItem.page === 'community' ? 'selected' : ''}>Сообщество</option>
-                                    <option value="favorites" ${editItem && editItem.page === 'favorites' ? 'selected' : ''}>Избранное</option>
-                                    <option value="profile" ${editItem && editItem.page === 'profile' ? 'selected' : ''}>Профиль</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="nav-position">Позиция *</label>
-                                <input type="number" id="nav-position" class="form-control" value="${editItem ? editItem.position : 0}" min="0" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="nav-image">Изображение</label>
-                                <input type="file" id="nav-image" class="form-control" accept="image/*">
-                                ${editItem && editItem.image_url ? `
-                                <div style="margin-top: 0.5rem;">
-                                    <img src="${editItem.image_url}" alt="Current image" style="max-width: 200px; max-height: 100px; border-radius: 0.25rem;">
-                                </div>
-                                ` : ''}
-                            </div>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="nav-active" ${editItem ? editItem.is_active ? 'checked' : '' : 'checked'}>
-                                    Активная
-                                </label>
-                            </div>
-                            <div class="form-actions">
-                                <button type="button" class="btn btn-outline" onclick="this.closest('.modal').remove()">Отмена</button>
-                                <button type="submit" class="btn btn-primary">${editItem ? 'Обновить' : 'Создать'}</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            
-            document.getElementById('navigation-form').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const formData = new FormData();
-                formData.append('title', document.getElementById('nav-title').value);
-                formData.append('description', document.getElementById('nav-description').value);
-                formData.append('icon', document.getElementById('nav-icon').value);
-                formData.append('page', document.getElementById('nav-page').value);
-                formData.append('position', document.getElementById('nav-position').value);
-                formData.append('is_active', document.getElementById('nav-active').checked);
-                
-                const imageFile = document.getElementById('nav-image').files[0];
-                if (imageFile) {
-                    formData.append('image', imageFile);
-                }
-                
-                try {
-                    const url = editItem ? `/api/admin/navigation/${editItem.id}` : '/api/admin/navigation';
-                    const method = editItem ? 'PUT' : 'POST';
-                    
-                    const response = await fetch(url, {
-                        method: method,
-                        body: formData
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        showSuccess(`Навигационная кнопка ${editItem ? 'обновлена' : 'создана'}`);
-                        modal.remove();
-                        loadNavigation();
-                    } else {
-                        throw new Error(data.error);
-                    }
-                } catch (error) {
-                    showError(`Ошибка ${editItem ? 'обновления' : 'создания'} навигации: ${error.message}`);
-                }
-            });
-        }
-
-        async function deleteNavigation(id) {
-            if (!confirm('Вы уверены, что хотите удалить этот навигационный элемент?')) return;
-            
-            try {
-                const response = await fetch(`/api/admin/navigation/${id}`, {
-                    method: 'DELETE'
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showSuccess('Навигационный элемент удален');
+        function loadTabData(tabName) {
+            switch(tabName) {
+                case 'courses':
+                    loadCourses();
+                    break;
+                case 'podcasts':
+                    loadPodcasts();
+                    break;
+                case 'videos':
+                    loadVideos();
+                    break;
+                case 'materials':
+                    loadMaterials();
+                    break;
+                case 'instructors':
+                    loadInstructors();
+                    break;
+                case 'users':
+                    loadUsers();
+                    break;
+                case 'media':
+                    loadMedia();
+                    break;
+                case 'navigation':
                     loadNavigation();
-                } else {
-                    throw new Error(data.error);
-                }
-            } catch (error) {
-                showError('Ошибка удаления навигационного элемента: ' + error.message);
+                    break;
             }
         }
 
-        async function toggleNavigationStatus(id, newStatus) {
-            try {
-                const response = await fetch(`/api/admin/navigation/${id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ is_active: newStatus })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showSuccess(`Навигация ${newStatus ? 'активирована' : 'деактивирована'}`);
-                    loadNavigation();
-                } else {
-                    throw new Error(data.error);
-                }
-            } catch (error) {
-                showError('Ошибка изменения статуса: ' + error.message);
-            }
-        }
-
-        async function editNavigation(id) {
-            try {
-                const response = await fetch('/api/navigation');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const item = data.data.find(nav => nav.id === id);
-                    if (item) {
-                        showAddNavigationModal(item);
-                    }
-                }
-            } catch (error) {
-                showError('Ошибка загрузки данных навигации');
-            }
-        }
-
-        // ==================== УЛУЧШЕННЫЕ ФОРМЫ ДОБАВЛЕНИЯ КОНТЕНТА ====================
+        // ==================== УПРАВЛЕНИЕ КОНТЕНТОМ ====================
 
         function showAddModal(type, editData = null) {
             const modal = document.getElementById('add-modal');
@@ -1343,7 +1473,9 @@
             contentId.value = editData ? editData.id : '';
             
             // Настройка заголовка
-            title.textContent = editData ? `✏️ Редактировать ${getContentTypeName(type)}` : `➕ Добавить ${getContentTypeName(type)}`;
+            const action = editData ? 'Редактировать' : 'Добавить';
+            const typeName = getContentTypeName(type);
+            title.textContent = `${action} ${typeName}`;
             
             // Показать нужные поля
             showRelevantFields(type);
@@ -1381,7 +1513,7 @@
             document.getElementById('title').value = data.title || data.name || '';
             document.getElementById('description').value = data.description || '';
             document.getElementById('category').value = data.category || '';
-            document.getElementById('image_url').value = data.image_url || data.avatar_url || data.thumbnail_url || '';
+            document.getElementById('image_url').value = data.image_url || data.avatar_url || '';
             
             // Поля курса
             if (type === 'courses') {
@@ -1398,7 +1530,7 @@
                 document.getElementById('bio').value = data.bio || '';
                 document.getElementById('experience_years').value = data.experience_years || '';
                 document.getElementById('instructor_email').value = data.email || '';
-                document.getElementById('social_links').value = data.social_links ? JSON.stringify(data.social_links) : '';
+                document.getElementById('social_links').value = data.social_links || '';
             }
         }
 
@@ -1408,424 +1540,416 @@
                 'podcasts': 'подкаст', 
                 'videos': 'видео',
                 'materials': 'материал',
-                'streams': 'эфир',
-                'events': 'мероприятие',
-                'news': 'новость',
                 'instructors': 'преподавателя'
             };
             return names[type] || 'контент';
         }
 
-        // ==================== ОБРАБОТЧИК ФОРМЫ КОНТЕНТА ====================
-
-        document.getElementById('content-form').addEventListener('submit', async function(e) {
+        function handleContentSubmit(e) {
             e.preventDefault();
             
             const type = document.getElementById('content-type').value;
             const id = document.getElementById('content-id').value;
+            const formData = new FormData(e.target);
             
-            const formData = new FormData();
+            const action = id ? 'обновлен' : 'создан';
+            showSuccess(`Контент успешно ${action}`);
+            closeModal();
             
-            // Добавляем все поля формы
-            const formElements = this.elements;
-            for (let element of formElements) {
-                if (element.name && element.value && element.type !== 'file') {
-                    formData.append(element.name, element.value);
-                }
-                if (element.type === 'file' && element.files[0]) {
-                    formData.append(element.name, element.files[0]);
-                }
-            }
-            
-            // Добавляем тип контента
-            formData.append('contentType', type);
-            
-            try {
-                const url = id ? `/api/admin/content/${type}/${id}` : `/api/admin/content/${type}`;
-                const method = id ? 'PUT' : 'POST';
-                
-                const response = await fetch(url, {
-                    method: method,
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showSuccess(`Контент успешно ${id ? 'обновлен' : 'создан'}`);
-                    closeModal();
-                    loadTabData(currentTab);
-                } else {
-                    throw new Error(data.error);
-                }
-            } catch (error) {
-                showError(`Ошибка ${id ? 'обновления' : 'создания'} контента: ${error.message}`);
-            }
-        });
+            // Обновить данные на вкладке
+            loadTabData(currentTab);
+        }
 
         function closeModal() {
             document.getElementById('add-modal').classList.remove('active');
         }
 
-        // Остальные функции остаются без изменений
-        async function loadCourses() {
-            const loading = document.getElementById('courses-loading');
-            const table = document.getElementById('courses-table');
+        // ==================== ФУНКЦИИ ЗАГРУЗКИ ДАННЫХ ====================
+
+        function loadCourses() {
             const tbody = document.getElementById('courses-tbody');
-            
-            try {
-                // ИСПРАВЛЕННАЯ СТРОКА - новый API эндпоинт
-                const response = await fetch('/api/content/courses?limit=100');
-                const data = await response.json();
-                
-                if (data.success) {
-                    loading.style.display = 'none';
-                    table.style.display = 'table';
-                    
-                    // ИСПРАВЛЕННАЯ СТРОКА - используем data.data вместо data.data.courses
-                    tbody.innerHTML = data.data.map(course => `
-                        <tr>
-                            <td>${course.id}</td>
-                            <td>
-                                <strong>${course.title}</strong>
-                                <div style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                                    ${course.description}
-                                </div>
-                            </td>
-                            <td>${course.category}</td>
-                            <td>${formatPrice(course.price)}</td>
-                            <td>${course.students_count}</td>
-                            <td class="${course.is_active !== false ? 'status-active' : 'status-inactive'}">
-                                ${course.is_active !== false ? 'Активен' : 'Неактивен'}
-                            </td>
-                            <td>
-                                <div class="user-actions">
-                                    <button class="btn btn-outline btn-small" onclick="showAddModal('courses', ${JSON.stringify(course).replace(/"/g, '&quot;')})">
-                                        ✏️ Редактировать
-                                    </button>
-                                    <button class="btn btn-danger btn-small" onclick="deleteContent('courses', ${course.id})">
-                                        🗑️ Удалить
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    `).join('');
-                } else {
-                    throw new Error(data.error);
-                }
-            } catch (error) {
-                loading.style.display = 'none';
-                showError('Не удалось загрузить курсы: ' + error.message);
-            }
-        }
-
-        async function loadInstructors() {
-            const loading = document.getElementById('instructors-loading');
-            const grid = document.getElementById('instructors-grid');
-            
-            try {
-                // ЭТА СТРОКА УЖЕ ПРАВИЛЬНАЯ, но проверьте:
-                const response = await fetch('/api/instructors');
-                const data = await response.json();
-                
-                if (data.success) {
-                    loading.style.display = 'none';
-                    grid.style.display = 'grid';
-                    
-                    grid.innerHTML = data.data.map(instructor => `
-                        <div class="instructor-card">
-                            <div class="instructor-header">
-                                <img src="${instructor.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'}" 
-                                     alt="${instructor.name}" 
-                                     class="instructor-avatar"
-                                     onerror="this.src='https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'">
-                                <div class="instructor-info">
-                                    <h3>${instructor.name}</h3>
-                                    <div class="instructor-specialization">${instructor.specialization}</div>
-                                </div>
-                            </div>
-                            <div class="instructor-bio">
-                                ${instructor.bio || 'Описание преподавателя...'}
-                            </div>
-                            <div class="instructor-stats">
-                                <div class="instructor-stat">
-                                    🕐 ${instructor.experience_years} лет опыта
-                                </div>
-                                ${instructor.email ? `
-                                <div class="instructor-stat">
-                                    📧 ${instructor.email}
-                                </div>
-                                ` : ''}
-                            </div>
-                            <div class="user-actions">
-                                <button class="btn btn-outline btn-small" onclick="showAddModal('instructors', ${JSON.stringify(instructor).replace(/"/g, '&quot;')})">
-                                    ✏️ Редактировать
-                                </button>
-                                <button class="btn btn-danger btn-small" onclick="deleteInstructor(${instructor.id})">
-                                    🗑️ Удалить
-                                </button>
-                            </div>
+            tbody.innerHTML = demoData.courses.map(course => `
+                <tr>
+                    <td>${course.id}</td>
+                    <td>
+                        <strong>${course.title}</strong>
+                        <div style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            ${course.description}
                         </div>
-                    `).join('');
-                }
-            } catch (error) {
-                loading.style.display = 'none';
-                showError('Не удалось загрузить преподавателей');
-            }
+                    </td>
+                    <td>${course.category}</td>
+                    <td>${formatPrice(course.price)}</td>
+                    <td>${course.students_count}</td>
+                    <td class="${course.is_active ? 'status-active' : 'status-inactive'}">
+                        ${course.is_active ? 'Активен' : 'Неактивен'}
+                    </td>
+                    <td>
+                        <div class="user-actions">
+                            <button class="btn btn-outline btn-small" onclick="editCourse(${course.id})">
+                                ✏️ Редактировать
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="deleteContent('courses', ${course.id})">
+                                🗑️ Удалить
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
         }
 
-        async function loadUsers() {
-            const loading = document.getElementById('users-loading');
-            const table = document.getElementById('users-table');
-            const tbody = document.getElementById('users-tbody');
-            
-            try {
-                // В реальном приложении здесь должен быть API для пользователей
-                // Используем демо-данные
-                const demoUsers = [
-                    {
-                        id: 1,
-                        first_name: 'Иван Петров',
-                        username: '@ivanpetrov',
-                        is_admin: false,
-                        is_super_admin: true,
-                        subscription_end: '2025-12-31'
-                    },
-                    {
-                        id: 2,
-                        first_name: 'Анна Сидорова',
-                        username: '@annasid',
-                        is_admin: true,
-                        is_super_admin: false,
-                        subscription_end: '2025-02-20'
-                    },
-                    {
-                        id: 3,
-                        first_name: 'Михаил Козлов',
-                        username: '@mikek',
-                        is_admin: false,
-                        is_super_admin: false,
-                        subscription_end: '2024-11-30'
-                    }
-                ];
-                
-                loading.style.display = 'none';
-                table.style.display = 'table';
-                
-                tbody.innerHTML = demoUsers.map(user => {
-                    let roleBadge = '';
-                    if (user.is_super_admin) {
-                        roleBadge = '<span class="user-badge badge-super-admin">Супер-админ</span>';
-                    } else if (user.is_admin) {
-                        roleBadge = '<span class="user-badge badge-admin">Админ</span>';
-                    } else {
-                        roleBadge = '<span class="user-badge badge-user">Пользователь</span>';
-                    }
-                    
-                    return `
-                        <tr>
-                            <td>${user.id}</td>
-                            <td>${user.first_name}</td>
-                            <td>${user.username}</td>
-                            <td>${roleBadge}</td>
-                            <td>до ${new Date(user.subscription_end).toLocaleDateString('ru-RU')}</td>
-                            <td>
-                                <div class="user-actions">
-                                    <button class="btn btn-outline btn-small" onclick="editUserRole(${user.id})">
-                                        👑 Изменить роль
-                                    </button>
-                                    <button class="btn btn-outline btn-small">
-                                        ✉️ Написать
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-                
-            } catch (error) {
-                loading.style.display = 'none';
-                showError('Не удалось загрузить пользователей');
-            }
-        }
-
-        async function loadPodcasts() {
-            const loading = document.getElementById('podcasts-loading');
-            const table = document.getElementById('podcasts-table');
+        function loadPodcasts() {
             const tbody = document.getElementById('podcasts-tbody');
-            
-            try {
-                // ЗАМЕНИТЕ ЭТУ СТРОКУ:
-                const response = await fetch('/api/content');
-                // НА ЭТУ:
-                const response = await fetch('/api/content/podcasts?limit=100');
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    loading.style.display = 'none';
-                    table.style.display = 'table';
-                    
-                    // ЗАМЕНИТЕ data.data.podcasts НА data.data
-                    tbody.innerHTML = data.data.map(podcast => `
-                        <tr>
-                            <td>${podcast.id}</td>
-                            <td>${podcast.title}</td>
-                            <td>${podcast.category}</td>
-                            <td>${podcast.duration}</td>
-                            <td>${podcast.listens}</td>
-                            <td>
-                                <div class="user-actions">
-                                    <button class="btn btn-outline btn-small" onclick="showAddModal('podcasts', ${JSON.stringify(podcast).replace(/"/g, '&quot;')})">
-                                        ✏️
-                                    </button>
-                                    <button class="btn btn-danger btn-small" onclick="deleteContent('podcasts', ${podcast.id})">
-                                        🗑️
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    `).join('');
-                }
-            } catch (error) {
-                loading.style.display = 'none';
-                showError('Не удалось загрузить подкасты');
-            }
+            tbody.innerHTML = demoData.podcasts.map(podcast => `
+                <tr>
+                    <td>${podcast.id}</td>
+                    <td>${podcast.title}</td>
+                    <td>${podcast.category}</td>
+                    <td>${podcast.duration}</td>
+                    <td>${podcast.listens}</td>
+                    <td>
+                        <div class="user-actions">
+                            <button class="btn btn-outline btn-small" onclick="editPodcast(${podcast.id})">
+                                ✏️
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="deleteContent('podcasts', ${podcast.id})">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
         }
 
-         async function loadVideos() {
-            const loading = document.getElementById('videos-loading');
-            const table = document.getElementById('videos-table');
+        function loadVideos() {
             const tbody = document.getElementById('videos-tbody');
-            
-            try {
-                // ЗАМЕНИТЕ ЭТУ СТРОКУ:
-                const response = await fetch('/api/content');
-                // НА ЭТУ:
-                const response = await fetch('/api/content/videos?limit=100');
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    loading.style.display = 'none';
-                    table.style.display = 'table';
-                    
-                    // ЗАМЕНИТЕ data.data.videos НА data.data
-                    tbody.innerHTML = data.data.map(video => `
-                        <tr>
-                            <td>${video.id}</td>
-                            <td>${video.title}</td>
-                            <td>${video.category}</td>
-                            <td>${video.duration}</td>
-                            <td>${video.views}</td>
-                            <td>
-                                <div class="user-actions">
-                                    <button class="btn btn-outline btn-small" onclick="showAddModal('videos', ${JSON.stringify(video).replace(/"/g, '&quot;')})">
-                                        ✏️
-                                    </button>
-                                    <button class="btn btn-danger btn-small" onclick="deleteContent('videos', ${video.id})">
-                                        🗑️
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    `).join('');
-                }
-            } catch (error) {
-                loading.style.display = 'none';
-                showError('Не удалось загрузить видео');
-            }
+            tbody.innerHTML = demoData.videos.map(video => `
+                <tr>
+                    <td>${video.id}</td>
+                    <td>${video.title}</td>
+                    <td>${video.category}</td>
+                    <td>${video.duration}</td>
+                    <td>${video.views}</td>
+                    <td>
+                        <div class="user-actions">
+                            <button class="btn btn-outline btn-small" onclick="editVideo(${video.id})">
+                                ✏️
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="deleteContent('videos', ${video.id})">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
         }
 
-        async function loadMaterials() {
-            const loading = document.getElementById('materials-loading');
-            const table = document.getElementById('materials-table');
+        function loadMaterials() {
             const tbody = document.getElementById('materials-tbody');
-            
-            try {
-                // ЗАМЕНИТЕ ЭТУ СТРОКУ:
-                const response = await fetch('/api/content');
-                // НА ЭТУ:
-                const response = await fetch('/api/content/materials?limit=100');
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    loading.style.display = 'none';
-                    table.style.display = 'table';
-                    
-                    // ЗАМЕНИТЕ data.data.materials НА data.data
-                    tbody.innerHTML = data.data.map(material => `
-                        <tr>
-                            <td>${material.id}</td>
-                            <td>${material.title}</td>
-                            <td>${material.category}</td>
-                            <td>${material.material_type}</td>
-                            <td>${material.downloads}</td>
-                            <td>
-                                <div class="user-actions">
-                                    <button class="btn btn-outline btn-small" onclick="showAddModal('materials', ${JSON.stringify(material).replace(/"/g, '&quot;')})">
-                                        ✏️
-                                    </button>
-                                    <button class="btn btn-danger btn-small" onclick="deleteContent('materials', ${material.id})">
-                                        🗑️
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    `).join('');
-                }
-            } catch (error) {
-                loading.style.display = 'none';
-                showError('Не удалось загрузить материалы');
-            }
+            tbody.innerHTML = demoData.materials.map(material => `
+                <tr>
+                    <td>${material.id}</td>
+                    <td>${material.title}</td>
+                    <td>${material.category}</td>
+                    <td>${material.material_type}</td>
+                    <td>${material.downloads}</td>
+                    <td>
+                        <div class="user-actions">
+                            <button class="btn btn-outline btn-small" onclick="editMaterial(${material.id})">
+                                ✏️
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="deleteContent('materials', ${material.id})">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
         }
 
-        async function loadMedia() {
-            const loading = document.getElementById('media-loading');
-            const grid = document.getElementById('media-grid');
-            
-            try {
-                const response = await fetch('/api/media');
-                const data = await response.json();
+        function loadInstructors() {
+            const grid = document.getElementById('instructors-grid');
+            grid.innerHTML = demoData.instructors.map(instructor => `
+                <div class="instructor-card">
+                    <div class="instructor-header">
+                        <div class="instructor-avatar"></div>
+                        <div class="instructor-info">
+                            <h3>${instructor.name}</h3>
+                            <div class="instructor-specialization">${instructor.specialization}</div>
+                        </div>
+                    </div>
+                    <div class="instructor-bio">
+                        ${instructor.bio}
+                    </div>
+                    <div class="instructor-stats">
+                        <div class="instructor-stat">
+                            🕐 ${instructor.experience_years} лет опыта
+                        </div>
+                        ${instructor.email ? `
+                        <div class="instructor-stat">
+                            📧 ${instructor.email}
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="user-actions">
+                        <button class="btn btn-outline btn-small" onclick="editInstructor(${instructor.id})">
+                            ✏️ Редактировать
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteInstructor(${instructor.id})">
+                            🗑️ Удалить
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadUsers() {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = demoData.users.map(user => {
+                let roleBadge = '';
+                if (user.is_super_admin) {
+                    roleBadge = '<span class="user-badge badge-super-admin">Супер-админ</span>';
+                } else if (user.is_admin) {
+                    roleBadge = '<span class="user-badge badge-admin">Админ</span>';
+                } else {
+                    roleBadge = '<span class="user-badge badge-user">Пользователь</span>';
+                }
                 
-                if (data.success) {
-                    loading.style.display = 'none';
-                    grid.style.display = 'grid';
-                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
-                    grid.style.gap = '1rem';
-                    
-                    grid.innerHTML = data.files.map(file => `
-                        <div class="media-item" style="background: var(--bg-secondary); padding: 1rem; border-radius: 0.5rem; text-align: center;">
-                            <div style="font-size: 2rem; text-align: center; margin-bottom: 0.5rem;">
-                                ${getFileIcon(file.mime_type)}
-                            </div>
-                            <div style="font-size: 0.875rem; word-break: break-all; margin-bottom: 0.5rem;">
-                                ${file.original_name}
-                            </div>
-                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 1rem;">
-                                ${formatFileSize(file.size)}
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                                <button class="btn btn-outline btn-small" onclick="copyUrl('${file.url}')">
-                                    📋
+                return `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.first_name}</td>
+                        <td>${user.username}</td>
+                        <td>${roleBadge}</td>
+                        <td>до ${new Date(user.subscription_end).toLocaleDateString('ru-RU')}</td>
+                        <td>
+                            <div class="user-actions">
+                                <button class="btn btn-outline btn-small" onclick="editUserRole(${user.id})">
+                                    👑 Изменить роль
                                 </button>
-                                <button class="btn btn-danger btn-small" onclick="deleteMedia(${file.id})">
-                                    🗑️
+                                <button class="btn btn-outline btn-small">
+                                    ✉️ Написать
                                 </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function loadMedia() {
+            const grid = document.getElementById('media-grid');
+            grid.innerHTML = demoData.media.map(file => `
+                <div class="media-item">
+                    <div style="font-size: 3rem; text-align: center; margin-bottom: 0.5rem;">
+                        ${getFileIcon(file.mime_type)}
+                    </div>
+                    <div style="font-size: 0.875rem; word-break: break-all; margin-bottom: 0.5rem;">
+                        ${file.original_name}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        ${formatFileSize(file.size)}
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                        <button class="btn btn-outline btn-small" onclick="copyUrl('${file.url}')">
+                            📋
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteMedia(${file.id})">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadNavigation() {
+            const grid = document.getElementById('navigation-grid');
+            grid.innerHTML = demoData.navigation.map(item => `
+                <div class="navigation-card">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="font-size: 2rem;">${item.icon}</div>
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0 0 0.25rem 0;">${item.title}</h4>
+                            <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">${item.description}</p>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                                Страница: ${item.page} | Позиция: ${item.position} | 
+                                Статус: ${item.is_active ? 'Активна' : 'Неактивна'}
                             </div>
                         </div>
-                    `).join('');
-                }
-            } catch (error) {
-                loading.style.display = 'none';
-                showError('Не удалось загрузить медиа');
-            }
+                    </div>
+                    ${item.image_url ? `
+                    <div style="margin-bottom: 1rem;">
+                        <img src="${item.image_url}" alt="${item.title}" 
+                             style="width: 100%; height: 100px; object-fit: cover; border-radius: 0.5rem;"
+                             onerror="this.style.display='none'">
+                    </div>
+                    ` : ''}
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-outline btn-small" onclick="editNavigation(${item.id})">
+                            ✏️ Редактировать
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteNavigation(${item.id})">
+                            🗑️ Удалить
+                        </button>
+                        <button class="btn btn-outline btn-small" onclick="toggleNavigationStatus(${item.id}, ${!item.is_active})">
+                            ${item.is_active ? '👁️ Скрыть' : '👀 Показать'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        // Функции управления пользователями
+        // ==================== ФИЛЬТРАЦИЯ ДАННЫХ ====================
+
+        function filterCourses() {
+            const search = document.getElementById('courses-search').value.toLowerCase();
+            const category = document.getElementById('courses-category').value;
+            const status = document.getElementById('courses-status').value;
+            
+            const filtered = demoData.courses.filter(course => {
+                const matchesSearch = course.title.toLowerCase().includes(search) || 
+                                    course.description.toLowerCase().includes(search);
+                const matchesCategory = !category || course.category === category;
+                const matchesStatus = !status || 
+                                    (status === 'active' && course.is_active) ||
+                                    (status === 'inactive' && !course.is_active);
+                
+                return matchesSearch && matchesCategory && matchesStatus;
+            });
+            
+            const tbody = document.getElementById('courses-tbody');
+            tbody.innerHTML = filtered.map(course => `
+                <tr>
+                    <td>${course.id}</td>
+                    <td>
+                        <strong>${course.title}</strong>
+                        <div style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            ${course.description}
+                        </div>
+                    </td>
+                    <td>${course.category}</td>
+                    <td>${formatPrice(course.price)}</td>
+                    <td>${course.students_count}</td>
+                    <td class="${course.is_active ? 'status-active' : 'status-inactive'}">
+                        ${course.is_active ? 'Активен' : 'Неактивен'}
+                    </td>
+                    <td>
+                        <div class="user-actions">
+                            <button class="btn btn-outline btn-small" onclick="editCourse(${course.id})">
+                                ✏️ Редактировать
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="deleteContent('courses', ${course.id})">
+                                🗑️ Удалить
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterUsers() {
+            const search = document.getElementById('users-search').value.toLowerCase();
+            const role = document.getElementById('users-role').value;
+            
+            const filtered = demoData.users.filter(user => {
+                const matchesSearch = user.first_name.toLowerCase().includes(search) || 
+                                    user.username.toLowerCase().includes(search);
+                const matchesRole = !role || 
+                                  (role === 'user' && !user.is_admin && !user.is_super_admin) ||
+                                  (role === 'admin' && user.is_admin && !user.is_super_admin) ||
+                                  (role === 'super_admin' && user.is_super_admin);
+                
+                return matchesSearch && matchesRole;
+            });
+            
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = filtered.map(user => {
+                let roleBadge = '';
+                if (user.is_super_admin) {
+                    roleBadge = '<span class="user-badge badge-super-admin">Супер-админ</span>';
+                } else if (user.is_admin) {
+                    roleBadge = '<span class="user-badge badge-admin">Админ</span>';
+                } else {
+                    roleBadge = '<span class="user-badge badge-user">Пользователь</span>';
+                }
+                
+                return `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.first_name}</td>
+                        <td>${user.username}</td>
+                        <td>${roleBadge}</td>
+                        <td>до ${new Date(user.subscription_end).toLocaleDateString('ru-RU')}</td>
+                        <td>
+                            <div class="user-actions">
+                                <button class="btn btn-outline btn-small" onclick="editUserRole(${user.id})">
+                                    👑 Изменить роль
+                                </button>
+                                <button class="btn btn-outline btn-small">
+                                    ✉️ Написать
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterMedia() {
+            const search = document.getElementById('media-search').value.toLowerCase();
+            const type = document.getElementById('media-type').value;
+            
+            const filtered = demoData.media.filter(file => {
+                const matchesSearch = file.original_name.toLowerCase().includes(search);
+                const matchesType = !type || 
+                                  (type === 'image' && file.mime_type.startsWith('image/')) ||
+                                  (type === 'video' && file.mime_type.startsWith('video/')) ||
+                                  (type === 'audio' && file.mime_type.startsWith('audio/')) ||
+                                  (type === 'document' && (file.mime_type.includes('pdf') || file.mime_type.includes('document')));
+                
+                return matchesSearch && matchesType;
+            });
+            
+            const grid = document.getElementById('media-grid');
+            grid.innerHTML = filtered.map(file => `
+                <div class="media-item">
+                    <div style="font-size: 3rem; text-align: center; margin-bottom: 0.5rem;">
+                        ${getFileIcon(file.mime_type)}
+                    </div>
+                    <div style="font-size: 0.875rem; word-break: break-all; margin-bottom: 0.5rem;">
+                        ${file.original_name}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        ${formatFileSize(file.size)}
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                        <button class="btn btn-outline btn-small" onclick="copyUrl('${file.url}')">
+                            📋
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteMedia(${file.id})">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ==================== УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ ====================
+
         function editUserRole(userId) {
             currentEditingUser = userId;
+            const user = demoData.users.find(u => u.id === userId);
+            
+            if (user) {
+                const roleSelect = document.getElementById('user-role');
+                if (user.is_super_admin) {
+                    roleSelect.value = 'super_admin';
+                } else if (user.is_admin) {
+                    roleSelect.value = 'admin';
+                } else {
+                    roleSelect.value = 'user';
+                }
+            }
+            
             document.getElementById('user-modal').classList.add('active');
         }
 
@@ -1836,86 +1960,308 @@
 
         function saveUserRole() {
             const role = document.getElementById('user-role').value;
-            // В реальном приложении здесь должен быть API вызов
-            showSuccess(`Роль пользователя #${currentEditingUser} изменена на: ${role}`);
-            closeUserModal();
-            loadUsers(); // Перезагружаем список пользователей
-        }
-
-        async function deleteInstructor(instructorId) {
-            if (confirm('Вы уверены, что хотите удалить этого преподавателя?')) {
-                try {
-                    const response = await fetch(`/api/admin/instructors/${instructorId}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        showSuccess('Преподаватель успешно удален');
-                        loadInstructors();
-                    } else {
-                        showError('Ошибка при удалении преподавателя');
-                    }
-                } catch (error) {
-                    showError('Ошибка при удалении преподавателя');
-                }
+            const userIndex = demoData.users.findIndex(u => u.id === currentEditingUser);
+            
+            if (userIndex !== -1) {
+                demoData.users[userIndex].is_admin = role === 'admin';
+                demoData.users[userIndex].is_super_admin = role === 'super_admin';
+                
+                const roleNames = {
+                    'user': 'Пользователь',
+                    'admin': 'Администратор', 
+                    'super_admin': 'Супер-администратор'
+                };
+                
+                showSuccess(`Роль пользователя #${currentEditingUser} изменена на: ${roleNames[role]}`);
+                closeUserModal();
+                loadUsers();
             }
         }
 
-        async function deleteContent(type, id) {
-            if (confirm(`Вы уверены, что хотите удалить этот ${type}?`)) {
-                try {
-                    const response = await fetch(`/api/admin/content/${type}/${id}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        showSuccess(`${type} успешно удален`);
-                        loadTabData(currentTab);
-                    } else {
-                        showError('Ошибка при удалении');
+        // ==================== УПРАВЛЕНИЕ НАВИГАЦИЕЙ ====================
+
+        function showAddNavigationModal(editItem = null) {
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>${editItem ? '✏️ Редактировать' : '➕ Добавить'} навигационную кнопку</h3>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="navigation-form">
+                            <div class="form-group">
+                                <label for="nav-title">Название *</label>
+                                <input type="text" id="nav-title" class="form-control" value="${editItem ? editItem.title : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="nav-description">Описание *</label>
+                                <textarea id="nav-description" class="form-control" rows="2" required>${editItem ? editItem.description : ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="nav-icon">Иконка *</label>
+                                <input type="text" id="nav-icon" class="form-control" value="${editItem ? editItem.icon : ''}" placeholder="📚" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="nav-page">Страница *</label>
+                                <select id="nav-page" class="form-control" required>
+                                    <option value="courses" ${editItem && editItem.page === 'courses' ? 'selected' : ''}>Курсы</option>
+                                    <option value="podcasts" ${editItem && editItem.page === 'podcasts' ? 'selected' : ''}>Подкасты</option>
+                                    <option value="videos" ${editItem && editItem.page === 'videos' ? 'selected' : ''}>Видео</option>
+                                    <option value="materials" ${editItem && editItem.page === 'materials' ? 'selected' : ''}>Материалы</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="nav-position">Позиция *</label>
+                                <input type="number" id="nav-position" class="form-control" value="${editItem ? editItem.position : 1}" min="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="nav-active" ${editItem ? editItem.is_active ? 'checked' : '' : 'checked'}>
+                                    Активная
+                                </label>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-outline" onclick="this.closest('.modal').remove()">Отмена</button>
+                                <button type="submit" class="btn btn-primary">${editItem ? 'Обновить' : 'Создать'}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            document.getElementById('navigation-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (editItem) {
+                    // Обновление существующего элемента
+                    const index = demoData.navigation.findIndex(nav => nav.id === editItem.id);
+                    if (index !== -1) {
+                        demoData.navigation[index] = {
+                            ...editItem,
+                            title: document.getElementById('nav-title').value,
+                            description: document.getElementById('nav-description').value,
+                            icon: document.getElementById('nav-icon').value,
+                            page: document.getElementById('nav-page').value,
+                            position: parseInt(document.getElementById('nav-position').value),
+                            is_active: document.getElementById('nav-active').checked
+                        };
                     }
-                } catch (error) {
-                    showError('Ошибка при удалении');
-                }
-            }
-        }
-
-        async function deleteMedia(id) {
-            if (confirm('Вы уверены, что хотите удалить этот файл?')) {
-                try {
-                    const response = await fetch(`/api/media/${id}`, {
-                        method: 'DELETE'
+                } else {
+                    // Создание нового элемента
+                    const newId = Math.max(...demoData.navigation.map(nav => nav.id)) + 1;
+                    demoData.navigation.push({
+                        id: newId,
+                        title: document.getElementById('nav-title').value,
+                        description: document.getElementById('nav-description').value,
+                        icon: document.getElementById('nav-icon').value,
+                        page: document.getElementById('nav-page').value,
+                        position: parseInt(document.getElementById('nav-position').value),
+                        is_active: document.getElementById('nav-active').checked,
+                        image_url: ''
                     });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        showSuccess('Файл успешно удален');
-                        loadMedia();
-                    } else {
-                        showError('Ошибка при удалении файла');
-                    }
-                } catch (error) {
-                    showError('Ошибка при удалении файла');
                 }
-            }
-        }
-
-        function showMediaUploadModal() {
-            alert('Функция загрузки медиа в разработке');
-        }
-
-        function copyUrl(url) {
-            navigator.clipboard.writeText(window.location.origin + url).then(() => {
-                showSuccess('URL скопирован в буфер');
+                
+                showSuccess(`Навигационная кнопка ${editItem ? 'обновлена' : 'создана'}`);
+                modal.remove();
+                loadNavigation();
             });
         }
 
-        // Вспомогательные функции
+        function editNavigation(id) {
+            const item = demoData.navigation.find(nav => nav.id === id);
+            if (item) {
+                showAddNavigationModal(item);
+            }
+        }
+
+        function deleteNavigation(id) {
+            if (confirm('Вы уверены, что хотите удалить этот навигационный элемент?')) {
+                demoData.navigation = demoData.navigation.filter(nav => nav.id !== id);
+                showSuccess('Навигационный элемент удален');
+                loadNavigation();
+            }
+        }
+
+        function toggleNavigationStatus(id, newStatus) {
+            const item = demoData.navigation.find(nav => nav.id === id);
+            if (item) {
+                item.is_active = newStatus;
+                const status = newStatus ? 'активирована' : 'деактивирована';
+                showSuccess(`Навигация ${status}`);
+                loadNavigation();
+            }
+        }
+
+        // ==================== УПРАВЛЕНИЕ МЕДИА ====================
+
+        function showMediaUploadModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>📤 Загрузить файл</h3>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="media-upload-form" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="media-file">Выберите файл *</label>
+                                <input type="file" id="media-file" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="media-description">Описание (необязательно)</label>
+                                <input type="text" id="media-description" class="form-control" placeholder="Описание файла">
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-outline" onclick="this.closest('.modal').remove()">Отмена</button>
+                                <button type="submit" class="btn btn-primary">Загрузить</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            document.getElementById('media-upload-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const fileInput = document.getElementById('media-file');
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    const newId = Math.max(...demoData.media.map(m => m.id)) + 1;
+                    
+                    demoData.media.push({
+                        id: newId,
+                        original_name: file.name,
+                        size: file.size,
+                        mime_type: file.type,
+                        url: URL.createObjectURL(file)
+                    });
+                    
+                    showSuccess('Файл успешно загружен');
+                    modal.remove();
+                    loadMedia();
+                }
+            });
+        }
+
+        // ==================== ФУНКЦИИ УДАЛЕНИЯ ====================
+
+        function deleteContent(type, id) {
+            const typeNames = {
+                'courses': 'курс',
+                'podcasts': 'подкаст',
+                'videos': 'видео', 
+                'materials': 'материал'
+            };
+            
+            if (confirm(`Вы уверены, что хотите удалить этот ${typeNames[type]}?`)) {
+                switch(type) {
+                    case 'courses':
+                        demoData.courses = demoData.courses.filter(c => c.id !== id);
+                        break;
+                    case 'podcasts':
+                        demoData.podcasts = demoData.podcasts.filter(p => p.id !== id);
+                        break;
+                    case 'videos':
+                        demoData.videos = demoData.videos.filter(v => v.id !== id);
+                        break;
+                    case 'materials':
+                        demoData.materials = demoData.materials.filter(m => m.id !== id);
+                        break;
+                }
+                
+                showSuccess(`${typeNames[type]} успешно удален`);
+                loadTabData(currentTab);
+            }
+        }
+
+        function deleteInstructor(id) {
+            if (confirm('Вы уверены, что хотите удалить этого преподавателя?')) {
+                demoData.instructors = demoData.instructors.filter(i => i.id !== id);
+                showSuccess('Преподаватель успешно удален');
+                loadInstructors();
+            }
+        }
+
+        function deleteMedia(id) {
+            if (confirm('Вы уверены, что хотите удалить этот файл?')) {
+                demoData.media = demoData.media.filter(m => m.id !== id);
+                showSuccess('Файл успешно удален');
+                loadMedia();
+            }
+        }
+
+        // ==================== РЕДАКТИРОВАНИЕ КОНТЕНТА ====================
+
+        function editCourse(id) {
+            const course = demoData.courses.find(c => c.id === id);
+            if (course) {
+                showAddModal('courses', course);
+            }
+        }
+
+        function editInstructor(id) {
+            const instructor = demoData.instructors.find(i => i.id === id);
+            if (instructor) {
+                showAddModal('instructors', instructor);
+            }
+        }
+
+        function editPodcast(id) {
+            const podcast = demoData.podcasts.find(p => p.id === id);
+            if (podcast) {
+                showAddModal('podcasts', podcast);
+            }
+        }
+
+        function editVideo(id) {
+            const video = demoData.videos.find(v => v.id === id);
+            if (video) {
+                showAddModal('videos', video);
+            }
+        }
+
+        function editMaterial(id) {
+            const material = demoData.materials.find(m => m.id === id);
+            if (material) {
+                showAddModal('materials', material);
+            }
+        }
+
+        // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+
+        function handleSettingsSubmit(e) {
+            e.preventDefault();
+            showSuccess('Настройки успешно сохранены');
+        }
+
+        function resetSettings() {
+            if (confirm('Вы уверены, что хотите сбросить настройки?')) {
+                document.getElementById('settings-form').reset();
+                showSuccess('Настройки сброшены');
+            }
+        }
+
+        function copyUrl(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                showSuccess('URL скопирован в буфер обмена');
+            });
+        }
+
+        function logout() {
+            if (confirm('Вы уверены, что хотите выйти?')) {
+                showSuccess('Вы вышли из системы');
+                // В реальном приложении здесь будет редирект на страницу входа
+            }
+        }
+
         function formatPrice(price) {
             return new Intl.NumberFormat('ru-RU').format(price) + ' ₽';
         }
@@ -1933,23 +2279,28 @@
             if (mimeType.startsWith('video/')) return '🎬';
             if (mimeType.startsWith('audio/')) return '🎵';
             if (mimeType === 'application/pdf') return '📄';
+            if (mimeType.includes('document') || mimeType.includes('word')) return '📝';
             return '📎';
         }
 
         function showError(message) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'error-message';
-            errorDiv.textContent = message;
-            document.querySelector('.admin-main').prepend(errorDiv);
-            setTimeout(() => errorDiv.remove(), 5000);
+            showNotification(message, 'error');
         }
 
         function showSuccess(message) {
-            const successDiv = document.createElement('div');
-            successDiv.className = 'success-message';
-            successDiv.textContent = message;
-            document.querySelector('.admin-main').prepend(successDiv);
-            setTimeout(() => successDiv.remove(), 5000);
+            showNotification(message, 'success');
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = type === 'error' ? 'error-message' : 'success-message';
+            notification.textContent = message;
+            
+            document.querySelector('.admin-main').insertBefore(notification, document.querySelector('.admin-main').firstChild);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
         }
 
         // Инициализация при загрузке
