@@ -2829,6 +2829,435 @@ createDemoUser() {
             this.showNotification('❌ У вас нет доступа к админ-панели', 'error');
         }
     }
+
+    // ==================== ДЕТАЛЬНЫЕ СТРАНИЦЫ ====================
+
+    openCourseDetail(courseId) {
+        this.currentSubPage = `course-${courseId}`;
+        this.renderPage('courses', `course-${courseId}`);
+    }
+
+    openStreamDetail(streamId) {
+        this.currentSubPage = `stream-${streamId}`;
+        this.renderPage('streams', `stream-${streamId}`);
+    }
+
+    openInstructorDetail(instructorId) {
+        this.currentSubPage = `instructor-${instructorId}`;
+        this.renderPage('instructors', `instructor-${instructorId}`);
+    }
+
+    // Обновляем метод getPageHTML для поддержки детальных страниц
+    getPageHTML(page, subPage = '') {
+        // Обрабатываем детальные страницы
+        if (subPage.includes('course-')) {
+            const courseId = parseInt(subPage.split('-')[1]);
+            return this.createCourseDetailPage(courseId);
+        }
+        
+        if (subPage.includes('stream-')) {
+            const streamId = parseInt(subPage.split('-')[1]);
+            return this.createStreamDetailPage(streamId);
+        }
+        
+        if (subPage.includes('instructor-')) {
+            const instructorId = parseInt(subPage.split('-')[1]);
+            return this.createInstructorDetailPage(instructorId);
+        }
+
+        const pages = {
+            home: this.createHomePage(),
+            courses: this.createCoursesPage(),
+            podcasts: this.createPodcastsPage(),
+            streams: this.createStreamsPage(),
+            videos: this.createVideosPage(),
+            materials: this.createMaterialsPage(),
+            events: this.createEventsPage(),
+            favorites: this.createFavoritesPage(),
+            profile: this.createProfilePage(),
+            community: this.createCommunityPage()
+        };
+
+        return pages[page] || this.createNotFoundPage();
+    }
+
+       
+    createCourseDetailPage(courseId) {
+        const course = this.allContent.courses?.find(c => c.id == courseId) || this.getDemoCourse();
+        const instructors = course.instructors || [];
+        
+        return `
+            <div class="page course-detail-page">
+                <!-- Хлебные крошки -->
+                <div class="breadcrumbs">
+                    <button class="btn btn-outline btn-small" onclick="app.renderPage('courses')">
+                        ← Назад к курсам
+                    </button>
+                </div>
+
+                <!-- Hero секция курса -->
+                <div class="course-hero">
+                    <div class="course-hero-image">
+                        <img src="${course.image_url}" alt="${course.title}" 
+                             onerror="this.src='https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=600&h=400&fit=crop'">
+                        <div class="course-hero-overlay">
+                            <button class="btn btn-primary btn-large play-btn" 
+                                    onclick="app.previewContent('video', '${course.video_url}', {title: '${course.title}', id: ${course.id}})">
+                                ▶️ Предпросмотр курса
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="course-hero-content">
+                        <div class="course-meta-large">
+                            <span class="category-badge">${course.category}</span>
+                            <span class="level-badge level-${course.level}">${this.getLevelName(course.level)}</span>
+                            <span class="rating-badge">⭐ ${course.rating}</span>
+                        </div>
+                        
+                        <h1>${course.title}</h1>
+                        <p class="course-subtitle">${course.description}</p>
+                        
+                        <div class="course-stats">
+                            <div class="stat">
+                                <div class="stat-value">${course.modules}</div>
+                                <div class="stat-label">Модулей</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">${course.duration}</div>
+                                <div class="stat-label">Длительность</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">${course.students_count}</div>
+                                <div class="stat-label">Студентов</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">${course.rating}/5</div>
+                                <div class="stat-label">Рейтинг</div>
+                            </div>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            ${this.currentUser?.hasActiveSubscription ? `
+                                <button class="btn btn-success btn-large" onclick="app.startCourse(${course.id})">
+                                    🎯 Начать обучение
+                                </button>
+                            ` : `
+                                <button class="btn btn-primary btn-large" onclick="app.showSubscriptionModal()">
+                                    💎 Получить доступ по подписке
+                                </button>
+                                <button class="btn btn-outline" onclick="app.purchaseCourse(${course.id})">
+                                    💳 Купить отдельно - ${this.formatPrice(course.discount > 0 ? course.price * (1 - course.discount/100) : course.price)}
+                                </button>
+                            `}
+                            
+                            <button class="btn btn-outline" onclick="app.toggleFavorite(${course.id}, 'courses')">
+                                ${this.isFavorite(course.id, 'courses') ? '❤️ В избранном' : '🤍 В избранное'}
+                            </button>
+                        </div>
+                        
+                        ${course.discount > 0 ? `
+                        <div class="discount-info">
+                            <span class="original-price">${this.formatPrice(course.price)}</span>
+                            <span class="discount-amount">Экономия ${course.discount}%</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                ${instructors.length > 0 ? `
+                <!-- Преподаватели курса -->
+                <div class="course-instructors-section">
+                    <h3>👨‍🏫 Преподаватели курса</h3>
+                    <div class="instructors-grid">
+                        ${instructors.map(instructor => `
+                            <div class="instructor-card" onclick="app.openInstructorDetail(${instructor.id})">
+                                <div class="instructor-avatar">
+                                    <img src="${instructor.avatar_url}" alt="${instructor.name}"
+                                         onerror="this.src='https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'">
+                                </div>
+                                <div class="instructor-info">
+                                    <h4>${instructor.name}</h4>
+                                    <p class="instructor-specialization">${instructor.specialization}</p>
+                                    <p class="instructor-role">${instructor.role}</p>
+                                    <div class="instructor-experience">
+                                        🕐 Опыт: ${instructor.experience_years} лет
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Табы с информацией о курсе -->
+                <div class="course-tabs">
+                    <div class="tab-navigation">
+                        <button class="tab-btn active" onclick="app.switchCourseTab('about')">
+                            📋 О курсе
+                        </button>
+                        <button class="tab-btn" onclick="app.switchCourseTab('curriculum')">
+                            🎯 Программа
+                        </button>
+                        <button class="tab-btn" onclick="app.switchCourseTab('reviews')">
+                            💬 Отзывы
+                        </button>
+                    </div>
+
+                    <div class="tab-content active" id="about-tab">
+                        <div class="course-description-detailed">
+                            <h3>Что вы узнаете</h3>
+                            <ul class="learning-list">
+                                <li>Современные методики диагностики и лечения</li>
+                                <li>Практические навыки для ежедневной работы</li>
+                                <li>Разбор реальных клинических случаев</li>
+                                <li>Инструменты для профессионального роста</li>
+                            </ul>
+                            
+                            <h3>Для кого этот курс</h3>
+                            <ul class="audience-list">
+                                <li>Неврологи и реабилитологи</li>
+                                <li>Мануальные терапевты</li>
+                                <li>Врачи, желающие повысить квалификацию</li>
+                                <li>Студенты медицинских вузов</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="curriculum-tab">
+                        <div class="curriculum-list">
+                            ${this.createCurriculumModules(course.modules)}
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="reviews-tab">
+                        <div class="reviews-list">
+                            ${this.createCourseReviews()}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Блок покупки -->
+                <div class="purchase-section">
+                    <div class="pricing-card">
+                        <div class="pricing-header">
+                            <h3>Начните обучение сегодня</h3>
+                            ${course.discount > 0 ? `
+                            <div class="discount-timer">
+                                ⏰ Скидка действует еще 2 дня
+                            </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="price-display">
+                            ${course.discount > 0 ? `
+                                <div class="original-price">${this.formatPrice(course.price)}</div>
+                            ` : ''}
+                            <div class="current-price">
+                                ${this.formatPrice(course.discount > 0 ? course.price * (1 - course.discount/100) : course.price)}
+                            </div>
+                        </div>
+                        
+                        <div class="features-list">
+                            <div class="feature-item">✅ Полный доступ к курсу</div>
+                            <div class="feature-item">✅ Сертификат о прохождении</div>
+                            <div class="feature-item">✅ Поддержка куратора</div>
+                            <div class="feature-item">✅ Доступ в закрытый чат</div>
+                            <div class="feature-item">✅ Обновления курса</div>
+                        </div>
+                        
+                        <div class="purchase-actions">
+                            <button class="btn btn-primary btn-large" onclick="app.purchaseCourse(${course.id})">
+                                💳 Купить курс
+                            </button>
+                            <button class="btn btn-outline" onclick="app.addToCart(${course.id})">
+                                🛒 В корзину
+                            </button>
+                        </div>
+                        
+                        <div class="guarantee-badge">
+                            ✅ 30-дневная гарантия возврата
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    
+    createInstructorDetailPage(instructorId) {
+        // Находим преподавателя - в реальном приложении здесь должен быть API вызов
+        const instructor = this.instructors.find(i => i.id === instructorId) || {
+            id: instructorId,
+            name: 'Доктор Иванов А.В.',
+            specialization: 'Неврология, Мануальная терапия',
+            bio: 'Ведущий специалист по мануальной терапии, автор методик лечения болей в спине. Опыт работы - 15 лет. Автор более 50 научных публикаций.',
+            experience_years: 15,
+            avatar_url: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=300&h=300&fit=crop&crop=face',
+            email: 'ivanov@anb.ru',
+            social_links: '{"telegram": "@ivanov_neuro", "instagram": "dr_ivanov", "website": "ivanov-clinic.ru"}'
+        };
+
+        const socialLinks = instructor.social_links ? JSON.parse(instructor.social_links) : {};
+
+        return `
+            <div class="page instructor-detail-page">
+                <!-- Хлебные крошки -->
+                <div class="breadcrumbs">
+                    <button class="btn btn-outline btn-small" onclick="app.renderPage('courses')">
+                        ← Назад
+                    </button>
+                </div>
+
+                <!-- Hero секция преподавателя -->
+                <div class="instructor-hero">
+                    <div class="instructor-avatar-large">
+                        <img src="${instructor.avatar_url}" alt="${instructor.name}"
+                             onerror="this.src='https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&crop=face'">
+                    </div>
+                    
+                    <div class="instructor-hero-content">
+                        <h1>${instructor.name}</h1>
+                        <p class="instructor-specialization-large">${instructor.specialization}</p>
+                        
+                        <div class="instructor-stats-large">
+                            <div class="instructor-stat-large">
+                                <div class="stat-icon">🕐</div>
+                                <div class="stat-info">
+                                    <div class="stat-value">${instructor.experience_years}+</div>
+                                    <div class="stat-label">лет опыта</div>
+                                </div>
+                            </div>
+                            <div class="instructor-stat-large">
+                                <div class="stat-icon">📚</div>
+                                <div class="stat-info">
+                                    <div class="stat-value">${this.getInstructorCoursesCount(instructor.id)}+</div>
+                                    <div class="stat-label">курсов</div>
+                                </div>
+                            </div>
+                            <div class="instructor-stat-large">
+                                <div class="stat-icon">⭐</div>
+                                <div class="stat-info">
+                                    <div class="stat-value">4.9</div>
+                                    <div class="stat-label">рейтинг</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${instructor.email || Object.keys(socialLinks).length > 0 ? `
+                        <div class="instructor-contacts">
+                            ${instructor.email ? `
+                            <div class="contact-item">
+                                <span class="contact-icon">📧</span>
+                                <span class="contact-text">${instructor.email}</span>
+                            </div>
+                            ` : ''}
+                            
+                            ${Object.entries(socialLinks).map(([platform, link]) => `
+                                <div class="contact-item">
+                                    <span class="contact-icon">${this.getSocialIcon(platform)}</span>
+                                    <a href="${link}" target="_blank" class="contact-text">${platform}</a>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- Биография преподавателя -->
+                <div class="instructor-bio-section">
+                    <h3>📖 О преподавателе</h3>
+                    <div class="instructor-bio-content">
+                        <p>${instructor.bio}</p>
+                        
+                        <div class="instructor-achievements">
+                            <h4>Достижения и квалификация:</h4>
+                            <ul>
+                                <li>Доктор медицинских наук</li>
+                                <li>Член Российской ассоциации неврологов</li>
+                                <li>Автор методик мануальной терапии</li>
+                                <li>Регулярный спикер международных конференций</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Курсы преподавателя -->
+                <div class="instructor-courses-section">
+                    <h3>🎯 Курсы преподавателя</h3>
+                    <div class="courses-grid">
+                        ${this.getInstructorCourses(instructor.id).map(course => `
+                            <div class="course-card" onclick="app.openCourseDetail(${course.id})">
+                                <div class="card-image">
+                                    <img src="${course.image_url}" alt="${course.title}" 
+                                         onerror="this.src='https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop'">
+                                    <div class="card-overlay">
+                                        <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
+                                                onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
+                                            ${this.isFavorite(course.id, 'courses') ? '❤️' : '🤍'}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-content">
+                                    <div class="card-category">${course.category}</div>
+                                    <h3 class="card-title">${course.title}</h3>
+                                    <p class="card-description">${course.description}</p>
+                                    <div class="card-meta">
+                                        <span class="meta-item">⏱️ ${course.duration}</span>
+                                        <span class="meta-item">🎯 ${course.modules} модулей</span>
+                                    </div>
+                                    <div class="card-footer">
+                                        <div class="price-section">
+                                            ${course.discount > 0 ? `
+                                                <div class="price-original">${this.formatPrice(course.price)}</div>
+                                                <div class="price-current">${this.formatPrice(course.price * (1 - course.discount/100))}</div>
+                                            ` : `
+                                                <div class="price-current">${this.formatPrice(course.price)}</div>
+                                            `}
+                                        </div>
+                                        <button class="btn btn-primary btn-small" 
+                                                onclick="event.stopPropagation(); app.openCourseDetail(${course.id})">
+                                            Подробнее
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    
+    // Вспомогательные методы для работы с преподавателями
+    getInstructorCoursesCount(instructorId) {
+        // В реальном приложении здесь должен быть API вызов
+        // Считаем демо-данные
+        return this.allContent.courses?.filter(course => 
+            course.instructors && course.instructors.some(i => i.id === instructorId)
+        ).length || 2;
+    }
+
+    getInstructorCourses(instructorId) {
+        // В реальном приложении здесь должен быть API вызов
+        // Возвращаем демо-курсы преподавателя
+        return this.allContent.courses?.filter(course => 
+            course.instructors && course.instructors.some(i => i.id === instructorId)
+        ).slice(0, 3) || [];
+    }
+
+    getSocialIcon(platform) {
+        const icons = {
+            'telegram': '📱',
+            'instagram': '📸',
+            'website': '🌐',
+            'youtube': '🎥',
+            'vk': '👥',
+            'facebook': '👤'
+        };
+        return icons[platform] || '🔗';
+    }
 }
 
 // Глобальная инициализация
