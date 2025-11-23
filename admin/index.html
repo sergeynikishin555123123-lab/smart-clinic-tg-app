@@ -553,6 +553,25 @@
         .tab-content.active {
             display: block;
         }
+
+        /* Стили для навигации */
+        .navigation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .navigation-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .navigation-card:hover {
+            border-color: var(--accent);
+        }
     </style>
 </head>
 <body>
@@ -829,27 +848,27 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Навигация -->
+            <div id="navigation-tab" class="tab-content">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2>🧭 Управление навигацией</h2>
+                        <button class="btn btn-primary" onclick="showAddNavigationModal()">
+                            ➕ Добавить кнопку
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <div class="loading" id="navigation-loading">
+                            <div class="spinner"></div>
+                        </div>
+                        <div class="navigation-grid" id="navigation-grid" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
-<!-- Управление навигацией -->
-<div id="navigation-tab" class="tab-content">
-    <div class="content-section">
-        <div class="section-header">
-            <h2>🧭 Управление навигацией</h2>
-            <button class="btn btn-primary" onclick="showAddNavigationModal()">
-                ➕ Добавить кнопку
-            </button>
-        </div>
-        <div class="section-content">
-            <div class="loading" id="navigation-loading">
-                <div class="spinner"></div>
-            </div>
-            <div class="navigation-grid" id="navigation-grid" style="display: none;"></div>
-        </div>
-    </div>
-</div>
-    
     <!-- Модальное окно добавления контента -->
     <div id="add-modal" class="modal">
         <div class="modal-content">
@@ -858,45 +877,45 @@
                 <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <div class="modal-body">
-                <form id="content-form">
-                    <input type="hidden" id="content-type">
-                    <input type="hidden" id="content-id">
+                <form id="content-form" enctype="multipart/form-data">
+                    <input type="hidden" id="content-type" name="contentType">
+                    <input type="hidden" id="content-id" name="id">
                     
                     <div class="form-group">
                         <label for="title">Название</label>
-                        <input type="text" id="title" class="form-control" required>
+                        <input type="text" id="title" name="title" class="form-control" required>
                     </div>
                     
                     <div class="form-group">
                         <label for="description">Описание</label>
-                        <textarea id="description" class="form-control" rows="3" required></textarea>
+                        <textarea id="description" name="description" class="form-control" rows="3" required></textarea>
                     </div>
                     
                     <div class="form-group">
                         <label for="category">Категория</label>
-                        <input type="text" id="category" class="form-control" required>
+                        <input type="text" id="category" name="category" class="form-control" required>
                     </div>
                     
                     <div id="course-fields" style="display: none;">
                         <div class="form-group">
                             <label for="price">Цена (₽)</label>
-                            <input type="number" id="price" class="form-control" required>
+                            <input type="number" id="price" name="price" class="form-control" required>
                         </div>
                         <div class="form-group">
                             <label for="discount">Скидка (%)</label>
-                            <input type="number" id="discount" class="form-control" min="0" max="100">
+                            <input type="number" id="discount" name="discount" class="form-control" min="0" max="100">
                         </div>
                         <div class="form-group">
                             <label for="duration">Длительность</label>
-                            <input type="text" id="duration" class="form-control" placeholder="12 недель" required>
+                            <input type="text" id="duration" name="duration" class="form-control" placeholder="12 недель" required>
                         </div>
                         <div class="form-group">
                             <label for="modules">Количество модулей</label>
-                            <input type="number" id="modules" class="form-control" required>
+                            <input type="number" id="modules" name="modules" class="form-control" required>
                         </div>
                         <div class="form-group">
                             <label for="level">Уровень</label>
-                            <select id="level" class="form-control" required>
+                            <select id="level" name="level" class="form-control" required>
                                 <option value="beginner">Начинающий</option>
                                 <option value="intermediate">Средний</option>
                                 <option value="advanced">Продвинутый</option>
@@ -907,35 +926,35 @@
                     <div id="instructor-fields" style="display: none;">
                         <div class="form-group">
                             <label for="specialization">Специализация</label>
-                            <input type="text" id="specialization" class="form-control" required>
+                            <input type="text" id="specialization" name="specialization" class="form-control" required>
                         </div>
                         <div class="form-group">
                             <label for="bio">Биография</label>
-                            <textarea id="bio" class="form-control" rows="4" required></textarea>
+                            <textarea id="bio" name="bio" class="form-control" rows="4" required></textarea>
                         </div>
                         <div class="form-group">
                             <label for="experience_years">Опыт работы (лет)</label>
-                            <input type="number" id="experience_years" class="form-control" required>
+                            <input type="number" id="experience_years" name="experience_years" class="form-control" required>
                         </div>
                         <div class="form-group">
                             <label for="instructor_email">Email</label>
-                            <input type="email" id="instructor_email" class="form-control">
+                            <input type="email" id="instructor_email" name="email" class="form-control">
                         </div>
                         <div class="form-group">
                             <label for="social_links">Социальные сети (JSON)</label>
-                            <textarea id="social_links" class="form-control" rows="3" placeholder='{"telegram": "@username", "instagram": "@username"}'></textarea>
+                            <textarea id="social_links" name="social_links" class="form-control" rows="3" placeholder='{"telegram": "@username", "instagram": "@username"}'></textarea>
                         </div>
                     </div>
                     
                     <div id="media-fields">
                         <div class="form-group">
                             <label for="image_url">URL изображения</label>
-                            <input type="url" id="image_url" class="form-control">
+                            <input type="url" id="image_url" name="image_url" class="form-control">
                         </div>
                         
                         <div class="form-group">
                             <label for="file">Загрузить файл</label>
-                            <input type="file" id="file" class="form-control">
+                            <input type="file" id="file" name="file" class="form-control">
                         </div>
                     </div>
                     
@@ -1054,42 +1073,401 @@
             loadTabData(tabName);
         }
 
-// Загрузка данных для вкладки
-async function loadTabData(tabName) {
-    try {
-        switch(tabName) {
-            case 'courses':
-                await loadCourses();
-                break;
-            case 'podcasts':
-                await loadPodcasts();
-                break;
-            case 'videos':
-                await loadVideos();
-                break;
-            case 'materials':
-                await loadMaterials();
-                break;
-            case 'instructors':
-                await loadInstructors();
-                break;
-            case 'users':
-                await loadUsers();
-                break;
-            case 'media':
-                await loadMedia();
-                break;
-            case 'navigation':
-                await loadNavigation(); // ДОБАВИТЬ ЭТУ СТРОЧКУ
-                break;
+        // Загрузка данных для вкладки
+        async function loadTabData(tabName) {
+            try {
+                switch(tabName) {
+                    case 'courses':
+                        await loadCourses();
+                        break;
+                    case 'podcasts':
+                        await loadPodcasts();
+                        break;
+                    case 'videos':
+                        await loadVideos();
+                        break;
+                    case 'materials':
+                        await loadMaterials();
+                        break;
+                    case 'instructors':
+                        await loadInstructors();
+                        break;
+                    case 'users':
+                        await loadUsers();
+                        break;
+                    case 'media':
+                        await loadMedia();
+                        break;
+                    case 'navigation':
+                        await loadNavigation();
+                        break;
+                }
+            } catch (error) {
+                console.error(`Ошибка загрузки данных для ${tabName}:`, error);
+                showError(`Не удалось загрузить данные для ${tabName}`);
+            }
         }
-    } catch (error) {
-        console.error(`Ошибка загрузки данных для ${tabName}:`, error);
-        showError(`Не удалось загрузить данные для ${tabName}`);
-    }
-}
 
-        // Загрузка курсов
+        // ==================== ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ НАВИГАЦИЕЙ ====================
+
+        async function loadNavigation() {
+            try {
+                const response = await fetch('/api/navigation');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const grid = document.getElementById('navigation-grid');
+                    const loading = document.getElementById('navigation-loading');
+                    
+                    loading.style.display = 'none';
+                    grid.style.display = 'grid';
+                    
+                    grid.innerHTML = data.data.map(item => `
+                        <div class="navigation-card">
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                <div style="font-size: 2rem;">${item.icon}</div>
+                                <div style="flex: 1;">
+                                    <h4 style="margin: 0 0 0.25rem 0;">${item.title}</h4>
+                                    <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">${item.description}</p>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                                        Страница: ${item.page} | Позиция: ${item.position} | 
+                                        Статус: ${item.is_active ? 'Активна' : 'Неактивна'}
+                                    </div>
+                                </div>
+                            </div>
+                            ${item.image_url ? `
+                            <div style="margin-bottom: 1rem;">
+                                <img src="${item.image_url}" alt="${item.title}" 
+                                     style="width: 100%; height: 100px; object-fit: cover; border-radius: 0.5rem;"
+                                     onerror="this.style.display='none'">
+                            </div>
+                            ` : ''}
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button class="btn btn-outline btn-small" onclick="editNavigation(${item.id})">
+                                    ✏️ Редактировать
+                                </button>
+                                <button class="btn btn-danger btn-small" onclick="deleteNavigation(${item.id})">
+                                    🗑️ Удалить
+                                </button>
+                                <button class="btn btn-outline btn-small" onclick="toggleNavigationStatus(${item.id}, ${!item.is_active})">
+                                    ${item.is_active ? '👁️ Скрыть' : '👀 Показать'}
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки навигации:', error);
+                showError('Не удалось загрузить навигацию');
+            }
+        }
+
+        function showAddNavigationModal(editItem = null) {
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>${editItem ? '✏️ Редактировать' : '➕ Добавить'} навигационную кнопку</h3>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="navigation-form" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="nav-title">Название *</label>
+                                <input type="text" id="nav-title" class="form-control" value="${editItem ? editItem.title : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="nav-description">Описание *</label>
+                                <textarea id="nav-description" class="form-control" rows="2" required>${editItem ? editItem.description : ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="nav-icon">Иконка *</label>
+                                <input type="text" id="nav-icon" class="form-control" value="${editItem ? editItem.icon : ''}" placeholder="📚" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="nav-page">Страница *</label>
+                                <select id="nav-page" class="form-control" required>
+                                    <option value="courses" ${editItem && editItem.page === 'courses' ? 'selected' : ''}>Курсы</option>
+                                    <option value="podcasts" ${editItem && editItem.page === 'podcasts' ? 'selected' : ''}>Подкасты</option>
+                                    <option value="streams" ${editItem && editItem.page === 'streams' ? 'selected' : ''}>Эфиры</option>
+                                    <option value="videos" ${editItem && editItem.page === 'videos' ? 'selected' : ''}>Видео</option>
+                                    <option value="materials" ${editItem && editItem.page === 'materials' ? 'selected' : ''}>Материалы</option>
+                                    <option value="events" ${editItem && editItem.page === 'events' ? 'selected' : ''}>Мероприятия</option>
+                                    <option value="community" ${editItem && editItem.page === 'community' ? 'selected' : ''}>Сообщество</option>
+                                    <option value="favorites" ${editItem && editItem.page === 'favorites' ? 'selected' : ''}>Избранное</option>
+                                    <option value="profile" ${editItem && editItem.page === 'profile' ? 'selected' : ''}>Профиль</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="nav-position">Позиция *</label>
+                                <input type="number" id="nav-position" class="form-control" value="${editItem ? editItem.position : 0}" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="nav-image">Изображение</label>
+                                <input type="file" id="nav-image" class="form-control" accept="image/*">
+                                ${editItem && editItem.image_url ? `
+                                <div style="margin-top: 0.5rem;">
+                                    <img src="${editItem.image_url}" alt="Current image" style="max-width: 200px; max-height: 100px; border-radius: 0.25rem;">
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="nav-active" ${editItem ? editItem.is_active ? 'checked' : '' : 'checked'}>
+                                    Активная
+                                </label>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-outline" onclick="this.closest('.modal').remove()">Отмена</button>
+                                <button type="submit" class="btn btn-primary">${editItem ? 'Обновить' : 'Создать'}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            document.getElementById('navigation-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData();
+                formData.append('title', document.getElementById('nav-title').value);
+                formData.append('description', document.getElementById('nav-description').value);
+                formData.append('icon', document.getElementById('nav-icon').value);
+                formData.append('page', document.getElementById('nav-page').value);
+                formData.append('position', document.getElementById('nav-position').value);
+                formData.append('is_active', document.getElementById('nav-active').checked);
+                
+                const imageFile = document.getElementById('nav-image').files[0];
+                if (imageFile) {
+                    formData.append('image', imageFile);
+                }
+                
+                try {
+                    const url = editItem ? `/api/admin/navigation/${editItem.id}` : '/api/admin/navigation';
+                    const method = editItem ? 'PUT' : 'POST';
+                    
+                    const response = await fetch(url, {
+                        method: method,
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showSuccess(`Навигационная кнопка ${editItem ? 'обновлена' : 'создана'}`);
+                        modal.remove();
+                        loadNavigation();
+                    } else {
+                        throw new Error(data.error);
+                    }
+                } catch (error) {
+                    showError(`Ошибка ${editItem ? 'обновления' : 'создания'} навигации: ${error.message}`);
+                }
+            });
+        }
+
+        async function deleteNavigation(id) {
+            if (!confirm('Вы уверены, что хотите удалить этот навигационный элемент?')) return;
+            
+            try {
+                const response = await fetch(`/api/admin/navigation/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('Навигационный элемент удален');
+                    loadNavigation();
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                showError('Ошибка удаления навигационного элемента: ' + error.message);
+            }
+        }
+
+        async function toggleNavigationStatus(id, newStatus) {
+            try {
+                const response = await fetch(`/api/admin/navigation/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active: newStatus })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(`Навигация ${newStatus ? 'активирована' : 'деактивирована'}`);
+                    loadNavigation();
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                showError('Ошибка изменения статуса: ' + error.message);
+            }
+        }
+
+        async function editNavigation(id) {
+            try {
+                const response = await fetch('/api/navigation');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const item = data.data.find(nav => nav.id === id);
+                    if (item) {
+                        showAddNavigationModal(item);
+                    }
+                }
+            } catch (error) {
+                showError('Ошибка загрузки данных навигации');
+            }
+        }
+
+        // ==================== УЛУЧШЕННЫЕ ФОРМЫ ДОБАВЛЕНИЯ КОНТЕНТА ====================
+
+        function showAddModal(type, editData = null) {
+            const modal = document.getElementById('add-modal');
+            const title = document.getElementById('modal-title');
+            const form = document.getElementById('content-form');
+            const contentType = document.getElementById('content-type');
+            const contentId = document.getElementById('content-id');
+            
+            // Сброс формы
+            form.reset();
+            
+            contentType.value = type;
+            contentId.value = editData ? editData.id : '';
+            
+            // Настройка заголовка
+            title.textContent = editData ? `✏️ Редактировать ${getContentTypeName(type)}` : `➕ Добавить ${getContentTypeName(type)}`;
+            
+            // Показать нужные поля
+            showRelevantFields(type);
+            
+            // Заполнить данные если редактирование
+            if (editData) {
+                populateFormData(editData, type);
+            }
+            
+            modal.classList.add('active');
+        }
+
+        function showRelevantFields(type) {
+            // Скрыть все дополнительные поля
+            document.querySelectorAll('[id$="-fields"]').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Показать нужные поля
+            switch(type) {
+                case 'courses':
+                    document.getElementById('course-fields').style.display = 'block';
+                    break;
+                case 'instructors':
+                    document.getElementById('instructor-fields').style.display = 'block';
+                    break;
+            }
+            
+            // Всегда показываем медиа поля
+            document.getElementById('media-fields').style.display = 'block';
+        }
+
+        function populateFormData(data, type) {
+            // Основные поля
+            document.getElementById('title').value = data.title || data.name || '';
+            document.getElementById('description').value = data.description || '';
+            document.getElementById('category').value = data.category || '';
+            document.getElementById('image_url').value = data.image_url || data.avatar_url || data.thumbnail_url || '';
+            
+            // Поля курса
+            if (type === 'courses') {
+                document.getElementById('price').value = data.price || '';
+                document.getElementById('discount').value = data.discount || '';
+                document.getElementById('duration').value = data.duration || '';
+                document.getElementById('modules').value = data.modules || '';
+                document.getElementById('level').value = data.level || 'beginner';
+            }
+            
+            // Поля преподавателя
+            if (type === 'instructors') {
+                document.getElementById('specialization').value = data.specialization || '';
+                document.getElementById('bio').value = data.bio || '';
+                document.getElementById('experience_years').value = data.experience_years || '';
+                document.getElementById('instructor_email').value = data.email || '';
+                document.getElementById('social_links').value = data.social_links ? JSON.stringify(data.social_links) : '';
+            }
+        }
+
+        function getContentTypeName(type) {
+            const names = {
+                'courses': 'курс',
+                'podcasts': 'подкаст', 
+                'videos': 'видео',
+                'materials': 'материал',
+                'streams': 'эфир',
+                'events': 'мероприятие',
+                'news': 'новость',
+                'instructors': 'преподавателя'
+            };
+            return names[type] || 'контент';
+        }
+
+        // ==================== ОБРАБОТЧИК ФОРМЫ КОНТЕНТА ====================
+
+        document.getElementById('content-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const type = document.getElementById('content-type').value;
+            const id = document.getElementById('content-id').value;
+            
+            const formData = new FormData();
+            
+            // Добавляем все поля формы
+            const formElements = this.elements;
+            for (let element of formElements) {
+                if (element.name && element.value && element.type !== 'file') {
+                    formData.append(element.name, element.value);
+                }
+                if (element.type === 'file' && element.files[0]) {
+                    formData.append(element.name, element.files[0]);
+                }
+            }
+            
+            // Добавляем тип контента
+            formData.append('contentType', type);
+            
+            try {
+                const url = id ? `/api/admin/content/${type}/${id}` : `/api/admin/content/${type}`;
+                const method = id ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(`Контент успешно ${id ? 'обновлен' : 'создан'}`);
+                    closeModal();
+                    loadTabData(currentTab);
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                showError(`Ошибка ${id ? 'обновления' : 'создания'} контента: ${error.message}`);
+            }
+        });
+
+        function closeModal() {
+            document.getElementById('add-modal').classList.remove('active');
+        }
+
+        // Остальные функции остаются без изменений
         async function loadCourses() {
             const loading = document.getElementById('courses-loading');
             const table = document.getElementById('courses-table');
@@ -1120,7 +1498,7 @@ async function loadTabData(tabName) {
                             </td>
                             <td>
                                 <div class="user-actions">
-                                    <button class="btn btn-outline btn-small" onclick="editContent('courses', ${course.id})">
+                                    <button class="btn btn-outline btn-small" onclick="showAddModal('courses', ${JSON.stringify(course).replace(/"/g, '&quot;')})">
                                         ✏️ Редактировать
                                     </button>
                                     <button class="btn btn-danger btn-small" onclick="deleteContent('courses', ${course.id})">
@@ -1137,7 +1515,6 @@ async function loadTabData(tabName) {
             }
         }
 
-        // Загрузка преподавателей
         async function loadInstructors() {
             const loading = document.getElementById('instructors-loading');
             const grid = document.getElementById('instructors-grid');
@@ -1176,7 +1553,7 @@ async function loadTabData(tabName) {
                                 ` : ''}
                             </div>
                             <div class="user-actions">
-                                <button class="btn btn-outline btn-small" onclick="editInstructor(${instructor.id})">
+                                <button class="btn btn-outline btn-small" onclick="showAddModal('instructors', ${JSON.stringify(instructor).replace(/"/g, '&quot;')})">
                                     ✏️ Редактировать
                                 </button>
                                 <button class="btn btn-danger btn-small" onclick="deleteInstructor(${instructor.id})">
@@ -1192,7 +1569,6 @@ async function loadTabData(tabName) {
             }
         }
 
-        // Загрузка пользователей
         async function loadUsers() {
             const loading = document.getElementById('users-loading');
             const table = document.getElementById('users-table');
@@ -1268,7 +1644,6 @@ async function loadTabData(tabName) {
             }
         }
 
-        // Остальные функции загрузки (podcasts, videos, materials, media) остаются аналогичными
         async function loadPodcasts() {
             const loading = document.getElementById('podcasts-loading');
             const table = document.getElementById('podcasts-table');
@@ -1291,7 +1666,7 @@ async function loadTabData(tabName) {
                             <td>${podcast.listens}</td>
                             <td>
                                 <div class="user-actions">
-                                    <button class="btn btn-outline btn-small" onclick="editContent('podcasts', ${podcast.id})">
+                                    <button class="btn btn-outline btn-small" onclick="showAddModal('podcasts', ${JSON.stringify(podcast).replace(/"/g, '&quot;')})">
                                         ✏️
                                     </button>
                                     <button class="btn btn-danger btn-small" onclick="deleteContent('podcasts', ${podcast.id})">
@@ -1330,7 +1705,7 @@ async function loadTabData(tabName) {
                             <td>${video.views}</td>
                             <td>
                                 <div class="user-actions">
-                                    <button class="btn btn-outline btn-small" onclick="editContent('videos', ${video.id})">
+                                    <button class="btn btn-outline btn-small" onclick="showAddModal('videos', ${JSON.stringify(video).replace(/"/g, '&quot;')})">
                                         ✏️
                                     </button>
                                     <button class="btn btn-danger btn-small" onclick="deleteContent('videos', ${video.id})">
@@ -1369,7 +1744,7 @@ async function loadTabData(tabName) {
                             <td>${material.downloads}</td>
                             <td>
                                 <div class="user-actions">
-                                    <button class="btn btn-outline btn-small" onclick="editContent('materials', ${material.id})">
+                                    <button class="btn btn-outline btn-small" onclick="showAddModal('materials', ${JSON.stringify(material).replace(/"/g, '&quot;')})">
                                         ✏️
                                     </button>
                                     <button class="btn btn-danger btn-small" onclick="deleteContent('materials', ${material.id})">
@@ -1447,18 +1822,6 @@ async function loadTabData(tabName) {
             loadUsers(); // Перезагружаем список пользователей
         }
 
-        // Функции управления преподавателями
-        function editInstructor(instructorId) {
-            // В реальном приложении здесь должна быть загрузка данных преподавателя
-            showAddModal('instructors');
-            // Заполняем форму данными преподавателя
-            document.getElementById('title').value = 'Доктор Иванов А.В.';
-            document.getElementById('specialization').value = 'Неврология, Мануальная терапия';
-            document.getElementById('bio').value = 'Ведущий специалист по мануальной терапии...';
-            document.getElementById('experience_years').value = 15;
-            document.getElementById('instructor_email').value = 'ivanov@anb.ru';
-        }
-
         async function deleteInstructor(instructorId) {
             if (confirm('Вы уверены, что хотите удалить этого преподавателя?')) {
                 try {
@@ -1478,56 +1841,6 @@ async function loadTabData(tabName) {
                     showError('Ошибка при удалении преподавателя');
                 }
             }
-        }
-
-        // Остальные функции остаются без изменений
-        function showAddModal(type) {
-            const modal = document.getElementById('add-modal');
-            const title = document.getElementById('modal-title');
-            const form = document.getElementById('content-form');
-            const courseFields = document.getElementById('course-fields');
-            const instructorFields = document.getElementById('instructor-fields');
-            
-            document.getElementById('content-type').value = type;
-            document.getElementById('content-id').value = '';
-            form.reset();
-            
-            // Скрываем все дополнительные поля
-            courseFields.style.display = 'none';
-            instructorFields.style.display = 'none';
-            
-            // Настройка полей в зависимости от типа
-            switch(type) {
-                case 'courses':
-                    title.textContent = 'Добавить курс';
-                    courseFields.style.display = 'block';
-                    break;
-                case 'podcasts':
-                    title.textContent = 'Добавить подкаст';
-                    break;
-                case 'videos':
-                    title.textContent = 'Добавить видео';
-                    break;
-                case 'materials':
-                    title.textContent = 'Добавить материал';
-                    break;
-                case 'instructors':
-                    title.textContent = 'Добавить преподавателя';
-                    instructorFields.style.display = 'block';
-                    break;
-            }
-            
-            modal.classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('add-modal').classList.remove('active');
-        }
-
-        function editContent(type, id) {
-            // Реализация редактирования
-            showAddModal(type);
-            // Здесь должна быть загрузка данных для редактирования
         }
 
         async function deleteContent(type, id) {
@@ -1618,318 +1931,6 @@ async function loadTabData(tabName) {
             document.querySelector('.admin-main').prepend(successDiv);
             setTimeout(() => successDiv.remove(), 5000);
         }
-// ==================== ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ НАВИГАЦИЕЙ ====================
-
-// Загрузка навигационных элементов
-async function loadNavigation() {
-    const loading = document.getElementById('navigation-loading');
-    const grid = document.getElementById('navigation-grid');
-    
-    try {
-        const response = await fetch('/api/navigation');
-        const data = await response.json();
-        
-        if (data.success) {
-            loading.style.display = 'none';
-            grid.style.display = 'grid';
-            grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
-            grid.style.gap = '1rem';
-            
-            grid.innerHTML = data.data.map(item => `
-                <div class="navigation-card" style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--border);">
-                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                        <div style="font-size: 2rem;">${item.icon}</div>
-                        <div>
-                            <h4 style="margin: 0 0 0.25rem 0;">${item.title}</h4>
-                            <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">${item.description}</p>
-                        </div>
-                    </div>
-                    ${item.image_url ? `
-                    <div style="margin-bottom: 1rem;">
-                        <img src="${item.image_url}" alt="${item.title}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 0.5rem;">
-                    </div>
-                    ` : ''}
-                    <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
-                        Страница: ${item.page} | Позиция: ${item.position}
-                    </div>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button class="btn btn-outline btn-small" onclick="editNavigation(${item.id})">
-                            ✏️ Редактировать
-                        </button>
-                        <button class="btn btn-danger btn-small" onclick="deleteNavigation(${item.id})">
-                            🗑️ Удалить
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-    } catch (error) {
-        loading.style.display = 'none';
-        showError('Не удалось загрузить навигацию');
-    }
-}
-
-// Показать модальное окно добавления навигации
-function showAddNavigationModal() {
-    const modal = document.createElement('div');
-    modal.className = 'modal active';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>➕ Добавить навигационную кнопку</h3>
-                <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
-            </div>
-            <div class="modal-body">
-                <form id="navigation-form">
-                    <div class="form-group">
-                        <label for="nav-title">Название</label>
-                        <input type="text" id="nav-title" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="nav-description">Описание</label>
-                        <textarea id="nav-description" class="form-control" rows="2" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="nav-icon">Иконка</label>
-                        <input type="text" id="nav-icon" class="form-control" placeholder="📚" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="nav-page">Страница</label>
-                        <select id="nav-page" class="form-control" required>
-                            <option value="courses">Курсы</option>
-                            <option value="podcasts">Подкасты</option>
-                            <option value="streams">Эфиры</option>
-                            <option value="videos">Видео</option>
-                            <option value="materials">Материалы</option>
-                            <option value="events">Мероприятия</option>
-                            <option value="community">Сообщество</option>
-                            <option value="favorites">Избранное</option>
-                            <option value="profile">Профиль</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="nav-position">Позиция</label>
-                        <input type="number" id="nav-position" class="form-control" min="0" value="0" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="nav-image">URL изображения</label>
-                        <input type="url" id="nav-image" class="form-control" placeholder="https://example.com/image.jpg">
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-outline" onclick="this.closest('.modal').remove()">Отмена</button>
-                        <button type="submit" class="btn btn-primary">Сохранить</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Обработчик формы
-    document.getElementById('navigation-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const formData = {
-            title: document.getElementById('nav-title').value,
-            description: document.getElementById('nav-description').value,
-            icon: document.getElementById('nav-icon').value,
-            page: document.getElementById('nav-page').value,
-            position: parseInt(document.getElementById('nav-position').value),
-            image_url: document.getElementById('nav-image').value || null
-        };
-        
-        try {
-            const response = await fetch('/api/admin/navigation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                showSuccess('Навигационная кнопка создана');
-                modal.remove();
-                loadNavigation();
-            } else {
-                showError('Ошибка при создании навигационной кнопки');
-            }
-        } catch (error) {
-            showError('Ошибка при создании навигационной кнопки');
-        }
-    });
-}
-
-function editNavigation(id) {
-    // Реализация редактирования
-    showAddNavigationModal();
-}
-
-async function deleteNavigation(id) {
-    if (confirm('Вы уверены, что хотите удалить этот навигационный элемент?')) {
-        try {
-            // Здесь должен быть API вызов для удаления
-            showSuccess('Навигационный элемент удален');
-            loadNavigation();
-        } catch (error) {
-            showError('Ошибка при удалении навигационного элемента');
-        }
-    }
-}
-
-// Показать модальное окно добавления навигации
-function showAddNavigationModal() {
-    // Создаем модальное окно для навигации
-    const modal = document.createElement('div');
-    modal.className = 'modal active';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>➕ Добавить навигационную кнопку</h3>
-                <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
-            </div>
-            <div class="modal-body">
-                <form id="navigation-form">
-                    <div class="form-group">
-                        <label for="nav-title">Название</label>
-                        <input type="text" id="nav-title" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="nav-description">Описание</label>
-                        <textarea id="nav-description" class="form-control" rows="2" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="nav-icon">Иконка</label>
-                        <input type="text" id="nav-icon" class="form-control" placeholder="📚" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="nav-page">Страница</label>
-                        <select id="nav-page" class="form-control" required>
-                            <option value="courses">Курсы</option>
-                            <option value="podcasts">Подкасты</option>
-                            <option value="streams">Эфиры</option>
-                            <option value="videos">Видео</option>
-                            <option value="materials">Материалы</option>
-                            <option value="events">Мероприятия</option>
-                            <option value="community">Сообщество</option>
-                            <option value="favorites">Избранное</option>
-                            <option value="profile">Профиль</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="nav-position">Позиция</label>
-                        <input type="number" id="nav-position" class="form-control" min="0" value="0" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="nav-image">URL изображения</label>
-                        <input type="url" id="nav-image" class="form-control" placeholder="https://example.com/image.jpg">
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-outline" onclick="this.closest('.modal').remove()">Отмена</button>
-                        <button type="submit" class="btn btn-primary">Сохранить</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Обработчик формы
-    document.getElementById('navigation-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const formData = {
-            title: document.getElementById('nav-title').value,
-            description: document.getElementById('nav-description').value,
-            icon: document.getElementById('nav-icon').value,
-            page: document.getElementById('nav-page').value,
-            position: parseInt(document.getElementById('nav-position').value),
-            image_url: document.getElementById('nav-image').value || null
-        };
-        
-        try {
-            const response = await fetch('/api/admin/navigation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                showSuccess('Навигационная кнопка создана');
-                modal.remove();
-                loadNavigation();
-            } else {
-                showError('Ошибка при создании навигационной кнопки');
-            }
-        } catch (error) {
-            showError('Ошибка при создании навигационной кнопки');
-        }
-    });
-}
-
-// Обработка формы
-document.getElementById('content-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const type = document.getElementById('content-type').value;
-            const formData = new FormData();
-            
-            // Добавляем основные поля формы
-            const basicFields = ['title', 'description', 'category', 'image_url'];
-            basicFields.forEach(field => {
-                const value = document.getElementById(field).value;
-                if (value) formData.append(field, value);
-            });
-            
-            // Добавляем поля курса
-            if (type === 'courses') {
-                const courseFields = ['price', 'discount', 'duration', 'modules', 'level'];
-                courseFields.forEach(field => {
-                    const value = document.getElementById(field).value;
-                    if (value) formData.append(field, value);
-                });
-            }
-            
-            // Добавляем поля преподавателя
-            if (type === 'instructors') {
-                const instructorFields = ['specialization', 'bio', 'experience_years', 'instructor_email', 'social_links'];
-                instructorFields.forEach(field => {
-                    const value = document.getElementById(field).value;
-                    if (value) formData.append(field.replace('instructor_', ''), value);
-                });
-                // Для преподавателя title становится name
-                formData.append('name', document.getElementById('title').value);
-            }
-            
-            // Добавляем файл
-            const fileInput = document.getElementById('file');
-            if (fileInput.files[0]) {
-                formData.append('file', fileInput.files[0]);
-            }
-            
-            try {
-                const response = await fetch(`/api/admin/content/${type}`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showSuccess('Контент успешно создан');
-                    closeModal();
-                    loadTabData(currentTab);
-                } else {
-                    showError('Ошибка при создании контента: ' + (data.error || ''));
-                }
-            } catch (error) {
-                showError('Ошибка при создании контента');
-            }
-        });
 
         // Инициализация при загрузке
         document.addEventListener('DOMContentLoaded', initAdmin);
