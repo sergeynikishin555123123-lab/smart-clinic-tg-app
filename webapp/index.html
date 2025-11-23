@@ -1429,36 +1429,61 @@
 
     <!-- Основное приложение -->
     <div id="app">
-        <!-- Navigation -->
-        <nav class="main-nav">
-            <div class="nav-container">
-                <div class="nav-brand">
+               <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <div class="nav-scroll-container">
+                <button class="nav-btn active" data-page="home">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Главная</span>
+                </button>
+                <button class="nav-btn" data-page="courses">
+                    <span class="nav-icon">📚</span>
+                    <span class="nav-label">Курсы</span>
+                </button>
+                <button class="nav-btn" data-page="podcasts">
+                    <span class="nav-icon">🎧</span>
+                    <span class="nav-label">Подкасты</span>
+                </button>
+                <button class="nav-btn" data-page="streams">
+                    <span class="nav-icon">📹</span>
+                    <span class="nav-label">Эфиры</span>
+                </button>
+                <button class="nav-btn" data-page="videos">
+                    <span class="nav-icon">🎯</span>
+                    <span class="nav-label">Видео</span>
+                </button>
+                <button class="nav-btn" data-page="materials">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-label">Материалы</span>
+                </button>
+                <button class="nav-btn" data-page="events">
+                    <span class="nav-icon">🗺️</span>
+                    <span class="nav-label">Мероприятия</span>
+                </button>
+                <button class="nav-btn" data-page="favorites">
+                    <span class="nav-icon">❤️</span>
+                    <span class="nav-label">Избранное</span>
+                    <span class="nav-badge" id="favoritesCount">0</span>
+                </button>
+                <button class="nav-btn" data-page="profile">
+                    <span class="nav-icon">👤</span>
+                    <span class="nav-label">Профиль</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Top Header -->
+        <header class="top-header">
+            <div class="header-container">
+                <div class="header-brand">
                     <span class="brand-icon">🎓</span>
                     <span class="brand-text">Академия АНБ</span>
                 </div>
-                
-                <div class="nav-menu">
-                    <button class="nav-btn active" data-page="home">🏠 Главная</button>
-                    <button class="nav-btn" data-page="courses">📚 Курсы</button>
-                    <button class="nav-btn" data-page="podcasts">🎧 АНБ FM</button>
-                    <button class="nav-btn" data-page="streams">📹 Эфиры</button>
-                    <button class="nav-btn" data-page="videos">🎯 Видео</button>
-                    <button class="nav-btn" data-page="materials">📋 Материалы</button>
-                    <button class="nav-btn" data-page="events">🗺️ Мероприятия</button>
-                </div>
-                
-                <div class="nav-actions">
-                    <button class="nav-action-btn" data-page="favorites" title="Избранное">
-                        <span class="action-icon">❤️</span>
-                        <span class="action-badge" id="favoritesCount">0</span>
-                    </button>
-                    <button class="nav-action-btn" data-page="profile" title="Профиль">
-                        <span class="action-icon">👤</span>
-                    </button>
+                <div class="header-actions">
                     <div id="adminBadge" class="admin-badge">🔧 Админ</div>
                 </div>
             </div>
-        </nav>
+        </header>
 
         <!-- Main Content -->
         <main id="mainContent" class="main-content">
