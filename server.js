@@ -1,4 +1,4 @@
-// server.js - ПОЛНОСТЬЮ РАБОЧИЙ СЕРВЕР С АДМИНКОЙ, ПРОФИЛЕМ И ЛАЙКАМИ
+// server.js - ИСПРАВЛЕННЫЙ СЕРВЕР С ТЁМНОЙ ТЕМОЙ
 import express from 'express';
 import { Telegraf, session, Markup } from 'telegraf';
 import pkg from 'pg';
@@ -20,7 +20,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ==================== НАСТРОЙКА MULTER ДЛЯ ФОТО И ВИДЕО ====================
+// ==================== НАСТРОЙКА MULTER ====================
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -39,7 +39,7 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 100 * 1024 * 1024 // 100MB для видео
+        fileSize: 100 * 1024 * 1024
     },
     fileFilter: (req, file, cb) => {
         const allowedTypes = {
