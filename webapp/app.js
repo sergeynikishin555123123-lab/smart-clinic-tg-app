@@ -206,44 +206,48 @@ class AcademyApp {
         }
     }
 
-    async loadUserData() {
-        console.log('👤 Загрузка данных пользователя...');
+async loadUserData() {
+    console.log('👤 Загрузка данных пользователя...');
+    
+    try {
+        let tgUser = null;
         
-        try {
-            let tgUser = null;
-            
-            if (window.Telegram && Telegram.WebApp) {
-                tgUser = Telegram.WebApp.initDataUnsafe?.user;
-            }
-            
-            const userToSend = tgUser || {
-                id: 898508164,
-                first_name: 'Демо Пользователь',
-                username: 'demo_user'
-            };
-
-            const response = await this.safeApiCall('/api/user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user: userToSend })
-            });
-
-            if (response && response.success && response.user) {
-                this.currentUser = response.user;
-                this.isAdmin = this.currentUser.isAdmin || false;
-                this.isSuperAdmin = this.currentUser.isSuperAdmin || false;
-                this.state.favorites = this.currentUser.favorites || this.state.favorites;
-                
-                this.updateAdminBadge();
-                this.updateFavoritesCount();
-            } else {
-                throw new Error('Неверный ответ сервера');
-            }
-        } catch (error) {
-            console.error('Ошибка загрузки пользователя:', error);
-            this.createDemoUser();
+        if (window.Telegram && Telegram.WebApp) {
+            tgUser = Telegram.WebApp.initDataUnsafe?.user;
         }
+        
+        // ФИКС: Используем фиксированный ID для супер-админа
+        const userToSend = tgUser || {
+            id: 898508164,
+            first_name: 'Главный Админ',
+            username: 'superadmin'
+        };
+
+        const response = await this.safeApiCall('/api/user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user: userToSend })
+        });
+
+        if (response && response.success && response.user) {
+            this.currentUser = response.user;
+            this.isAdmin = this.currentUser.isAdmin || false;
+            this.isSuperAdmin = this.currentUser.isSuperAdmin || false;
+            this.state.favorites = this.currentUser.favorites || this.state.favorites;
+            
+            // Загружаем данные подписки
+            await this.loadSubscriptionData();
+            
+            this.updateAdminBadge();
+            this.updateFavoritesCount();
+        } else {
+            throw new Error('Неверный ответ сервера');
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки пользователя:', error);
+        this.createDemoUser();
     }
+}
 
     async loadContent() {
         console.log('📚 Загрузка контента...');
@@ -1221,139 +1225,164 @@ class AcademyApp {
 
     // ==================== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ====================
 
-    createProfilePage() {
-        const user = this.currentUser;
-        const progress = user?.progress || {};
-        const currentLevel = this.learningPath[progress.level] || this.learningPath['Понимаю'];
-        
-        return `
-            <div class="page profile-page">
-                <div class="profile-header">
-                    <div class="avatar-section">
-                        <div class="avatar">${user.avatarUrl ? `<img src="${user.avatarUrl}" alt="Аватар">` : '👤'}</div>
-                        <div class="profile-info">
-                            <h2>${user?.firstName || 'Пользователь'}</h2>
-                            <p class="profile-status">${this.getProfileStatus()}</p>
-                            <p class="member-since">Член Академии АНБ с ${new Date().toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'})}</p>
-                        </div>
+createProfilePage() {
+    const user = this.currentUser;
+    const progress = user?.progress || {};
+    const currentLevel = this.learningPath[progress.level] || this.learningPath['Понимаю'];
+    
+    return `
+        <div class="page profile-page">
+            <div class="profile-header">
+                <div class="avatar-section">
+                    <div class="avatar">${user.avatarUrl ? `<img src="${user.avatarUrl}" alt="Аватар">` : '👤'}</div>
+                    <div class="profile-info">
+                        <h2>${user?.firstName || 'Пользователь'}</h2>
+                        <p class="profile-status">${this.getProfileStatus()}</p>
+                        <p class="member-since">Член Академии АНБ с ${new Date().toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'})}</p>
                     </div>
-                    
-                    <div class="subscription-status ${this.currentUser?.hasActiveSubscription ? 'active' : 'inactive'}">
-                        <span>${this.currentUser?.hasActiveSubscription ? '✅' : '❌'} Подписка ${this.currentUser?.hasActiveSubscription ? 'активна' : 'не активна'}</span>
-                        <button class="btn btn-small ${this.currentUser?.hasActiveSubscription ? 'btn-outline' : 'btn-primary'}" 
-                                onclick="app.showSubscriptionModal()">
-                            ${this.currentUser?.hasActiveSubscription ? 'Изменить' : 'Активировать'}
+                </div>
+                
+                <div class="subscription-status ${this.currentUser?.hasActiveSubscription ? 'active' : 'inactive'}">
+                    <span>${this.currentUser?.hasActiveSubscription ? '✅' : '❌'} Подписка ${this.currentUser?.hasActiveSubscription ? 'активна' : 'не активна'}</span>
+                    <button class="btn btn-small ${this.currentUser?.hasActiveSubscription ? 'btn-outline' : 'btn-primary'}" 
+                            onclick="app.showSubscriptionModal()">
+                        ${this.currentUser?.hasActiveSubscription ? 'Изменить' : 'Активировать'}
+                    </button>
+                </div>
+            </div>
+
+            <div class="profile-stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📚</div>
+                    <div class="stat-info">
+                        <div class="stat-value">${progress.steps?.coursesBought || 0}</div>
+                        <div class="stat-label">Курсов</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-info">
+                        <div class="stat-value">${progress.steps?.modulesCompleted || 0}</div>
+                        <div class="stat-label">Модулей</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-info">
+                        <div class="stat-value">${progress.steps?.materialsWatched || 0}</div>
+                        <div class="stat-label">Материалов</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">❤️</div>
+                    <div class="stat-info">
+                        <div class="stat-value">${this.getTotalFavorites()}</div>
+                        <div class="stat-label">В избранном</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="learning-path-section">
+                <h3>🛣️ Мой путь обучения</h3>
+                <div class="current-level">
+                    <div class="level-badge">${progress.level}</div>
+                    <div class="level-description">${currentLevel.description}</div>
+                </div>
+                
+                <div class="level-progress">
+                    <div class="progress-header">
+                        <span>Прогресс уровня</span>
+                        <span>${progress.experience} XP</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${(progress.experience / 2000) * 100}%"></div>
+                    </div>
+                </div>
+
+                <div class="path-levels">
+                    ${Object.entries(this.learningPath).map(([levelName, levelData], index) => {
+                        const isCurrent = progress.level === levelName;
+                        const isCompleted = progress.experience >= levelData.minExp;
+                        const isUnlocked = progress.experience >= levelData.minExp;
+                        
+                        return `
+                            <div class="path-level ${isCurrent ? 'current' : ''} ${isCompleted ? 'completed' : ''} ${!isUnlocked ? 'locked' : ''}">
+                                <div class="level-header">
+                                    <div class="level-icon">${index + 1}</div>
+                                    <div class="level-info">
+                                        <div class="level-name">${levelName}</div>
+                                        <div class="level-exp">${levelData.minExp} - ${levelData.maxExp} XP</div>
+                                    </div>
+                                    ${isCompleted ? '<div class="level-badge">✅</div>' : 
+                                      isCurrent ? '<div class="level-badge">🎯</div>' : 
+                                      '<div class="level-badge">🔒</div>'}
+                                </div>
+                                
+                                ${isCurrent ? `
+                                <div class="level-requirements">
+                                    <strong>Следующие шаги:</strong>
+                                    <ul>
+                                        ${levelData.steps.map(step => `<li>${step}</li>`).join('')}
+                                    </ul>
+                                </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+
+            <div class="subscription-info-section">
+                <h3>💎 Ваша подписка</h3>
+                ${this.currentUser?.hasActiveSubscription ? `
+                    <div class="active-subscription">
+                        <div class="subscription-plan-info">
+                            <h4>${this.userSubscription?.plan_name || 'Профессиональный'}</h4>
+                            <div class="subscription-details">
+                                <p><strong>Тариф:</strong> ${this.userSubscription?.plan_type || 'monthly'}</p>
+                                <p><strong>Стоимость:</strong> ${this.formatPrice(this.userSubscription?.price || 5900)}</p>
+                                <p><strong>Действует до:</strong> ${new Date(this.userSubscription?.ends_at).toLocaleDateString('ru-RU')}</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="app.showSubscriptionModal()">
+                            💎 Управление подпиской
                         </button>
                     </div>
-                </div>
-
-                <div class="learning-path-section">
-                    <h3>🛣️ Мой путь</h3>
-                    <div class="path-description">
-                        ${currentLevel.description}
-                    </div>
-                    
-                    <div class="path-levels">
-                        ${Object.entries(this.learningPath).map(([levelName, levelData], index) => {
-                            const isCurrent = progress.level === levelName;
-                            const isCompleted = progress.experience >= levelData.minExp;
-                            const progressPercent = Math.min(100, ((progress.experience - levelData.minExp) / (levelData.maxExp - levelData.minExp)) * 100);
-                            
-                            return `
-                                <div class="path-level ${isCurrent ? 'current' : ''} ${isCompleted ? 'completed' : ''}">
-                                    <div class="level-header">
-                                        <div class="level-icon">${index + 1}️⃣</div>
-                                        <div class="level-info">
-                                            <div class="level-name">${levelName}</div>
-                                            <div class="level-exp">${levelData.minExp} - ${levelData.maxExp} XP</div>
-                                        </div>
-                                        ${isCompleted ? '<div class="level-badge">✅</div>' : ''}
-                                    </div>
-                                    
-                                    ${isCurrent ? `
-                                    <div class="level-progress">
-                                        <div class="progress-bar">
-                                            <div class="progress-fill" style="width: ${progressPercent}%"></div>
-                                        </div>
-                                        <div class="progress-text">${progress.experience} / ${levelData.maxExp} XP</div>
-                                    </div>
-                                    
-                                    <div class="level-requirements">
-                                        <strong>Требования для перехода:</strong>
-                                        <ul>
-                                            ${levelData.steps.map(step => `<li>${step}</li>`).join('')}
-                                        </ul>
-                                    </div>
-                                    ` : ''}
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-
-                <!-- ДОБАВИТЬ СЕКЦИЮ ПОДПИСКИ -->
-                <div class="subscription-info-section">
-                    <h3>💎 Ваша подписка</h3>
-                    ${this.currentUser?.hasActiveSubscription ? `
-                        <div class="active-subscription">
-                            <div class="subscription-plan-info">
-                                <h4>${this.userSubscription?.plan_name || 'Профессиональный'}</h4>
-                                <p>Тариф: ${this.userSubscription?.plan_type || 'monthly'}</p>
-                                <p>Стоимость: ${this.formatPrice(this.userSubscription?.price || 5900)}</p>
-                                <p>Действует до: ${new Date(this.userSubscription?.ends_at).toLocaleDateString('ru-RU')}</p>
-                            </div>
-                            <button class="btn btn-primary" onclick="app.showSubscriptionModal()">
-                                💎 Изменить подписку
-                            </button>
-                        </div>
-                    ` : `
-                        <div class="no-subscription">
-                            <p>У вас нет активной подписки. Получите доступ ко всем курсам и материалам!</p>
+                ` : `
+                    <div class="no-subscription">
+                        <div class="subscription-cta">
+                            <h4>Получите полный доступ к Академии!</h4>
+                            <p>Доступ ко всем курсам, материалам и эксклюзивному контенту</p>
                             <button class="btn btn-primary btn-large" onclick="app.showSubscriptionModal()">
                                 💎 Выбрать подписку
                             </button>
                         </div>
-                    `}
-                </div>
-
-                <div class="profile-stats">
-
-                <div class="profile-stats">
-                    <h3>📊 Статистика</h3>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-value">${this.state.favorites.courses.length}</div>
-                            <div class="stat-label">Курсов в избранном</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value">${progress.steps?.coursesBought || 0}</div>
-                            <div class="stat-label">Приобретенных курсов</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value">${progress.steps?.modulesCompleted || 0}</div>
-                            <div class="stat-label">Завершенных модулей</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value">${progress.steps?.materialsWatched || 0}</div>
-                            <div class="stat-label">Просмотренных материалов</div>
-                        </div>
                     </div>
-                </div>
+                `}
+            </div>
 
-                <div class="profile-actions">
-                    <button class="btn btn-primary" onclick="app.showSettings()">
-                        ⚙️ Настройки
-                    </button>
-                    <button class="btn btn-secondary" onclick="app.renderPage('favorites')">
+            <div class="profile-actions">
+                <h3>⚙️ Действия</h3>
+                <div class="action-buttons">
+                    <button class="btn btn-outline action-btn" onclick="app.renderPage('favorites')">
                         ❤️ Избранное
                     </button>
-                    <button class="btn btn-outline" onclick="app.exportData()">
+                    <button class="btn btn-outline action-btn" onclick="app.showSettings()">
+                        ⚙️ Настройки
+                    </button>
+                    ${this.isAdmin ? `
+                    <button class="btn btn-outline action-btn" onclick="app.openAdminPanel()">
+                        🔧 Админ-панель
+                    </button>
+                    ` : ''}
+                    <button class="btn btn-outline action-btn" onclick="app.exportData()">
                         📤 Экспорт данных
                     </button>
                 </div>
             </div>
-        `;
-    }
+        </div>
+    `;
+}
 
     // ==================== СТРАНИЦА СООБЩЕСТВА ====================
 
@@ -2213,41 +2242,41 @@ class AcademyApp {
 
     // ==================== ДЕМО-ДАННЫЕ ====================
 
-    createDemoUser() {
-        this.currentUser = {
-            id: 898508164,
-            firstName: 'Демо Пользователь',
-            isAdmin: true,
-            isSuperAdmin: true,
-            subscriptionEnd: new Date('2024-12-31').toISOString(),
-            avatarUrl: null,
-            favorites: {
-                courses: [1],
-                podcasts: [],
-                streams: [],
-                videos: [],
-                materials: [],
-                events: []
-            },
-            progress: {
-                level: 'Понимаю',
-                experience: 1250,
-                steps: {
-                    coursesBought: 3,
-                    modulesCompleted: 2,
-                    materialsWatched: 12,
-                    eventsAttended: 1
-                }
+createDemoUser() {
+    this.currentUser = {
+        id: 898508164,
+        firstName: 'Главный Админ',
+        isAdmin: true,
+        isSuperAdmin: true,
+        subscriptionEnd: new Date('2025-12-31').toISOString(),
+        hasActiveSubscription: true,
+        avatarUrl: null,
+        favorites: {
+            courses: [1],
+            podcasts: [],
+            streams: [],
+            videos: [],
+            materials: [],
+            events: []
+        },
+        progress: {
+            level: 'Понимаю',
+            experience: 1250,
+            steps: {
+                coursesBought: 3,
+                modulesCompleted: 2,
+                materialsWatched: 12,
+                eventsAttended: 1
             }
-        };
-        
-        this.isAdmin = true;
-        this.isSuperAdmin = true;
-        this.updateAdminBadge();
-        this.state.favorites = this.currentUser.favorites;
-        this.updateFavoritesCount();
-    }
-
+        }
+    };
+    
+    this.isAdmin = true;
+    this.isSuperAdmin = true;
+    this.updateAdminBadge();
+    this.state.favorites = this.currentUser.favorites;
+    this.updateFavoritesCount();
+}
     createDemoContent() {
         this.allContent = this.getDemoContentData();
     }
@@ -2692,7 +2721,7 @@ class AcademyApp {
         this.showNotification('Курс добавлен в корзину', 'success');
     }
 
-       manageSubscription() {
+    manageSubscription() {
         this.showSubscriptionModal();
     }
 
@@ -2706,6 +2735,16 @@ class AcademyApp {
 
     exportData() {
         this.showNotification('Экспорт данных в разработке', 'info');
+    }
+
+    // ==================== НОВЫЕ МЕТОДЫ ДЛЯ ПРОФИЛЯ ====================
+
+    openAdminPanel() {
+        if (this.isAdmin || this.isSuperAdmin) {
+            window.open('/admin/', '_blank');
+        } else {
+            this.showNotification('❌ У вас нет доступа к админ-панели', 'error');
+        }
     }
 }
 
