@@ -992,6 +992,91 @@ getInstructorCourses(instructorId) {
         course.instructors && course.instructors.some(i => i.id === instructorId)
     ).slice(0, 3) || [];
 }
+
+    // ==================== ДЕТАЛЬНЫЕ СТРАНИЦЫ СТРИМОВ И ВИДЕО ====================
+
+createStreamDetailPage(streamId) {
+    const stream = this.allContent.streams?.find(s => s.id == streamId) || {
+        id: streamId,
+        title: 'LIVE: Ответы на вопросы по мануальной терапии',
+        description: 'Прямой эфир с ответами на вопросы по технике мануальной терапии и реабилитации пациентов.',
+        duration: '2:15:00',
+        category: 'Мануальные техники',
+        participants: 156,
+        is_live: true,
+        thumbnail_url: '/webapp/assets/stream-default.jpg',
+        video_url: 'https://example.com/stream2'
+    };
+
+    return `
+        <div class="page stream-detail-page">
+            <div class="detail-header">
+                <button class="back-btn" onclick="app.renderPage('streams')">
+                    ← Назад к эфирам
+                </button>
+                <h2>${stream.title}</h2>
+            </div>
+
+            <div class="detail-container">
+                <div class="stream-player-section">
+                    <div class="video-player">
+                        <img src="${stream.thumbnail_url}" alt="${stream.title}" 
+                             onerror="this.src='/webapp/assets/stream-default.jpg'">
+                        <div class="player-overlay">
+                            <button class="btn btn-primary btn-large play-btn" 
+                                    onclick="app.previewContent('video', '${stream.video_url}', {title: '${stream.title}', id: ${stream.id}})">
+                                ▶️ Смотреть эфир
+                            </button>
+                        </div>
+                        ${stream.is_live ? `
+                        <div class="live-indicator">
+                            <div class="live-dot"></div>
+                            LIVE
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <div class="stream-info">
+                    <div class="stream-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">Категория:</span>
+                            <span class="meta-value">${stream.category}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Длительность:</span>
+                            <span class="meta-value">${stream.duration}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Участников:</span>
+                            <span class="meta-value">${stream.participants}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Статус:</span>
+                            <span class="meta-value ${stream.is_live ? 'live' : 'recorded'}">
+                                ${stream.is_live ? '🔴 В прямом эфире' : '📹 Запись'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="stream-description">
+                        <h3>Описание эфира</h3>
+                        <p>${stream.description}</p>
+                    </div>
+
+                    <div class="stream-actions">
+                        <button class="btn btn-primary" onclick="app.toggleFavorite(${stream.id}, 'streams')">
+                            ${this.isFavorite(stream.id, 'streams') ? '❤️ В избранном' : '🤍 В избранное'}
+                        </button>
+                        <button class="btn btn-outline" onclick="app.shareContent('streams', ${stream.id})">
+                            📤 Поделиться
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
     // ==================== СТРАНИЦА ПОДКАСТОВ ====================
 
     createPodcastsPage() {
