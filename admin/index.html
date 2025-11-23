@@ -1054,37 +1054,40 @@
             loadTabData(tabName);
         }
 
-        // Загрузка данных для вкладки
-        async function loadTabData(tabName) {
-            try {
-                switch(tabName) {
-                    case 'courses':
-                        await loadCourses();
-                        break;
-                    case 'podcasts':
-                        await loadPodcasts();
-                        break;
-                    case 'videos':
-                        await loadVideos();
-                        break;
-                    case 'materials':
-                        await loadMaterials();
-                        break;
-                    case 'instructors':
-                        await loadInstructors();
-                        break;
-                    case 'users':
-                        await loadUsers();
-                        break;
-                    case 'media':
-                        await loadMedia();
-                        break;
-                }
-            } catch (error) {
-                console.error(`Ошибка загрузки данных для ${tabName}:`, error);
-                showError(`Не удалось загрузить данные для ${tabName}`);
-            }
+// Загрузка данных для вкладки
+async function loadTabData(tabName) {
+    try {
+        switch(tabName) {
+            case 'courses':
+                await loadCourses();
+                break;
+            case 'podcasts':
+                await loadPodcasts();
+                break;
+            case 'videos':
+                await loadVideos();
+                break;
+            case 'materials':
+                await loadMaterials();
+                break;
+            case 'instructors':
+                await loadInstructors();
+                break;
+            case 'users':
+                await loadUsers();
+                break;
+            case 'media':
+                await loadMedia();
+                break;
+            case 'navigation':
+                await loadNavigation(); // ДОБАВИТЬ ЭТУ СТРОЧКУ
+                break;
         }
+    } catch (error) {
+        console.error(`Ошибка загрузки данных для ${tabName}:`, error);
+        showError(`Не удалось загрузить данные для ${tabName}`);
+    }
+}
 
         // Загрузка курсов
         async function loadCourses() {
@@ -1616,8 +1619,173 @@
             setTimeout(() => successDiv.remove(), 5000);
         }
 
-        // Обработка формы
-        document.getElementById('content-form').addEventListener('submit', async function(e) {
+// ==================== ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ НАВИГАЦИЕЙ ====================
+
+// Загрузка навигационных элементов
+async function loadNavigation() {
+    const loading = document.getElementById('navigation-loading');
+    const grid = document.getElementById('navigation-grid');
+    
+    try {
+        const response = await fetch('/api/navigation');
+        const data = await response.json();
+        
+        if (data.success) {
+            loading.style.display = 'none';
+            grid.style.display = 'grid';
+            grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
+            grid.style.gap = '1rem';
+            
+            grid.innerHTML = data.data.map(item => `
+                <div class="navigation-card" style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--border);">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="font-size: 2rem;">${item.icon}</div>
+                        <div>
+                            <h4 style="margin: 0 0 0.25rem 0;">${item.title}</h4>
+                            <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">${item.description}</p>
+                        </div>
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
+                        Страница: ${item.page} | Позиция: ${item.position}
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-outline btn-small" onclick="editNavigation(${item.id})">
+                            ✏️ Редактировать
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteNavigation(${item.id})">
+                            🗑️ Удалить
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        loading.style.display = 'none';
+        showError('Не удалось загрузить навигацию');
+    }
+}
+
+// Редактирование навигационного элемента
+function editNavigation(id) {
+    // В реальном приложении здесь должна быть загрузка данных элемента
+    showAddNavigationModal();
+    // Заполняем форму данными (демо)
+    document.getElementById('nav-title').value = 'Курсы';
+    document.getElementById('nav-description').value = 'Доступные курсы и обучение';
+    document.getElementById('nav-icon').value = '📚';
+    document.getElementById('nav-page').value = 'courses';
+    document.getElementById('nav-position').value = '1';
+}
+
+// Удаление навигационного элемента
+async function deleteNavigation(id) {
+    if (confirm('Вы уверены, что хотите удалить этот навигационный элемент?')) {
+        try {
+            // В реальном приложении здесь должен быть API вызов
+            // await fetch(`/api/admin/navigation/${id}`, { method: 'DELETE' });
+            showSuccess('Навигационный элемент удален');
+            loadNavigation(); // Перезагружаем список
+        } catch (error) {
+            showError('Ошибка при удалении навигационного элемента');
+        }
+    }
+}
+
+// Показать модальное окно добавления навигации
+function showAddNavigationModal() {
+    // Создаем модальное окно для навигации
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>➕ Добавить навигационную кнопку</h3>
+                <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="navigation-form">
+                    <div class="form-group">
+                        <label for="nav-title">Название</label>
+                        <input type="text" id="nav-title" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="nav-description">Описание</label>
+                        <textarea id="nav-description" class="form-control" rows="2" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="nav-icon">Иконка</label>
+                        <input type="text" id="nav-icon" class="form-control" placeholder="📚" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="nav-page">Страница</label>
+                        <select id="nav-page" class="form-control" required>
+                            <option value="courses">Курсы</option>
+                            <option value="podcasts">Подкасты</option>
+                            <option value="streams">Эфиры</option>
+                            <option value="videos">Видео</option>
+                            <option value="materials">Материалы</option>
+                            <option value="events">Мероприятия</option>
+                            <option value="community">Сообщество</option>
+                            <option value="favorites">Избранное</option>
+                            <option value="profile">Профиль</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="nav-position">Позиция</label>
+                        <input type="number" id="nav-position" class="form-control" min="0" value="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="nav-image">URL изображения</label>
+                        <input type="url" id="nav-image" class="form-control" placeholder="https://example.com/image.jpg">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="this.closest('.modal').remove()">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Обработчик формы
+    document.getElementById('navigation-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            title: document.getElementById('nav-title').value,
+            description: document.getElementById('nav-description').value,
+            icon: document.getElementById('nav-icon').value,
+            page: document.getElementById('nav-page').value,
+            position: parseInt(document.getElementById('nav-position').value),
+            image_url: document.getElementById('nav-image').value || null
+        };
+        
+        try {
+            const response = await fetch('/api/admin/navigation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showSuccess('Навигационная кнопка создана');
+                modal.remove();
+                loadNavigation();
+            } else {
+                showError('Ошибка при создании навигационной кнопки');
+            }
+        } catch (error) {
+            showError('Ошибка при создании навигационной кнопки');
+        }
+    });
+}
+
+// Обработка формы
+document.getElementById('content-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const type = document.getElementById('content-type').value;
