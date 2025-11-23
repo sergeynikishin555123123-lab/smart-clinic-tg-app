@@ -1800,14 +1800,14 @@ app.get('/admin/*', (req, res) => {
     res.sendFile(join(__dirname, 'admin', 'index.html'));
 });
 
-// Корневой маршрут - перенаправляем на webapp
+// Корневой маршрут - отдаем webapp
 app.get('/', (req, res) => {
-    res.redirect('/webapp');
+    res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
 
 // Fallback для всех остальных маршрутов
 app.get('*', (req, res) => {
-    res.redirect('/webapp');
+    res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
 
 // ==================== ЗАПУСК СЕРВЕРА ====================
