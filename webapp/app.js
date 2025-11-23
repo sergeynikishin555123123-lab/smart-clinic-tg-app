@@ -2692,8 +2692,12 @@ class AcademyApp {
         this.showNotification('Курс добавлен в корзину', 'success');
     }
 
-    manageSubscription() {
-        this.showNotification('Функция управления подпиской в разработке', 'info');
+       manageSubscription() {
+        this.showSubscriptionModal();
+    }
+
+    startCourse(courseId) {
+        this.showNotification('🎯 Курс успешно открыт! Приятного обучения!', 'success');
     }
 
     showSettings() {
