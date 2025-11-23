@@ -1474,14 +1474,14 @@
             const tbody = document.getElementById('courses-tbody');
             
             try {
-                const response = await fetch('/api/content');
+                const response = await fetch('/api/content/courses?limit=100');
                 const data = await response.json();
                 
                 if (data.success) {
                     loading.style.display = 'none';
                     table.style.display = 'table';
                     
-                    tbody.innerHTML = data.data.courses.map(course => `
+                    tbody.innerHTML = data.data.map(course => `
                         <tr>
                             <td>${course.id}</td>
                             <td>
@@ -1493,8 +1493,8 @@
                             <td>${course.category}</td>
                             <td>${formatPrice(course.price)}</td>
                             <td>${course.students_count}</td>
-                            <td class="${course.is_active ? 'status-active' : 'status-inactive'}">
-                                ${course.is_active ? 'Активен' : 'Неактивен'}
+                            <td class="${course.is_active !== false ? 'status-active' : 'status-inactive'}">
+                                ${course.is_active !== false ? 'Активен' : 'Неактивен'}
                             </td>
                             <td>
                                 <div class="user-actions">
@@ -1508,10 +1508,12 @@
                             </td>
                         </tr>
                     `).join('');
+                } else {
+                    throw new Error(data.error);
                 }
             } catch (error) {
                 loading.style.display = 'none';
-                showError('Не удалось загрузить курсы');
+                showError('Не удалось загрузить курсы: ' + error.message);
             }
         }
 
