@@ -1092,6 +1092,324 @@
             text-align: center;
             color: var(--text-secondary);
         }
+
+        /* ==================== АДАПТИВНЫЕ СТИЛИ ==================== */
+
+        @media (max-width: 768px) {
+            .nav-container {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 0.5rem;
+            }
+            
+            .nav-menu {
+                order: 3;
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .nav-btn {
+                padding: 0.5rem;
+                font-size: 0.8rem;
+            }
+            
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .navigation-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .hero-stats {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+            
+            .profile-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-content {
+                padding: 0.5rem;
+            }
+            
+            .hero-section {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+            
+            .hero-content h2 {
+                font-size: 1.5rem;
+            }
+            
+            .nav-card {
+                padding: 1rem;
+            }
+            
+            .card-content {
+                padding: 1rem;
+            }
+            
+            .profile-stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .path-levels {
+                padding: 0.5rem;
+            }
+        }
+
+        /* ==================== СТИЛИ ДЛЯ ПРОФИЛЯ ==================== */
+
+        .profile-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        .stat-icon {
+            font-size: 1.5rem;
+            background: var(--accent);
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .current-level {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+
+        .level-badge {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .level-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .path-levels {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .path-level {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            transition: all 0.3s;
+        }
+
+        .path-level.current {
+            border-color: var(--accent);
+            background: linear-gradient(135deg, var(--bg-card), #1e293b);
+        }
+
+        .path-level.completed {
+            border-color: var(--success);
+        }
+
+        .path-level.locked {
+            opacity: 0.6;
+        }
+
+        .level-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .level-icon {
+            background: var(--bg-primary);
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .level-info {
+            flex: 1;
+        }
+
+        .level-name {
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
+        .level-exp {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .level-requirements {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .level-requirements ul {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0 0 0;
+        }
+
+        .level-requirements li {
+            padding: 0.25rem 0;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .level-requirements li:before {
+            content: '🎯';
+            margin-right: 0.5rem;
+        }
+
+        .subscription-cta {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .subscription-cta h4 {
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+        }
+
+        .subscription-cta p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            height: auto;
+            min-height: 80px;
+        }
+
+        /* ==================== ТАЧ-ДРУЖЕСТВЕННЫЕ СТИЛИ ==================== */
+
+        @media (hover: none) {
+            .nav-card:hover,
+            .content-card:hover,
+            .stat-card:hover {
+                transform: none;
+            }
+            
+            .card-overlay {
+                opacity: 1;
+                background: rgba(0, 0, 0, 0.3);
+            }
+            
+            .btn:active {
+                transform: scale(0.95);
+            }
+        }
+
+        /* Улучшения для тач-устройств */
+        @media (pointer: coarse) {
+            .btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            .nav-btn {
+                min-height: 44px;
+                padding: 0.75rem 1rem;
+            }
+            
+            .favorite-btn,
+            .play-btn,
+            .preview-btn,
+            .download-btn {
+                min-width: 44px;
+                min-height: 44px;
+            }
+        }
+        
     </style>
 </head>
 <body>
