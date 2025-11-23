@@ -1,3 +1,104 @@
+class AcademyApp {
+    constructor() {
+        console.log('🎓 Создание экземпляра AcademyApp...');
+        
+        // Инициализация состояния
+        this.currentPage = 'home';
+        this.currentSubPage = '';
+        this.isAdmin = false;
+        this.isSuperAdmin = false;
+        this.allContent = {};
+        this.state = {
+            favorites: {
+                courses: [],
+                podcasts: [],
+                streams: [],
+                videos: [],
+                materials: [],
+                events: []
+            }
+        };
+        this.filters = {
+            courses: { category: 'all', level: 'all', sort: 'newest' },
+            podcasts: { category: 'all', sort: 'newest' },
+            streams: { category: 'all', sort: 'newest' },
+            videos: { category: 'all', sort: 'newest' },
+            materials: { category: 'all', material_type: 'all', sort: 'newest' },
+            events: { category: 'all', sort: 'newest' }
+        };
+        this.subscriptionState = {
+            selectedPlan: null,
+            selectedPeriod: 'monthly'
+        };
+        this.mediaPlayers = {
+            video: null,
+            audio: null
+        };
+        this.currentNewsFilter = 'Все';
+        this.navigationItems = [];
+        this.subscriptionPlans = [];
+        this.userSubscription = null;
+        this.instructors = [];
+        
+        // Путь обучения
+        this.learningPath = {
+            'Новичок': { minExp: 0, maxExp: 500, description: 'Начало пути в Академии', steps: ['Пройдите 1 курс', 'Посмотрите 5 материалов'] },
+            'Понимаю': { minExp: 500, maxExp: 1500, description: 'Освоение базовых навыков', steps: ['Пройдите 3 курса', 'Завершите 2 модуля'] },
+            'Практик': { minExp: 1500, maxExp: 3000, description: 'Применение знаний на практике', steps: ['Пройдите 5 курсов', 'Участвуйте в эфирах'] },
+            'Эксперт': { minExp: 3000, maxExp: 5000, description: 'Глубокое понимание предмета', steps: ['Станьте ментором', 'Создайте свой курс'] }
+        };
+        
+        // Правила сообщества
+        this.communityRules = [
+            { title: 'Уважение', description: 'Уважайте мнение других участников' },
+            { title: 'Конфиденциальность', description: 'Не распространяйте личную информацию' },
+            { title: 'Профессионализм', description: 'Соблюдайте медицинскую этику' },
+            { title: 'Взаимопомощь', description: 'Помогайте другим участникам' }
+        ];
+        
+        // Конфигурация
+        this.config = {
+            API_BASE_URL: window.location.origin,
+            UPLOAD_LIMIT: 50 * 1024 * 1024 // 50MB
+        };
+    }
+
+    // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+
+    async init() {
+        console.log('🚀 Инициализация Академии АНБ...');
+        
+        // Инициализация Telegram WebApp
+        if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+            console.log('✅ Telegram WebApp инициализирован');
+        }
+        
+        // Загрузка пользователя
+        await this.loadUser();
+        
+        // Загрузка контента
+        await this.loadContent();
+        
+        // Загрузка навигации
+        await this.loadNavigation();
+        
+        // Загрузка данных подписки
+        await this.loadSubscriptionData();
+        
+        // Загрузка преподавателей
+        await this.loadInstructors();
+        
+        // Инициализация интерфейса
+        this.setupEventListeners();
+        this.renderPage('home');
+        
+        console.log('✅ Приложение инициализировано');
+    }
+
+    // ==================== МЕТОДЫ РЕНДЕРИНГА ====================
+
     createVideoCard(video) {
         const videoUrl = video.video_url || '/webapp/assets/video-default.jpg';
         const thumbnailUrl = video.thumbnail_url || '/webapp/assets/video-default.jpg';
@@ -178,6 +279,91 @@
         `;
     }
 
+    // ==================== МЕТОДЫ ДЛЯ ОТКРЫТИЯ ДЕТАЛЬНЫХ СТРАНИЦ ====================
+
+    async openCourseDetail(courseId) {
+        try {
+            const response = await this.safeApiCall(`/api/courses/${courseId}`);
+            if (response.success) {
+                this.currentSubPage = `course-${courseId}`;
+                this.renderPage('courses', `course-${courseId}`);
+            } else {
+                this.showNotification('Не удалось загрузить информацию о курсе', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading course:', error);
+            this.showNotification('Ошибка загрузки курса', 'error');
+        }
+    }
+
+    async openPodcastDetail(podcastId) {
+        try {
+            const response = await this.safeApiCall(`/api/podcasts/${podcastId}`);
+            if (response.success) {
+                this.currentSubPage = `podcast-${podcastId}`;
+                this.renderPage('podcasts', `podcast-${podcastId}`);
+            } else {
+                this.showNotification('Не удалось загрузить информацию о подкасте', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading podcast:', error);
+            this.showNotification('Ошибка загрузки подкаста', 'error');
+        }
+    }
+
+    async openVideoDetail(videoId) {
+        try {
+            const response = await this.safeApiCall(`/api/videos/${videoId}`);
+            if (response.success) {
+                this.currentSubPage = `video-${videoId}`;
+                this.renderPage('videos', `video-${videoId}`);
+            } else {
+                this.showNotification('Не удалось загрузить информацию о видео', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading video:', error);
+            this.showNotification('Ошибка загрузки видео', 'error');
+        }
+    }
+
+    async openMaterialDetail(materialId) {
+        try {
+            const response = await this.safeApiCall(`/api/materials/${materialId}`);
+            if (response.success) {
+                this.currentSubPage = `material-${materialId}`;
+                this.renderPage('materials', `material-${materialId}`);
+            } else {
+                this.showNotification('Не удалось загрузить информацию о материале', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading material:', error);
+            this.showNotification('Ошибка загрузки материала', 'error');
+        }
+    }
+
+    async openStreamDetail(streamId) {
+        try {
+            const response = await this.safeApiCall(`/api/streams/${streamId}`);
+            if (response.success) {
+                this.currentSubPage = `stream-${streamId}`;
+                this.renderPage('streams', `stream-${streamId}`);
+            } else {
+                this.showNotification('Не удалось загрузить информацию об эфире', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading stream:', error);
+            this.showNotification('Ошибка загрузки эфира', 'error');
+        }
+    }
+
+    // Вспомогательный метод для экранирования HTML
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     // ==================== СТРАНИЦЫ СТРИМОВ И МЕРОПРИЯТИЙ С ФИЛЬТРАМИ ====================
 
     createStreamsPage() {
@@ -233,30 +419,33 @@
         `;
     }
 
-    createStreamCard(stream) {
+        createStreamCard(stream) {
+        const thumbnailUrl = stream.thumbnail_url || '/webapp/assets/stream-default.jpg';
+        const videoUrl = stream.video_url || '#';
+        
         return `
-            <div class="content-card stream-card">
+            <div class="content-card stream-card" onclick="app.openStreamDetail(${stream.id})">
                 <div class="card-image">
-                    <img src="${stream.thumbnail_url}" alt="${stream.title}" 
-                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjM0Y0QTU1Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2Ij7QpNCw0LrRgtC+0YA8L3RleHQ+Cjwvc3ZnPgo='">
+                    <img src="${thumbnailUrl}" alt="${stream.title}" 
+                         onerror="this.src='/webapp/assets/stream-default.jpg'">
                     <div class="card-overlay">
                         <button class="favorite-btn ${this.isFavorite(stream.id, 'streams') ? 'active' : ''}" 
                                 onclick="event.stopPropagation(); app.toggleFavorite(${stream.id}, 'streams')">
                             ${this.isFavorite(stream.id, 'streams') ? '❤️' : '🤍'}
                         </button>
-                        <button class="play-btn" onclick="app.previewContent('video', '${stream.video_url}', {title: '${stream.title}', id: ${stream.id}})">
+                        <button class="play-btn" onclick="event.stopPropagation(); app.previewContent('video', '${videoUrl}', {title: '${this.escapeHtml(stream.title)}', id: ${stream.id}})">
                             ▶️
                         </button>
                     </div>
                     ${stream.is_live ? `<div class="live-badge">LIVE</div>` : ''}
                 </div>
                 <div class="card-content">
-                    <div class="card-category">${stream.category}</div>
+                    <div class="card-category">${stream.category || 'Общее'}</div>
                     <h3 class="card-title">${stream.title}</h3>
-                    <p class="card-description">${stream.description}</p>
+                    <p class="card-description">${stream.description || 'Описание эфира'}</p>
                     <div class="card-meta">
-                        <span class="meta-item">⏱️ ${stream.duration}</span>
-                        <span class="meta-item">👥 ${stream.participants} участников</span>
+                        <span class="meta-item">⏱️ ${stream.duration || '00:00'}</span>
+                        <span class="meta-item">👥 ${stream.participants || 0} участников</span>
                     </div>
                 </div>
             </div>
@@ -2464,6 +2653,102 @@
         };
     }
 
+       }
+
+    // ==================== ЗАГРУЗКА КОНТЕНТА ====================
+
+    async loadContent() {
+        try {
+            console.log('📥 Загрузка контента с API...');
+            
+            // Загружаем все типы контента параллельно
+            const [coursesResponse, podcastsResponse, videosResponse, 
+                   materialsResponse, streamsResponse, instructorsResponse] = await Promise.all([
+                this.safeApiCall('/api/content/courses?limit=50'),
+                this.safeApiCall('/api/content/podcasts?limit=50'),
+                this.safeApiCall('/api/content/videos?limit=50'),
+                this.safeApiCall('/api/content/materials?limit=50'),
+                this.safeApiCall('/api/content/streams?limit=50'),
+                this.safeApiCall('/api/instructors')
+            ]);
+
+            this.allContent = {
+                courses: coursesResponse.success ? coursesResponse.data : this.getDemoContentData().courses,
+                podcasts: podcastsResponse.success ? podcastsResponse.data : this.getDemoContentData().podcasts,
+                videos: videosResponse.success ? videosResponse.data : this.getDemoContentData().videos,
+                materials: materialsResponse.success ? materialsResponse.data : this.getDemoContentData().materials,
+                streams: streamsResponse.success ? streamsResponse.data : this.getDemoContentData().streams,
+                instructors: instructorsResponse.success ? instructorsResponse.data : this.getDemoContentData().instructors,
+                stats: {
+                    totalUsers: 1567,
+                    totalCourses: coursesResponse.success ? coursesResponse.data.length : 3,
+                    totalMaterials: materialsResponse.success ? materialsResponse.data.length : 2,
+                    totalEvents: 3
+                }
+            };
+
+            console.log('✅ Контент загружен:', {
+                courses: this.allContent.courses.length,
+                podcasts: this.allContent.podcasts.length,
+                videos: this.allContent.videos.length,
+                materials: this.allContent.materials.length,
+                streams: this.allContent.streams.length,
+                instructors: this.allContent.instructors.length
+            });
+        } catch (error) {
+            console.error('❌ Ошибка загрузки контента:', error);
+            this.allContent = this.getDemoContentData();
+            console.log('🔄 Используем демо-данные');
+        }
+    }
+
+    // ==================== ЗАГРУЗКА КОНТЕНТА ====================
+
+    async loadContent() {
+        try {
+            console.log('📥 Загрузка контента с API...');
+            
+            // Загружаем все типы контента параллельно
+            const [coursesResponse, podcastsResponse, videosResponse, 
+                   materialsResponse, streamsResponse, instructorsResponse] = await Promise.all([
+                this.safeApiCall('/api/content/courses?limit=50'),
+                this.safeApiCall('/api/content/podcasts?limit=50'),
+                this.safeApiCall('/api/content/videos?limit=50'),
+                this.safeApiCall('/api/content/materials?limit=50'),
+                this.safeApiCall('/api/content/streams?limit=50'),
+                this.safeApiCall('/api/instructors')
+            ]);
+
+            this.allContent = {
+                courses: coursesResponse.success ? coursesResponse.data : this.getDemoContentData().courses,
+                podcasts: podcastsResponse.success ? podcastsResponse.data : this.getDemoContentData().podcasts,
+                videos: videosResponse.success ? videosResponse.data : this.getDemoContentData().videos,
+                materials: materialsResponse.success ? materialsResponse.data : this.getDemoContentData().materials,
+                streams: streamsResponse.success ? streamsResponse.data : this.getDemoContentData().streams,
+                instructors: instructorsResponse.success ? instructorsResponse.data : this.getDemoContentData().instructors,
+                stats: {
+                    totalUsers: 1567,
+                    totalCourses: coursesResponse.success ? coursesResponse.data.length : 3,
+                    totalMaterials: materialsResponse.success ? materialsResponse.data.length : 2,
+                    totalEvents: 3
+                }
+            };
+
+            console.log('✅ Контент загружен:', {
+                courses: this.allContent.courses.length,
+                podcasts: this.allContent.podcasts.length,
+                videos: this.allContent.videos.length,
+                materials: this.allContent.materials.length,
+                streams: this.allContent.streams.length,
+                instructors: this.allContent.instructors.length
+            });
+        } catch (error) {
+            console.error('❌ Ошибка загрузки контента:', error);
+            this.allContent = this.getDemoContentData();
+            console.log('🔄 Используем демо-данные');
+        }
+    }
+
     showFatalError(message) {
         console.error('💥 Фатальная ошибка:', message);
         
@@ -2488,6 +2773,18 @@
 // Глобальная инициализация
 window.AcademyApp = AcademyApp;
 console.log('✅ AcademyApp class loaded');
+
+// АВТОМАТИЧЕСКАЯ ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📱 DOM загружен, запуск приложения...');
+    
+    if (!window.app) {
+        window.app = new AcademyApp();
+        window.app.init().catch(error => {
+            console.error('❌ Ошибка инициализации приложения:', error);
+        });
+    }
+});
 
 // Глобальная обработка ошибок
 window.addEventListener('error', function(event) {
