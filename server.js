@@ -1057,6 +1057,86 @@ app.get('/api/subscription/plans', async (req, res) => {
     }
 });
 
+// ДОБАВИТЬ ЭТОТ МАРШРУТ СЮДА:
+// Получить подписку пользователя
+app.get('/api/subscription/user/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const { rows } = await pool.query(`
+            SELECT s.*, sp.name as plan_name 
+            FROM subscriptions s
+            LEFT JOIN subscription_plans sp ON s.plan_type = sp.name
+            WHERE s.user_id = $1 AND s.status = 'active' AND s.ends_at > NOW()
+            ORDER BY s.created_at DESC
+            LIMIT 1
+        `, [userId]);
+
+        res.json({ 
+            success: true, 
+            data: rows.length > 0 ? rows[0] : null,
+            hasActiveSubscription: rows.length > 0
+        });
+    } catch (error) {
+        console.error('User subscription error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка проверки подписки' });
+    }
+});
+
+// Создать подписку (демо-режим)
+app.post('/api/subscription/create', async (req, res) => {
+    try {
+        const { userId, planId, planType } = req.body;
+        
+        // Найти план
+        const { rows: plans } = await pool.query('SELECT * FROM subscription_plans WHERE id = $1', [planId]);
+        if (plans.length === 0) {
+            return res.status(404).json({ success: false, error: 'План не найден' });
+        }
+
+        const plan = plans[0];
+        const priceField = `price_${planType}`;
+        const price = plan[priceField];
+
+        // Расчет даты окончания
+        const endsAt = new Date();
+        switch (planType) {
+            case 'monthly':
+                endsAt.setMonth(endsAt.getMonth() + 1);
+                break;
+            case 'quarterly':
+                endsAt.setMonth(endsAt.getMonth() + 3);
+                break;
+            case 'yearly':
+                endsAt.setFullYear(endsAt.getFullYear() + 1);
+                break;
+        }
+
+        // Создать подписку
+        const { rows: subscription } = await pool.query(`
+            INSERT INTO subscriptions (user_id, plan_type, price, status, ends_at, payment_data)
+            VALUES ($1, $2, $3, 'active', $4, $5)
+            RETURNING *
+        `, [userId, planType, price, endsAt, { demo: true, method: 'demo' }]);
+
+        // Обновить пользователя
+        await pool.query(
+            'UPDATE users SET subscription_end = $1 WHERE id = $2',
+            [endsAt, userId]
+        );
+
+        res.json({ 
+            success: true, 
+            data: subscription[0],
+            message: 'Подписка успешно активирована (демо-режим)'
+        });
+
+    } catch (error) {
+        console.error('Create subscription error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания подписки' });
+    }
+});
+
 // ==================== МЕДИА ОБРАБОТЧИКИ ====================
 
 // Загрузка файлов
