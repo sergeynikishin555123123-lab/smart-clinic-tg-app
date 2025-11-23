@@ -250,50 +250,51 @@ async loadUserData() {
     }
 }
 
-    async loadContent() {
-        console.log('📚 Загрузка контента...');
+async loadContent() {
+    console.log('📚 Загрузка контента...');
+    
+    try {
+        const response = await this.safeApiCall('/api/content');
         
-        try {
-            const response = await this.safeApiCall('/api/content');
-            
-            if (response && response.success) {
-                this.allContent = response.data;
-                console.log('✅ Контент загружен:', {
-                    courses: this.allContent.courses?.length,
-                    podcasts: this.allContent.podcasts?.length,
-                    videos: this.allContent.videos?.length,
-                    materials: this.allContent.materials?.length
-                });
-            } else {
-                throw new Error('Не удалось загрузить контент');
-            }
-        } catch (error) {
-            console.error('Ошибка загрузки контента:', error);
-            this.createDemoContent();
+        if (response && response.success) {
+            this.allContent = response.data;
+            console.log('✅ Контент загружен:', {
+                courses: this.allContent.courses?.length,
+                podcasts: this.allContent.podcasts?.length,
+                videos: this.allContent.videos?.length,
+                materials: this.allContent.materials?.length
+            });
+        } else {
+            throw new Error('Не удалось загрузить контент');
         }
-       // Загрузка навигационных кнопок
-    async loadNavigation() {
-        try {
-            const response = await this.safeApiCall('/api/navigation');
-            if (response && response.success) {
-                this.navigationItems = response.data;
-            } else {
-                // Демо-навигация если API не работает
-                this.navigationItems = [
-                    { title: 'Курсы', description: 'Доступные курсы и обучение', icon: '📚', image_url: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop', page: 'courses' },
-                    { title: 'Подкасты', description: 'Аудио подкасты и лекции', icon: '🎧', image_url: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=200&fit=crop', page: 'podcasts' },
-                    { title: 'Эфиры', description: 'Прямые эфиры и разборы', icon: '📹', image_url: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=200&fit=crop', page: 'streams' },
-                    { title: 'Видео', description: 'Короткие обучающие видео', icon: '🎯', image_url: 'https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=400&h=200&fit=crop', page: 'videos' },
-                    { title: 'Материалы', description: 'Чек-листы и протоколы', icon: '📋', image_url: 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=400&h=200&fit=crop', page: 'materials' },
-                    { title: 'Мероприятия', description: 'Онлайн и офлайн события', icon: '🗺️', image_url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop', page: 'events' },
-                    { title: 'Сообщество', description: 'Правила и ценности', icon: '👥', image_url: 'https://images.unsplash.com/photo-1551836026-d5c55ac5d4c5?w=400&h=200&fit=crop', page: 'community' },
-                    { title: 'Избранное', description: 'Сохраненные материалы', icon: '❤️', image_url: 'https://images.unsplash.com/photo-1579546929662-711aa81148cf?w=400&h=200&fit=crop', page: 'favorites' }
-                ];
-            }
-        } catch (error) {
-            console.error('Ошибка загрузки навигации:', error);
-        }
+    } catch (error) {
+        console.error('Ошибка загрузки контента:', error);
+        this.createDemoContent();
     }
+}
+      // Загрузка навигационных кнопок
+async loadNavigation() {
+    try {
+        const response = await this.safeApiCall('/api/navigation');
+        if (response && response.success) {
+            this.navigationItems = response.data;
+        } else {
+            // Демо-навигация если API не работает
+            this.navigationItems = [
+                { title: 'Курсы', description: 'Доступные курсы и обучение', icon: '📚', image_url: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop', page: 'courses' },
+                { title: 'Подкасты', description: 'Аудио подкасты и лекции', icon: '🎧', image_url: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=200&fit=crop', page: 'podcasts' },
+                { title: 'Эфиры', description: 'Прямые эфиры и разборы', icon: '📹', image_url: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=200&fit=crop', page: 'streams' },
+                { title: 'Видео', description: 'Короткие обучающие видео', icon: '🎯', image_url: 'https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=400&h=200&fit=crop', page: 'videos' },
+                { title: 'Материалы', description: 'Чек-листы и протоколы', icon: '📋', image_url: 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=400&h=200&fit=crop', page: 'materials' },
+                { title: 'Мероприятия', description: 'Онлайн и офлайн события', icon: '🗺️', image_url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop', page: 'events' },
+                { title: 'Сообщество', description: 'Правила и ценности', icon: '👥', image_url: 'https://images.unsplash.com/photo-1551836026-d5c55ac5d4c5?w=400&h=200&fit=crop', page: 'community' },
+                { title: 'Избранное', description: 'Сохраненные материалы', icon: '❤️', image_url: 'https://images.unsplash.com/photo-1579546929662-711aa81148cf?w=400&h=200&fit=crop', page: 'favorites' }
+            ];
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки навигации:', error);
+    }
+}
 
     // ==================== РЕНДЕРИНГ СТРАНИЦ ====================
 
@@ -1996,90 +1997,92 @@ createProfilePage() {
         `;
     }
 
-    createStreamsPage() {
-        const streams = this.allContent.streams || [];
-        return `
-            <div class="page streams-page">
-                <div class="page-header">
-                    <h2>📹 Эфиры и разборы</h2>
-                    <p>Прямые эфиры и разборы клинических случаев</p>
-                </div>
-                <div class="content-grid">
-                    ${streams.length > 0 ? streams.map(stream => `
-                        <div class="content-card stream-card">
-                            <div class="card-image">
-                                <img src="${stream.thumbnail_url}" alt="${stream.title}" onerror="this.src='/webapp/assets/stream-default.jpg'">
-                                <div class="card-overlay">
-                                    <button class="favorite-btn ${this.isFavorite(stream.id, 'streams') ? 'active' : ''}" 
-                                            onclick="event.stopPropagation(); app.toggleFavorite(${stream.id}, 'streams')">
-                                        ${this.isFavorite(stream.id, 'streams') ? '❤️' : '🤍'}
-                                    </button>
-                                    <button class="play-btn" onclick="app.previewContent('video', '${stream.video_url}', {title: '${stream.title}', id: ${stream.id}})">
-                                        ▶️
-                                    </button>
-                                </div>
-                                ${stream.is_live ? `<div class="live-badge">LIVE</div>` : ''}
+   // ==================== СТРАНИЦА СТРИМОВ ====================
+
+createStreamsPage() {
+    const streams = this.allContent.streams || [];
+    return `
+        <div class="page streams-page">
+            <div class="page-header">
+                <h2>📹 Эфиры и разборы</h2>
+                <p>Прямые эфиры и разборы клинических случаев</p>
+            </div>
+            <div class="content-grid">
+                ${streams.length > 0 ? streams.map(stream => `
+                    <div class="content-card stream-card">
+                        <div class="card-image">
+                            <img src="${stream.thumbnail_url}" alt="${stream.title}" onerror="this.src='/webapp/assets/stream-default.jpg'">
+                            <div class="card-overlay">
+                                <button class="favorite-btn ${this.isFavorite(stream.id, 'streams') ? 'active' : ''}" 
+                                        onclick="event.stopPropagation(); app.toggleFavorite(${stream.id}, 'streams')">
+                                    ${this.isFavorite(stream.id, 'streams') ? '❤️' : '🤍'}
+                                </button>
+                                <button class="play-btn" onclick="app.previewContent('video', '${stream.video_url}', {title: '${stream.title}', id: ${stream.id}})">
+                                    ▶️
+                                </button>
                             </div>
-                            <div class="card-content">
-                                <div class="card-category">${stream.category}</div>
-                                <h3 class="card-title">${stream.title}</h3>
-                                <p class="card-description">${stream.description}</p>
-                                <div class="card-meta">
-                                    <span class="meta-item">⏱️ ${stream.duration}</span>
-                                    <span class="meta-item">👥 ${stream.participants} участников</span>
-                                </div>
+                            ${stream.is_live ? `<div class="live-badge">LIVE</div>` : ''}
+                        </div>
+                        <div class="card-content">
+                            <div class="card-category">${stream.category}</div>
+                            <h3 class="card-title">${stream.title}</h3>
+                            <p class="card-description">${stream.description}</p>
+                            <div class="card-meta">
+                                <span class="meta-item">⏱️ ${stream.duration}</span>
+                                <span class="meta-item">👥 ${stream.participants} участников</span>
                             </div>
                         </div>
-                    `).join('') : this.createEmptyState('streams')}
-                </div>
+                    </div>
+                `).join('') : this.createEmptyState('streams')}
             </div>
-        `;
-    }
+        </div>
+    `;
+}
+   // ==================== СТРАНИЦА МЕРОПРИЯТИЙ ====================
 
-    createEventsPage() {
-        const events = this.allContent.events || [];
-        return `
-            <div class="page events-page">
-                <div class="page-header">
-                    <h2>🗺️ Карта мероприятий</h2>
-                    <p>Онлайн и офлайн события Академии АНБ</p>
-                </div>
-                <div class="content-grid">
-                    ${events.length > 0 ? events.map(event => `
-                        <div class="content-card event-card">
-                            <div class="card-image">
-                                <img src="${event.image_url}" alt="${event.title}" onerror="this.src='/webapp/assets/event-default.jpg'">
-                                <div class="card-overlay">
-                                    <button class="favorite-btn ${this.isFavorite(event.id, 'events') ? 'active' : ''}" 
-                                            onclick="event.stopPropagation(); app.toggleFavorite(${event.id}, 'events')">
-                                        ${this.isFavorite(event.id, 'events') ? '❤️' : '🤍'}
-                                    </button>
-                                </div>
-                                <div class="event-type">${event.event_type === 'online' ? '🌐 Онлайн' : '🏛️ Офлайн'}</div>
+createEventsPage() {
+    const events = this.allContent.events || [];
+    return `
+        <div class="page events-page">
+            <div class="page-header">
+                <h2>🗺️ Карта мероприятий</h2>
+                <p>Онлайн и офлайн события Академии АНБ</p>
+            </div>
+            <div class="content-grid">
+                ${events.length > 0 ? events.map(event => `
+                    <div class="content-card event-card">
+                        <div class="card-image">
+                            <img src="${event.image_url}" alt="${event.title}" onerror="this.src='/webapp/assets/event-default.jpg'">
+                            <div class="card-overlay">
+                                <button class="favorite-btn ${this.isFavorite(event.id, 'events') ? 'active' : ''}" 
+                                        onclick="event.stopPropagation(); app.toggleFavorite(${event.id}, 'events')">
+                                    ${this.isFavorite(event.id, 'events') ? '❤️' : '🤍'}
+                                </button>
                             </div>
-                            <div class="card-content">
-                                <div class="event-date">${new Date(event.event_date).toLocaleDateString('ru-RU')}</div>
-                                <h3 class="card-title">${event.title}</h3>
-                                <p class="card-description">${event.description}</p>
-                                <div class="card-meta">
-                                    <span class="meta-item">📍 ${event.location}</span>
-                                    <span class="meta-item">👥 ${event.participants} участников</span>
-                                </div>
-                                ${event.registration_url ? `
-                                <div class="event-actions">
-                                    <button class="btn btn-primary btn-small" onclick="window.open('${event.registration_url}', '_blank')">
-                                        Зарегистрироваться
-                                    </button>
-                                </div>
-                                ` : ''}
-                            </div>
+                            <div class="event-type">${event.event_type === 'online' ? '🌐 Онлайн' : '🏛️ Офлайн'}</div>
                         </div>
-                    `).join('') : this.createEmptyState('events')}
-                </div>
+                        <div class="card-content">
+                            <div class="event-date">${new Date(event.event_date).toLocaleDateString('ru-RU')}</div>
+                            <h3 class="card-title">${event.title}</h3>
+                            <p class="card-description">${event.description}</p>
+                            <div class="card-meta">
+                                <span class="meta-item">📍 ${event.location}</span>
+                                <span class="meta-item">👥 ${event.participants} участников</span>
+                            </div>
+                            ${event.registration_url ? `
+                            <div class="event-actions">
+                                <button class="btn btn-primary btn-small" onclick="window.open('${event.registration_url}', '_blank')">
+                                    Зарегистрироваться
+                                </button>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('') : this.createEmptyState('events')}
             </div>
-        `;
-    }
-
+        </div>
+    `;
+}
     showFatalError(message) {
         console.error('💥 Фатальная ошибка:', message);
         
