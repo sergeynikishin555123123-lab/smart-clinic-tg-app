@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "production": "NODE_ENV=production node server.js"
+    "production": "NODE_ENV=production node server.js",
+    "install-deps": "npm install express telegraf pg cors dotenv multer compression bcryptjs jsonwebtoken nodemailer uuid"
   },
   "keywords": [
     "medical",
@@ -17,7 +18,10 @@
     "bot",
     "academy",
     "neurology",
-    "courses"
+    "courses",
+    "postgresql",
+    "jwt",
+    "authentication"
   ],
   "author": "Академия АНБ",
   "license": "MIT",
@@ -28,9 +32,24 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "multer": "^1.4.5-lts.1",
-    "compression": "^1.7.4"
+    "compression": "^1.7.4",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.7",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anb-academy/platform.git"
+  },
+  "bugs": {
+    "url": "https://github.com/anb-academy/platform/issues"
+  },
+  "homepage": "https://academy-anb.ru"
 }
