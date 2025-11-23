@@ -1698,17 +1698,6 @@
             opacity: 0.9;
         }
 
-/* 2-колоночная сетка для навигации */
-.main-navigation-grid.two-columns {
-    grid-template-columns: repeat(2, 1fr);
-}
-
-@media (max-width: 768px) {
-    .main-navigation-grid.two-columns {
-        grid-template-columns: 1fr;
-    }
-}
-        
         .section-title {
             font-size: 1.5rem;
             margin-bottom: 1.5rem;
@@ -1775,838 +1764,1038 @@
             }
         }
 
-        /* 2-колоночная сетка для навигации */
-.main-navigation-grid.two-columns {
-    grid-template-columns: repeat(2, 1fr);
-}
-
-@media (max-width: 768px) {
-    .main-navigation-grid.two-columns {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Стили для больших навигационных карточек */
-.nav-card-large {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 1rem;
-    overflow: hidden;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-}
-
-.nav-card-large:hover {
-    transform: translateY(-5px);
-    border-color: var(--accent);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
-.nav-card-image {
-    position: relative;
-    height: 160px;
-    overflow: hidden;
-}
-
-.nav-card-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.nav-card-large:hover .nav-card-image img {
-    transform: scale(1.05);
-}
-
-.nav-card-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(30, 64, 175, 0.8));
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    text-align: center;
-    padding: 1.5rem;
-}
-
-.nav-card-icon {
-    font-size: 2.5rem;
-    margin-bottom: 0.75rem;
-}
-
-.nav-card-overlay h3 {
-    font-size: 1.25rem;
-    margin-bottom: 0.5rem;
-    font-weight: bold;
-}
-
-.nav-card-overlay p {
-    font-size: 0.875rem;
-    opacity: 0.9;
-}
-
- /* ==================== СТИЛИ ДЛЯ ДЕТАЛЬНЫХ СТРАНИЦ ==================== */
-
-.detail-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.back-btn {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.back-btn:hover {
-    background: var(--accent);
-    color: white;
-}
-
-.detail-container {
-    background: var(--bg-card);
-    border-radius: 1rem;
-    border: 1px solid var(--border);
-    overflow: hidden;
-    margin-bottom: 2rem;
-}
-
-.detail-hero {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    padding: 2rem;
-}
-
-@media (max-width: 768px) {
-    .detail-hero {
-        grid-template-columns: 1fr;
-    }
-}
-
-.hero-image {
-    position: relative;
-    border-radius: 0.75rem;
-    overflow: hidden;
-    height: 300px;
-}
-
-.hero-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.image-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.hero-image:hover .image-overlay {
-    opacity: 1;
-}
-
-.course-meta-large {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-}
-
-.category-badge, .level-badge, .rating-badge {
-    padding: 0.5rem 1rem;
-    border-radius: 2rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-}
-
-.category-badge {
-    background: var(--accent);
-    color: white;
-}
-
-.level-badge {
-    background: var(--success);
-    color: white;
-}
-
-.rating-badge {
-    background: var(--warning);
-    color: white;
-}
-
-.course-subtitle {
-    font-size: 1.2rem;
-    color: var(--text-secondary);
-    margin-bottom: 2rem;
-    line-height: 1.6;
-}
-
-.course-stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.stat {
-    text-align: center;
-    padding: 1rem;
-    background: var(--bg-primary);
-    border-radius: 0.5rem;
-}
-
-.stat-value {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--accent);
-    margin-bottom: 0.25rem;
-}
-
-.stat-label {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-}
-
-.discount-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.original-price {
-    color: var(--text-secondary);
-    text-decoration: line-through;
-    font-size: 1.1rem;
-}
-
-.discount-amount {
-    background: var(--error);
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
-    font-size: 0.875rem;
-}
-
-/* Стили для преподавателей */
-.instructors-section {
-    padding: 2rem;
-    border-top: 1px solid var(--border);
-}
-
-.instructors-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-}
-
-.instructor-card {
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    cursor: pointer;
-    transition: all 0.3s;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.instructor-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--accent);
-}
-
-.instructor-avatar {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    overflow: hidden;
-    flex-shrink: 0;
-}
-
-.instructor-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.instructor-info {
-    flex: 1;
-}
-
-.instructor-info h4 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.1rem;
-}
-
-.instructor-specialization {
-    color: var(--accent);
-    font-size: 0.9rem;
-    margin: 0 0 0.25rem 0;
-}
-
-.instructor-role {
-    color: var(--text-secondary);
-    font-size: 0.8rem;
-    margin: 0 0 0.5rem 0;
-}
-
-.instructor-experience {
-    color: var(--text-secondary);
-    font-size: 0.8rem;
-}
-
-/* Табы */
-.detail-tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    padding: 0 2rem;
-}
-
-.tab-btn {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    padding: 1rem 1.5rem;
-    cursor: pointer;
-    transition: all 0.3s;
-    border-bottom: 2px solid transparent;
-}
-
-.tab-btn:hover,
-.tab-btn.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-}
-
-.tab-content {
-    display: none;
-    padding: 2rem;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* Модули курса */
-.module-item {
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-}
-
-.module-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.module-number {
-    font-weight: bold;
-    color: var(--accent);
-}
-
-.module-duration {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-}
-
-.module-title {
-    font-weight: bold;
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
-}
-
-.module-lessons {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.lesson {
-    padding: 0.75rem;
-    background: var(--bg-secondary);
-    border-radius: 0.5rem;
-    font-size: 0.9rem;
-}
-
-/* Отзывы */
-.review-item {
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-}
-
-.review-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-}
-
-.reviewer-info {
-    flex: 1;
-}
-
-.reviewer-name {
-    font-weight: bold;
-    margin-bottom: 0.25rem;
-}
-
-.reviewer-role {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-}
-
-.review-rating {
-    color: var(--warning);
-}
-
-.review-text {
-    line-height: 1.6;
-    margin-bottom: 1rem;
-}
-
-.review-date {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-}
-
-/* Секция покупки */
-.purchase-section {
-    background: var(--bg-card);
-    border-radius: 1rem;
-    border: 1px solid var(--border);
-    padding: 2rem;
-}
-
-.pricing-card {
-    max-width: 400px;
-    margin: 0 auto;
-    text-align: center;
-}
-
-.pricing-header {
-    margin-bottom: 2rem;
-}
-
-.discount-timer {
-    background: var(--error);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 2rem;
-    font-size: 0.875rem;
-    display: inline-block;
-    margin-top: 1rem;
-}
-
-.price-display {
-    margin-bottom: 2rem;
-}
-
-.current-price {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: var(--accent);
-}
-
-.features-list {
-    margin-bottom: 2rem;
-}
-
-.feature-item {
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.feature-item:last-child {
-    border-bottom: none;
-}
-
-.purchase-actions {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.guarantee-badge {
-    color: var(--success);
-    font-size: 0.875rem;
-}
-
-/* Детальная страница преподавателя */
-.instructor-detail {
-    display: flex;
-    gap: 2rem;
-    align-items: flex-start;
-}
-
-.instructor-avatar-large {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    overflow: hidden;
-    flex-shrink: 0;
-}
-
-.instructor-avatar-large img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.instructor-detail-info {
-    flex: 1;
-}
-
-.instructor-detail-info h2 {
-    margin: 0 0 0.5rem 0;
-}
-
-.instructor-stats {
-    display: flex;
-    gap: 1rem;
-    margin: 1rem 0;
-    flex-wrap: wrap;
-}
-
-.instructor-stats .stat {
-    background: var(--bg-primary);
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    margin: 0;
-}
-
-.instructor-bio {
-    margin: 1.5rem 0;
-}
-
-.instructor-bio h4 {
-    margin-bottom: 0.5rem;
-}
-
-.instructor-bio p {
-    line-height: 1.6;
-}
-
-.instructor-social {
-    margin-top: 1.5rem;
-}
-
-.social-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-.social-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.5rem 1rem;
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    color: var(--text-primary);
-    text-decoration: none;
-    font-size: 0.875rem;
-    transition: all 0.3s;
-}
-
-.social-link:hover {
-    background: var(--accent);
-    color: white;
-}    
-
-      /* Детальная страница преподавателя - дополнительные стили */
-.instructor-hero {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 2rem;
-    padding: 2rem;
-    align-items: start;
-}
-
-@media (max-width: 768px) {
-    .instructor-hero {
-        grid-template-columns: 1fr;
-        text-align: center;
-    }
-}
-
-.instructor-hero-content h1 {
-    margin: 0 0 0.5rem 0;
-    font-size: 2rem;
-}
-
-.instructor-specialization-large {
-    color: var(--accent);
-    font-size: 1.2rem;
-    margin: 0 0 2rem 0;
-    font-weight: 500;
-}
-
-.instructor-stats-large {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-    margin: 2rem 0;
-}
-
-.instructor-stat-large {
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    text-align: center;
-}
-
-.stat-icon {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-}
-
-.stat-value {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--accent);
-    margin-bottom: 0.25rem;
-}
-
-.stat-label {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-}
-
-.instructor-contacts {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
-}
-
-.contact-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background: var(--bg-primary);
-    border-radius: 0.5rem;
-}
-
-.contact-icon {
-    font-size: 1.2rem;
-}
-
-.contact-text {
-    color: var(--text-primary);
-    text-decoration: none;
-}
-
-.contact-text:hover {
-    color: var(--accent);
-}
-
-.instructor-bio-section {
-    padding: 2rem;
-    border-top: 1px solid var(--border);
-}
-
-.instructor-bio-content {
-    line-height: 1.7;
-}
-
-.instructor-bio-content p {
-    margin-bottom: 1.5rem;
-    font-size: 1.1rem;
-}
-
-.instructor-achievements {
-    margin-top: 2rem;
-}
-
-.instructor-achievements h4 {
-    margin-bottom: 1rem;
-    color: var(--accent);
-}
-
-.instructor-achievements ul {
-    list-style: none;
-    padding: 0;
-}
-
-.instructor-achievements li {
-    padding: 0.5rem 0;
-    position: relative;
-    padding-left: 1.5rem;
-}
-
-.instructor-achievements li:before {
-    content: '✅';
-    position: absolute;
-    left: 0;
-}
-
-.instructor-courses-section {
-    padding: 2rem;
-    border-top: 1px solid var(--border);
-}
-
-.courses-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-}  
+        /* ==================== СТИЛИ ДЛЯ НАВИГАЦИИ 2x2 ==================== */
+
+        .main-navigation-grid.two-columns {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            max-width: 600px;
+            margin: 0 auto 2rem auto;
+        }
+
+        @media (max-width: 768px) {
+            .main-navigation-grid.two-columns {
+                grid-template-columns: 1fr;
+                max-width: 400px;
+            }
+        }
+
+        .nav-card-large {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            aspect-ratio: 1.6;
+        }
+
+        .nav-card-large:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-card-image {
+            position: relative;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .nav-card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-card-large:hover .nav-card-image img {
+            transform: scale(1.05);
+        }
+
+        .nav-card-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(30, 64, 175, 0.8));
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            padding: 1.5rem;
+        }
+
+        .nav-card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .nav-card-overlay h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .nav-card-overlay p {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        /* ==================== СТИЛИ ДЛЯ ФИЛЬТРОВ ==================== */
+
+        .content-filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 150px;
+        }
+
+        .filter-group label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .filter-select {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* ==================== УЛУЧШЕННЫЕ СТИЛИ МЕДИА-ПЛЕЕРА ==================== */
+
+        .media-modal .modal-content.media-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            width: auto;
+        }
+
+        .video-container {
+            width: 100%;
+            max-width: 800px;
+            background: #000;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .video-container video {
+            width: 100%;
+            height: auto;
+            max-height: 70vh;
+        }
+
+        .audio-player {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 2rem;
+            max-width: 500px;
+        }
+
+        .audio-cover {
+            width: 200px;
+            height: 200px;
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+
+        .audio-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .audio-controls {
+            width: 100%;
+        }
+
+        .audio-controls audio {
+            width: 100%;
+        }
+
+        .image-viewer img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 0.5rem;
+            cursor: zoom-in;
+            transition: transform 0.3s ease;
+        }
+
+        .image-viewer img.zoomed {
+            transform: scale(1.5);
+            cursor: zoom-out;
+        }
+
+        .pdf-viewer {
+            width: 100%;
+            height: 70vh;
+        }
+
+        .pdf-viewer iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 0.5rem;
+        }
+
+        .file-viewer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            padding: 2rem;
+        }
+
+        .file-icon {
+            font-size: 4rem;
+        }
+
+        .file-info {
+            text-align: center;
+        }
+
+        .file-info h4 {
+            margin-bottom: 0.5rem;
+        }
+
+        .media-description {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .media-description h4 {
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        /* ==================== АДАПТИВНЫЕ СТИЛИ ==================== */
+
+        @media (max-width: 768px) {
+            .content-filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-group {
+                min-width: auto;
+            }
+            
+            .media-modal .modal-content.media-content {
+                margin: 1rem;
+                width: calc(100vw - 2rem);
+            }
+            
+            .audio-player {
+                padding: 1rem;
+            }
+            
+            .audio-cover {
+                width: 150px;
+                height: 150px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-card-overlay {
+                padding: 1rem;
+            }
+            
+            .nav-card-icon {
+                font-size: 2rem;
+            }
+            
+            .nav-card-overlay h3 {
+                font-size: 1.1rem;
+            }
+            
+            .content-filters {
+                padding: 1rem;
+            }
+        }
+
+        /* ==================== СТИЛИ ДЛЯ ДЕТАЛЬНЫХ СТРАНИЦ ==================== */
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .back-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .detail-container {
+            background: var(--bg-card);
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .detail-hero {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .detail-hero {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .hero-image {
+            position: relative;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            height: 300px;
+        }
+
+        .hero-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .hero-image:hover .image-overlay {
+            opacity: 1;
+        }
+
+        .course-meta-large {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .category-badge, .level-badge, .rating-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .category-badge {
+            background: var(--accent);
+            color: white;
+        }
+
+        .level-badge {
+            background: var(--success);
+            color: white;
+        }
+
+        .rating-badge {
+            background: var(--warning);
+            color: white;
+        }
+
+        .course-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .course-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .discount-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .original-price {
+            color: var(--text-secondary);
+            text-decoration: line-through;
+            font-size: 1.1rem;
+        }
+
+        .discount-amount {
+            background: var(--error);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+        }
+
+        /* Стили для преподавателей */
+        .instructors-section {
+            padding: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .instructors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .instructor-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .instructor-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        .instructor-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .instructor-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .instructor-info {
+            flex: 1;
+        }
+
+        .instructor-info h4 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem;
+        }
+
+        .instructor-specialization {
+            color: var(--accent);
+            font-size: 0.9rem;
+            margin: 0 0 0.25rem 0;
+        }
+
+        .instructor-role {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .instructor-experience {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        /* Табы */
+        .detail-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-btn:hover,
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 2rem;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Модули курса */
+        .module-item {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .module-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .module-number {
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .module-duration {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .module-title {
+            font-weight: bold;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .module-lessons {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .lesson {
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        /* Отзывы */
+        .review-item {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .reviewer-info {
+            flex: 1;
+        }
+
+        .reviewer-name {
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
+        .reviewer-role {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .review-rating {
+            color: var(--warning);
+        }
+
+        .review-text {
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .review-date {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Секция покупки */
+        .purchase-section {
+            background: var(--bg-card);
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+            padding: 2rem;
+        }
+
+        .pricing-card {
+            max-width: 400px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .pricing-header {
+            margin-bottom: 2rem;
+        }
+
+        .discount-timer {
+            background: var(--error);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            display: inline-block;
+            margin-top: 1rem;
+        }
+
+        .price-display {
+            margin-bottom: 2rem;
+        }
+
+        .current-price {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .features-list {
+            margin-bottom: 2rem;
+        }
+
+        .feature-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .feature-item:last-child {
+            border-bottom: none;
+        }
+
+        .purchase-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .guarantee-badge {
+            color: var(--success);
+            font-size: 0.875rem;
+        }
+
+        /* Детальная страница преподавателя */
+        .instructor-detail {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+
+        .instructor-avatar-large {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .instructor-avatar-large img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .instructor-detail-info {
+            flex: 1;
+        }
+
+        .instructor-detail-info h2 {
+            margin: 0 0 0.5rem 0;
+        }
+
+        .instructor-stats {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .instructor-stats .stat {
+            background: var(--bg-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            margin: 0;
+        }
+
+        .instructor-bio {
+            margin: 1.5rem 0;
+        }
+
+        .instructor-bio h4 {
+            margin-bottom: 0.5rem;
+        }
+
+        .instructor-bio p {
+            line-height: 1.6;
+        }
+
+        .instructor-social {
+            margin-top: 1.5rem;
+        }
+
+        .social-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .social-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: all 0.3s;
+        }
+
+        .social-link:hover {
+            background: var(--accent);
+            color: white;
+        }    
+
+        /* Детальная страница преподавателя - дополнительные стили */
+        .instructor-hero {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 2rem;
+            padding: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .instructor-hero {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+        }
+
+        .instructor-hero-content h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2rem;
+        }
+
+        .instructor-specialization-large {
+            color: var(--accent);
+            font-size: 1.2rem;
+            margin: 0 0 2rem 0;
+            font-weight: 500;
+        }
+
+        .instructor-stats-large {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .instructor-stat-large {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .instructor-contacts {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border-radius: 0.5rem;
+        }
+
+        .contact-icon {
+            font-size: 1.2rem;
+        }
+
+        .contact-text {
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .contact-text:hover {
+            color: var(--accent);
+        }
+
+        .instructor-bio-section {
+            padding: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .instructor-bio-content {
+            line-height: 1.7;
+        }
+
+        .instructor-bio-content p {
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .instructor-achievements {
+            margin-top: 2rem;
+        }
+
+        .instructor-achievements h4 {
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .instructor-achievements ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .instructor-achievements li {
+            padding: 0.5rem 0;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .instructor-achievements li:before {
+            content: '✅';
+            position: absolute;
+            left: 0;
+        }
+
+        .instructor-courses-section {
+            padding: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .courses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }  
 
         /* Стили для детальных страниц стримов и видео */
-.stream-player-section {
-    padding: 2rem;
-}
+        .stream-player-section {
+            padding: 2rem;
+        }
 
-.video-player {
-    position: relative;
-    border-radius: 0.75rem;
-    overflow: hidden;
-    height: 400px;
-    background: #000;
-}
+        .video-player {
+            position: relative;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            height: 400px;
+            background: #000;
+        }
 
-.video-player img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0.7;
-}
+        .video-player img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.7;
+        }
 
-.player-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.5);
-}
+        .player-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.5);
+        }
 
-.live-indicator {
-    position: absolute;
-    top: 1rem;
-    left: 1rem;
-    background: var(--error);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 2rem;
-    font-size: 0.875rem;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
+        .live-indicator {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: var(--error);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
 
-.live-dot {
-    width: 8px;
-    height: 8px;
-    background: white;
-    border-radius: 50%;
-    animation: pulse 1.5s infinite;
-}
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
 
-.stream-info {
-    padding: 2rem;
-    border-top: 1px solid var(--border);
-}
+        .stream-info {
+            padding: 2rem;
+            border-top: 1px solid var(--border);
+        }
 
-.stream-meta {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
+        .stream-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
 
-.meta-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
 
-.meta-label {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-}
+        .meta-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
 
-.meta-value {
-    font-weight: 500;
-}
+        .meta-value {
+            font-weight: 500;
+        }
 
-.meta-value.live {
-    color: var(--error);
-}
+        .meta-value.live {
+            color: var(--error);
+        }
 
-.meta-value.recorded {
-    color: var(--success);
-}
+        .meta-value.recorded {
+            color: var(--success);
+        }
 
-.stream-description {
-    margin-bottom: 2rem;
-}
+        .stream-description {
+            margin-bottom: 2rem;
+        }
 
-.stream-description h3 {
-    margin-bottom: 1rem;
-}
+        .stream-description h3 {
+            margin-bottom: 1rem;
+        }
 
-.stream-description p {
-    line-height: 1.6;
-    color: var(--text-secondary);
-}
+        .stream-description p {
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
 
-.stream-actions {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
+        .stream-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
     </style>
 </head>
 <body>
@@ -2626,7 +2815,7 @@
 
     <!-- Основное приложение -->
     <div id="app">
-               <!-- Bottom Navigation -->
+        <!-- Bottom Navigation -->
         <nav class="bottom-nav">
             <div class="nav-scroll-container">
                 <button class="nav-btn active" data-page="home">
@@ -2716,17 +2905,995 @@
         </footer>
     </div>
 
-    <script src="/webapp/app.js"></script>
-    
     <script>
-        window.addEventListener('error', function(event) {
-            console.error('Global error:', event.error);
-        });
-        
-        window.addEventListener('unhandledrejection', function(event) {
-            console.error('Unhandled promise rejection:', event.reason);
-        });
+        // Основной класс приложения
+        class AcademyApp {
+            constructor() {
+                this.currentPage = 'home';
+                this.favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+                this.userData = JSON.parse(localStorage.getItem('userData')) || {
+                    name: 'Доктор Иванов',
+                    level: 'Новичок',
+                    exp: 45,
+                    nextLevelExp: 100,
+                    stats: {
+                        courses: 3,
+                        hours: 12,
+                        certificates: 1,
+                        streak: 7
+                    }
+                };
+            }
 
+            async init() {
+                console.log('🚀 Инициализация Академии АНБ...');
+                
+                // Инициализация Telegram WebApp
+                if (window.Telegram && Telegram.WebApp) {
+                    Telegram.WebApp.ready();
+                    Telegram.WebApp.expand();
+                    console.log('✅ Telegram WebApp инициализирован');
+                }
+
+                // Инициализация навигации
+                this.initNavigation();
+                
+                // Загрузка начальной страницы
+                await this.renderPage('home');
+                
+                // Обновление счетчика избранного
+                this.updateFavoritesCount();
+                
+                console.log('✅ Приложение готово к работе');
+            }
+
+            initNavigation() {
+                const navButtons = document.querySelectorAll('.nav-btn');
+                navButtons.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const page = btn.getAttribute('data-page');
+                        this.renderPage(page);
+                        
+                        // Обновление активного состояния
+                        navButtons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                    });
+                });
+            }
+
+            async renderPage(page) {
+                this.currentPage = page;
+                const mainContent = document.getElementById('mainContent');
+                
+                // Показ загрузки
+                mainContent.innerHTML = '<div class="loading-spinner"></div>';
+                
+                try {
+                    let content = '';
+                    
+                    switch(page) {
+                        case 'home':
+                            content = this.renderHomePage();
+                            break;
+                        case 'courses':
+                            content = this.renderCoursesPage();
+                            break;
+                        case 'podcasts':
+                            content = this.renderPodcastsPage();
+                            break;
+                        case 'streams':
+                            content = this.renderStreamsPage();
+                            break;
+                        case 'videos':
+                            content = this.renderVideosPage();
+                            break;
+                        case 'materials':
+                            content = this.renderMaterialsPage();
+                            break;
+                        case 'events':
+                            content = this.renderEventsPage();
+                            break;
+                        case 'favorites':
+                            content = this.renderFavoritesPage();
+                            break;
+                        case 'profile':
+                            content = this.renderProfilePage();
+                            break;
+                        default:
+                            content = this.renderHomePage();
+                    }
+                    
+                    mainContent.innerHTML = content;
+                    this.attachPageEventListeners(page);
+                    
+                } catch (error) {
+                    console.error('Ошибка рендеринга страницы:', error);
+                    mainContent.innerHTML = this.renderErrorPage('Не удалось загрузить страницу');
+                }
+            }
+
+            renderHomePage() {
+                return `
+                    <div class="home-page">
+                        <section class="hero-section">
+                            <div class="hero-content">
+                                <h1>Академия АНБ</h1>
+                                <div class="hero-subtitle">Современное образование для врачей</div>
+                                <div class="hero-stats">
+                                    <div class="hero-stat">
+                                        <div class="stat-value">150+</div>
+                                        <div class="stat-label">Курсов</div>
+                                    </div>
+                                    <div class="hero-stat">
+                                        <div class="stat-value">5,000+</div>
+                                        <div class="stat-label">Врачей</div>
+                                    </div>
+                                    <div class="hero-stat">
+                                        <div class="stat-value">98%</div>
+                                        <div class="stat-label">Рекомендуют</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div class="main-navigation-grid two-columns">
+                            <div class="nav-card-large" data-page="courses">
+                                <div class="nav-card-image">
+                                    <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400&h=250&fit=crop" alt="Курсы">
+                                    <div class="nav-card-overlay">
+                                        <div class="nav-card-icon">📚</div>
+                                        <h3>Курсы</h3>
+                                        <p>Системное обучение с сертификатами</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="nav-card-large" data-page="podcasts">
+                                <div class="nav-card-image">
+                                    <img src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=250&fit=crop" alt="Подкасты">
+                                    <div class="nav-card-overlay">
+                                        <div class="nav-card-icon">🎧</div>
+                                        <h3>Подкасты</h3>
+                                        <p>Аудиоуроки для обучения в дороге</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="nav-card-large" data-page="streams">
+                                <div class="nav-card-image">
+                                    <img src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop" alt="Эфиры">
+                                    <div class="nav-card-overlay">
+                                        <div class="nav-card-icon">📹</div>
+                                        <h3>Эфиры</h3>
+                                        <p>Прямые трансляции с экспертами</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="nav-card-large" data-page="materials">
+                                <div class="nav-card-image">
+                                    <img src="https://images.unsplash.com/photo-1589998059171-988d887df646?w=400&h=250&fit=crop" alt="Материалы">
+                                    <div class="nav-card-overlay">
+                                        <div class="nav-card-icon">📋</div>
+                                        <h3>Материалы</h3>
+                                        <p>Презентации, статьи и методички</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <section class="progress-section">
+                            <h3 class="section-title">📊 Ваш прогресс</h3>
+                            <div class="progress-cards">
+                                <div class="progress-card">
+                                    <div class="progress-icon">📚</div>
+                                    <div>
+                                        <div class="progress-value">${this.userData.stats.courses}</div>
+                                        <div class="progress-label">Курсов</div>
+                                    </div>
+                                </div>
+                                <div class="progress-card">
+                                    <div class="progress-icon">⏱️</div>
+                                    <div>
+                                        <div class="progress-value">${this.userData.stats.hours}</div>
+                                        <div class="progress-label">Часов</div>
+                                    </div>
+                                </div>
+                                <div class="progress-card">
+                                    <div class="progress-icon">📜</div>
+                                    <div>
+                                        <div class="progress-value">${this.userData.stats.certificates}</div>
+                                        <div class="progress-label">Сертификатов</div>
+                                    </div>
+                                </div>
+                                <div class="progress-card">
+                                    <div class="progress-icon">🔥</div>
+                                    <div>
+                                        <div class="progress-value">${this.userData.stats.streak}</div>
+                                        <div class="progress-label">Дней подряд</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="level-progress">
+                                <div class="level-info">
+                                    <div class="level-name">${this.userData.level}</div>
+                                    <div class="level-exp">${this.userData.exp}/${this.userData.nextLevelExp} EXP</div>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${(this.userData.exp / this.userData.nextLevelExp) * 100}%"></div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section>
+                            <div class="section-header">
+                                <h3 class="section-title">🎯 Рекомендуемые курсы</h3>
+                                <button class="btn btn-outline btn-small" onclick="app.renderPage('courses')">Все курсы</button>
+                            </div>
+                            <div class="content-grid">
+                                ${this.renderCourseCards().slice(0, 3)}
+                            </div>
+                        </section>
+                    </div>
+                `;
+            }
+
+            renderCoursesPage() {
+                return `
+                    <div class="page">
+                        <div class="detail-header">
+                            <button class="back-btn" onclick="app.renderPage('home')">← Назад</button>
+                            <h1>📚 Все курсы</h1>
+                        </div>
+
+                        <div class="content-filters">
+                            <div class="filter-group">
+                                <label for="categoryFilter">Категория</label>
+                                <select id="categoryFilter" class="filter-select">
+                                    <option value="all">Все категории</option>
+                                    <option value="therapy">Терапия</option>
+                                    <option value="surgery">Хирургия</option>
+                                    <option value="pediatrics">Педиатрия</option>
+                                    <option value="neurology">Неврология</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="levelFilter">Уровень</label>
+                                <select id="levelFilter" class="filter-select">
+                                    <option value="all">Все уровни</option>
+                                    <option value="beginner">Начинающий</option>
+                                    <option value="intermediate">Продвинутый</option>
+                                    <option value="expert">Эксперт</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="formatFilter">Формат</label>
+                                <select id="formatFilter" class="filter-select">
+                                    <option value="all">Все форматы</option>
+                                    <option value="video">Видео</option>
+                                    <option value="interactive">Интерактивный</option>
+                                    <option value="text">Текстовый</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="content-grid">
+                            ${this.renderCourseCards()}
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderCourseCards() {
+                const courses = [
+                    {
+                        id: 1,
+                        title: 'Современная кардиология',
+                        description: 'Актуальные подходы в диагностике и лечении сердечно-сосудистых заболеваний',
+                        category: 'Кардиология',
+                        level: 'Продвинутый',
+                        duration: '12 часов',
+                        rating: '4.9',
+                        price: 4900,
+                        originalPrice: 6900,
+                        image: 'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400&h=250&fit=crop',
+                        featured: true
+                    },
+                    {
+                        id: 2,
+                        title: 'Неврология для терапевтов',
+                        description: 'Основные неврологические синдромы и их диагностика',
+                        category: 'Неврология',
+                        level: 'Начинающий',
+                        duration: '8 часов',
+                        rating: '4.7',
+                        price: 2900,
+                        originalPrice: 3900,
+                        image: 'https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=400&h=250&fit=crop',
+                        discount: true
+                    },
+                    {
+                        id: 3,
+                        title: 'Педиатрическая пульмонология',
+                        description: 'Диагностика и лечение заболеваний органов дыхания у детей',
+                        category: 'Педиатрия',
+                        level: 'Эксперт',
+                        duration: '16 часов',
+                        rating: '4.8',
+                        price: 5900,
+                        originalPrice: 7900,
+                        image: 'https://images.unsplash.com/photo-1584820927498-cfe5211fd8bf?w=400&h=250&fit=crop'
+                    }
+                ];
+
+                return courses.map(course => `
+                    <div class="content-card" data-id="${course.id}">
+                        <div class="card-image">
+                            <img src="${course.image}" alt="${course.title}">
+                            <div class="card-overlay">
+                                <button class="favorite-btn ${this.favorites.includes(course.id) ? 'active' : ''}" 
+                                        onclick="app.toggleFavorite(${course.id})">
+                                    ❤️
+                                </button>
+                                <button class="preview-btn" onclick="app.previewContent(${course.id})">
+                                    👁️
+                                </button>
+                            </div>
+                            ${course.featured ? '<div class="featured-badge">Рекомендуем</div>' : ''}
+                            ${course.discount ? '<div class="discount-badge">-30%</div>' : ''}
+                        </div>
+                        <div class="card-content">
+                            <div class="card-category">${course.category}</div>
+                            <h3 class="card-title">${course.title}</h3>
+                            <p class="card-description">${course.description}</p>
+                            <div class="card-meta">
+                                <div class="meta-item">📊 ${course.level}</div>
+                                <div class="meta-item">⏱️ ${course.duration}</div>
+                                <div class="meta-item">⭐ ${course.rating}</div>
+                            </div>
+                            <div class="card-footer">
+                                <div class="price-section">
+                                    ${course.originalPrice ? `<span class="price-original">${course.originalPrice}₽</span>` : ''}
+                                    <span class="price-current">${course.price}₽</span>
+                                </div>
+                                <button class="btn btn-primary" onclick="app.purchaseCourse(${course.id})">
+                                    Купить
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            renderPodcastsPage() {
+                return `
+                    <div class="page">
+                        <div class="detail-header">
+                            <button class="back-btn" onclick="app.renderPage('home')">← Назад</button>
+                            <h1>🎧 Подкасты</h1>
+                        </div>
+
+                        <div class="content-filters">
+                            <div class="filter-group">
+                                <label for="podcastCategory">Категория</label>
+                                <select id="podcastCategory" class="filter-select">
+                                    <option value="all">Все категории</option>
+                                    <option value="interviews">Интервью</option>
+                                    <option value="clinical">Клинические случаи</option>
+                                    <option value="news">Новости медицины</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="podcastDuration">Длительность</label>
+                                <select id="podcastDuration" class="filter-select">
+                                    <option value="all">Любая</option>
+                                    <option value="short">До 15 мин</option>
+                                    <option value="medium">15-45 мин</option>
+                                    <option value="long">45+ мин</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="content-grid">
+                            <div class="content-card">
+                                <div class="card-image">
+                                    <img src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=250&fit=crop" alt="Подкаст">
+                                    <div class="card-overlay">
+                                        <button class="favorite-btn" onclick="app.toggleFavorite(101)">❤️</button>
+                                        <button class="play-btn" onclick="app.playAudio(101)">▶️</button>
+                                    </div>
+                                </div>
+                                <div class="card-content">
+                                    <div class="card-category">Интервью</div>
+                                    <h3 class="card-title">Инновации в кардиохирургии</h3>
+                                    <p class="card-description">Беседа с ведущим кардиохирургом о новых технологиях</p>
+                                    <div class="card-meta">
+                                        <div class="meta-item">🎙️ Др. Петров</div>
+                                        <div class="meta-item">⏱️ 25 мин</div>
+                                    </div>
+                                    <div class="card-footer">
+                                        <button class="btn btn-outline" onclick="app.downloadContent(101)">
+                                            Скачать
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderStreamsPage() {
+                return `
+                    <div class="page">
+                        <div class="detail-header">
+                            <button class="back-btn" onclick="app.renderPage('home')">← Назад</button>
+                            <h1>📹 Эфиры</h1>
+                        </div>
+
+                        <div class="content-filters">
+                            <div class="filter-group">
+                                <label for="streamStatus">Статус</label>
+                                <select id="streamStatus" class="filter-select">
+                                    <option value="all">Все</option>
+                                    <option value="live">Прямой эфир</option>
+                                    <option value="upcoming">Скоро</option>
+                                    <option value="recorded">Запись</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="content-grid">
+                            <div class="content-card">
+                                <div class="card-image">
+                                    <img src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop" alt="Эфир">
+                                    <div class="card-overlay">
+                                        <button class="favorite-btn" onclick="app.toggleFavorite(201)">❤️</button>
+                                        <button class="play-btn" onclick="app.playStream(201)">▶️</button>
+                                    </div>
+                                    <div class="live-badge">
+                                        <div class="live-dot"></div>
+                                        LIVE
+                                    </div>
+                                </div>
+                                <div class="card-content">
+                                    <div class="card-category">Хирургия</div>
+                                    <h3 class="card-title">Малоинвазивная хирургия: новые горизонты</h3>
+                                    <p class="card-description">Прямой эфир с демонстрацией операционной техники</p>
+                                    <div class="card-meta">
+                                        <div class="meta-item">👨‍⚕️ Проф. Сидоров</div>
+                                        <div class="meta-item">👥 245 онлайн</div>
+                                    </div>
+                                    <div class="card-footer">
+                                        <button class="btn btn-primary" onclick="app.joinStream(201)">
+                                            Присоединиться
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderVideosPage() {
+                return `
+                    <div class="page">
+                        <div class="detail-header">
+                            <button class="back-btn" onclick="app.renderPage('home')">← Назад</button>
+                            <h1>🎯 Видеоуроки</h1>
+                        </div>
+
+                        <div class="content-grid">
+                            ${this.renderVideoCards()}
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderVideoCards() {
+                const videos = [
+                    {
+                        id: 301,
+                        title: 'ЭКГ для начинающих',
+                        description: 'Основы чтения и интерпретации электрокардиограмм',
+                        duration: '15 мин',
+                        instructor: 'Др. Козлова',
+                        image: 'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400&h=250&fit=crop'
+                    },
+                    {
+                        id: 302,
+                        title: 'Неврологический осмотр',
+                        description: 'Практическое руководство по неврологическому обследованию',
+                        duration: '22 мин',
+                        instructor: 'Проф. Иванов',
+                        image: 'https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=400&h=250&fit=crop'
+                    }
+                ];
+
+                return videos.map(video => `
+                    <div class="content-card">
+                        <div class="card-image">
+                            <img src="${video.image}" alt="${video.title}">
+                            <div class="card-overlay">
+                                <button class="favorite-btn" onclick="app.toggleFavorite(${video.id})">❤️</button>
+                                <button class="play-btn" onclick="app.playVideo(${video.id})">▶️</button>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-title">${video.title}</h3>
+                            <p class="card-description">${video.description}</p>
+                            <div class="card-meta">
+                                <div class="meta-item">🎬 ${video.duration}</div>
+                                <div class="meta-item">👨‍⚕️ ${video.instructor}</div>
+                            </div>
+                            <div class="card-footer">
+                                <button class="btn btn-primary" onclick="app.playVideo(${video.id})">
+                                    Смотреть
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            renderMaterialsPage() {
+                return `
+                    <div class="page">
+                        <div class="detail-header">
+                            <button class="back-btn" onclick="app.renderPage('home')">← Назад</button>
+                            <h1>📋 Материалы</h1>
+                        </div>
+
+                        <div class="content-filters">
+                            <div class="filter-group">
+                                <label for="materialType">Тип</label>
+                                <select id="materialType" class="filter-select">
+                                    <option value="all">Все</option>
+                                    <option value="pdf">PDF</option>
+                                    <option value="presentation">Презентации</option>
+                                    <option value="article">Статьи</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="content-grid">
+                            <div class="content-card">
+                                <div class="card-content">
+                                    <div class="card-category">PDF • Клинические рекомендации</div>
+                                    <h3 class="card-title">Артериальная гипертензия 2024</h3>
+                                    <p class="card-description">Актуальные клинические рекомендации по диагностике и лечению АГ</p>
+                                    <div class="card-meta">
+                                        <div class="meta-item">📄 45 страниц</div>
+                                        <div class="meta-item">🔄 Версия 3.2</div>
+                                    </div>
+                                    <div class="card-footer">
+                                        <button class="btn btn-outline" onclick="app.downloadMaterial(401)">
+                                            📥 Скачать
+                                        </button>
+                                        <button class="btn btn-primary" onclick="app.previewMaterial(401)">
+                                            👁️ Просмотр
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderEventsPage() {
+                return `
+                    <div class="page">
+                        <div class="detail-header">
+                            <button class="back-btn" onclick="app.renderPage('home')">← Назад</button>
+                            <h1>🗺️ Мероприятия</h1>
+                        </div>
+
+                        <div class="content-grid">
+                            <div class="content-card">
+                                <div class="card-image">
+                                    <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=250&fit=crop" alt="Конференция">
+                                    <div class="card-overlay">
+                                        <button class="favorite-btn" onclick="app.toggleFavorite(501)">❤️</button>
+                                        <button class="preview-btn" onclick="app.viewEventDetails(501)">👁️</button>
+                                    </div>
+                                </div>
+                                <div class="card-content">
+                                    <div class="card-category">Конференция • Онлайн</div>
+                                    <h3 class="card-title">Современная терапия 2024</h3>
+                                    <p class="card-description">Ежегодная международная конференция по терапии</p>
+                                    <div class="card-meta">
+                                        <div class="meta-item">📅 15 декабря</div>
+                                        <div class="meta-item">⏰ 10:00 МСК</div>
+                                        <div class="meta-item">👥 200+ участников</div>
+                                    </div>
+                                    <div class="card-footer">
+                                        <button class="btn btn-primary" onclick="app.registerForEvent(501)">
+                                            Зарегистрироваться
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderFavoritesPage() {
+                if (this.favorites.length === 0) {
+                    return `
+                        <div class="page">
+                            <div class="detail-header">
+                                <button class="back-btn" onclick="app.renderPage('home')">← Назад</button>
+                                <h1>❤️ Избранное</h1>
+                            </div>
+                            <div class="empty-state">
+                                <div class="empty-icon">❤️</div>
+                                <div class="empty-title">Пока пусто</div>
+                                <div class="empty-description">Добавляйте курсы, видео и материалы в избранное</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="page">
+                        <div class="detail-header">
+                            <button class="back-btn" onclick="app.renderPage('home')">← Назад</button>
+                            <h1>❤️ Избранное</h1>
+                        </div>
+                        <div class="content-grid">
+                            <!-- Здесь будут отображены избранные элементы -->
+                            <div class="empty-state">
+                                <div class="empty-icon">📚</div>
+                                <div class="empty-title">Избранные курсы</div>
+                                <div class="empty-description">Вы добавили ${this.favorites.length} элементов в избранное</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderProfilePage() {
+                return `
+                    <div class="page">
+                        <div class="detail-header">
+                            <button class="back-btn" onclick="app.renderPage('home')">← Назад</button>
+                            <h1>👤 Профиль</h1>
+                        </div>
+
+                        <div class="profile-header">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="width: 80px; height: 80px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+                                    👨‍⚕️
+                                </div>
+                                <div>
+                                    <h2>${this.userData.name}</h2>
+                                    <p style="color: var(--text-secondary);">Врач-терапевт</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="profile-stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon">📚</div>
+                                <div>
+                                    <div class="stat-value">${this.userData.stats.courses}</div>
+                                    <div class="stat-label">Курсов</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">⏱️</div>
+                                <div>
+                                    <div class="stat-value">${this.userData.stats.hours}</div>
+                                    <div class="stat-label">Часов</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">📜</div>
+                                <div>
+                                    <div class="stat-value">${this.userData.stats.certificates}</div>
+                                    <div class="stat-label">Сертификатов</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🔥</div>
+                                <div>
+                                    <div class="stat-value">${this.userData.stats.streak}</div>
+                                    <div class="stat-label">Дней подряд</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="current-level">
+                            <div class="level-badge">${this.userData.level}</div>
+                            <div class="level-description">
+                                ${this.userData.exp} из ${this.userData.nextLevelExp} EXP до следующего уровня
+                            </div>
+                            <div class="progress-bar" style="margin-top: 1rem;">
+                                <div class="progress-fill" style="width: ${(this.userData.exp / this.userData.nextLevelExp) * 100}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="subscription-info-section">
+                            <div class="no-subscription">
+                                <h4>🔒 Премиум доступ</h4>
+                                <p>Получите доступ ко всем курсам и материалам</p>
+                                <button class="btn btn-primary" onclick="app.showSubscriptionModal()">
+                                    Оформить подписку
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="btn btn-outline action-btn" onclick="app.showSettings()">
+                                <span style="font-size: 1.5rem;">⚙️</span>
+                                Настройки
+                            </button>
+                            <button class="btn btn-outline action-btn" onclick="app.showHelp()">
+                                <span style="font-size: 1.5rem;">❓</span>
+                                Помощь
+                            </button>
+                            <button class="btn btn-outline action-btn" onclick="app.showAbout()">
+                                <span style="font-size: 1.5rem;">ℹ️</span>
+                                О приложении
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderErrorPage(message) {
+                return `
+                    <div class="empty-state">
+                        <div class="empty-icon">⚠️</div>
+                        <div class="empty-title">Ошибка</div>
+                        <div class="empty-description">${message}</div>
+                        <button class="btn btn-primary" onclick="app.renderPage('home')" style="margin-top: 1rem;">
+                            На главную
+                        </button>
+                    </div>
+                `;
+            }
+
+            attachPageEventListeners(page) {
+                // Обработчики для навигационных карточек
+                if (page === 'home') {
+                    const navCards = document.querySelectorAll('.nav-card-large');
+                    navCards.forEach(card => {
+                        card.addEventListener('click', () => {
+                            const targetPage = card.getAttribute('data-page');
+                            this.renderPage(targetPage);
+                        });
+                    });
+                }
+
+                // Обработчики для фильтров
+                const filterSelects = document.querySelectorAll('.filter-select');
+                filterSelects.forEach(select => {
+                    select.addEventListener('change', (e) => {
+                        console.log('Фильтр изменен:', e.target.id, e.target.value);
+                        // Здесь будет логика фильтрации контента
+                    });
+                });
+            }
+
+            // Методы для работы с избранным
+            toggleFavorite(id) {
+                const index = this.favorites.indexOf(id);
+                if (index > -1) {
+                    this.favorites.splice(index, 1);
+                } else {
+                    this.favorites.push(id);
+                }
+                localStorage.setItem('favorites', JSON.stringify(this.favorites));
+                this.updateFavoritesCount();
+                
+                // Обновление UI
+                const favoriteBtn = document.querySelector(`.favorite-btn[onclick="app.toggleFavorite(${id})"]`);
+                if (favoriteBtn) {
+                    favoriteBtn.classList.toggle('active');
+                }
+                
+                this.showNotification(
+                    index > -1 ? 'Удалено из избранного' : 'Добавлено в избранное',
+                    'success'
+                );
+            }
+
+            updateFavoritesCount() {
+                const favoritesCount = document.getElementById('favoritesCount');
+                if (favoritesCount) {
+                    favoritesCount.textContent = this.favorites.length;
+                }
+            }
+
+            // Методы для работы с контентом
+            previewContent(id) {
+                this.showNotification('Просмотр контента ' + id, 'info');
+            }
+
+            playAudio(id) {
+                this.showMediaModal('audio', {
+                    title: 'Инновации в кардиохирургии',
+                    src: '#',
+                    description: 'Беседа с ведущим кардиохирургом о новых технологиях'
+                });
+            }
+
+            playVideo(id) {
+                this.showMediaModal('video', {
+                    title: 'Видеоурок ' + id,
+                    src: '#',
+                    description: 'Обучающий видеоурок'
+                });
+            }
+
+            playStream(id) {
+                this.showMediaModal('stream', {
+                    title: 'Прямой эфир',
+                    src: '#',
+                    description: 'Малоинвазивная хирургия: новые горизонты'
+                });
+            }
+
+            downloadContent(id) {
+                this.showNotification('Загрузка начата', 'success');
+            }
+
+            purchaseCourse(id) {
+                this.showNotification('Курс добавлен в корзину', 'success');
+            }
+
+            joinStream(id) {
+                this.showNotification('Присоединяемся к эфиру...', 'info');
+            }
+
+            downloadMaterial(id) {
+                this.showNotification('Материал скачивается', 'success');
+            }
+
+            previewMaterial(id) {
+                this.showMediaModal('pdf', {
+                    title: 'Артериальная гипертензия 2024',
+                    src: '#',
+                    description: 'Клинические рекомендации'
+                });
+            }
+
+            registerForEvent(id) {
+                this.showNotification('Регистрация на мероприятие', 'success');
+            }
+
+            viewEventDetails(id) {
+                this.showNotification('Детали мероприятия ' + id, 'info');
+            }
+
+            // Модальные окна
+            showMediaModal(type, content) {
+                const modal = document.createElement('div');
+                modal.className = 'media-modal active';
+                modal.innerHTML = `
+                    <div class="modal-overlay" onclick="this.parentElement.remove()"></div>
+                    <div class="modal-content media-content">
+                        <div class="modal-header">
+                            <h3>${content.title}</h3>
+                            <button class="modal-close" onclick="this.closest('.media-modal').remove()">×</button>
+                        </div>
+                        <div class="modal-body">
+                            ${this.renderMediaPlayer(type, content)}
+                        </div>
+                        <div class="modal-actions">
+                            <button class="btn btn-outline" onclick="this.closest('.media-modal').remove()">Закрыть</button>
+                            ${type !== 'stream' ? `<button class="btn btn-primary" onclick="app.downloadContent(${content.id || 0})">Скачать</button>` : ''}
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+
+            renderMediaPlayer(type, content) {
+                switch(type) {
+                    case 'audio':
+                        return `
+                            <div class="audio-player">
+                                <div class="audio-cover">
+                                    <img src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=300&h=300&fit=crop" alt="${content.title}">
+                                </div>
+                                <div class="audio-controls">
+                                    <audio controls style="width: 100%">
+                                        <source src="${content.src}" type="audio/mpeg">
+                                        Ваш браузер не поддерживает аудио элементы.
+                                    </audio>
+                                </div>
+                                <div class="media-description">
+                                    <h4>Описание</h4>
+                                    <p>${content.description}</p>
+                                </div>
+                            </div>
+                        `;
+                    case 'video':
+                    case 'stream':
+                        return `
+                            <div class="video-container">
+                                <div style="background: #000; color: white; padding: 2rem; text-align: center; border-radius: 0.5rem;">
+                                    <div style="font-size: 3rem; margin-bottom: 1rem;">🎬</div>
+                                    <p>Видеоплеер</p>
+                                    <p style="opacity: 0.7; font-size: 0.9rem;">Контент загружается...</p>
+                                </div>
+                            </div>
+                            <div class="media-description">
+                                <h4>Описание</h4>
+                                <p>${content.description}</p>
+                            </div>
+                        `;
+                    case 'pdf':
+                        return `
+                            <div class="file-viewer">
+                                <div class="file-icon">📄</div>
+                                <div class="file-info">
+                                    <h4>${content.title}</h4>
+                                    <p>PDF документ • 2.4 MB</p>
+                                </div>
+                                <div style="background: #f5f5f5; padding: 2rem; border-radius: 0.5rem; color: #333; text-align: center; margin-top: 1rem;">
+                                    <p>Для просмотра PDF файлов скачайте материал</p>
+                                    <button class="btn btn-primary" onclick="app.downloadMaterial(1)" style="margin-top: 1rem;">
+                                        Скачать PDF
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    default:
+                        return `<p>Неизвестный тип медиа</p>`;
+                }
+            }
+
+            showSubscriptionModal() {
+                this.showNotification('Открывается выбор подписки...', 'info');
+            }
+
+            showSettings() {
+                this.showNotification('Настройки приложения', 'info');
+            }
+
+            showHelp() {
+                this.showNotification('Раздел помощи', 'info');
+            }
+
+            showAbout() {
+                this.showNotification('Академия АНБ v1.0', 'info');
+            }
+
+            // Уведомления
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = 'notification';
+                notification.style.background = type === 'error' ? 'var(--error)' : 
+                                              type === 'success' ? 'var(--success)' : 'var(--bg-card)';
+                
+                notification.innerHTML = `
+                    <div class="notification-content">
+                        <span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
+                        <span>${message}</span>
+                        <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+                    </div>
+                `;
+                
+                document.body.appendChild(notification);
+                
+                // Автоматическое удаление через 3 секунды
+                setTimeout(() => {
+                    if (notification.parentElement) {
+                        notification.remove();
+                    }
+                }, 3000);
+            }
+        }
+
+        // Инициализация приложения после загрузки DOM
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 DOM загружен, запуск приложения...');
             
