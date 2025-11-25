@@ -4225,148 +4225,144 @@
                     </div>
                 `;
                 
-                document.body.innerHTML = '';
-                document.body.appendChild(errorDiv);
-            }
+                  document.body.innerHTML = '';
+    document.body.appendChild(errorDiv);
+}
 
-            // ... остальные методы класса AcademyApp
+// ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ====================
 
-        }
+formatPrice(price) {
+    return new Intl.NumberFormat('ru-RU').format(Math.round(price)) + ' ₽';
+}
 
-    // ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ====================
+formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
 
-    formatPrice(price) {
-        return new Intl.NumberFormat('ru-RU').format(Math.round(price)) + ' ₽';
-    }
+isFavorite(contentId, contentType) {
+    return this.state.favorites[contentType]?.includes(contentId) || false;
+}
 
-    formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
+handleSearchInput(value) {
+    this.searchTerm = value;
+}
 
-    isFavorite(contentId, contentType) {
-        return this.state.favorites[contentType]?.includes(contentId) || false;
-    }
-
-    handleSearchInput(value) {
-        this.searchTerm = value;
-    }
-
-    handleSearchKeypress(event) {
-        if (event.key === 'Enter') {
-            this.performSearch();
-        }
-    }
-
-    performSearch() {
-        this.showNotification('Функция поиска в разработке', 'info');
-    }
-
-    openCourseDetail(courseId) {
-        this.showNotification(`Открытие курса ${courseId}`, 'info');
-    }
-
-    downloadMaterial(materialId) {
-        this.showNotification(`Скачивание материала ${materialId}`, 'info');
-    }
-
-    playStream(streamId) {
-        this.showNotification(`Воспроизведение эфира ${streamId}`, 'info');
-    }
-
-    registerForEvent(eventId) {
-        this.showNotification(`Регистрация на мероприятие ${eventId}`, 'info');
-    }
-
-    openChat(chatId) {
-        this.showNotification(`Открытие чата ${chatId}`, 'info');
-    }
-
-    showSettingsModal() {
-        this.showNotification('Открытие настроек', 'info');
-    }
-
-    renderSubPage(subPage) {
-        return `<div class="page"><h2>Подстраница: ${subPage}</h2></div>`;
+handleSearchKeypress(event) {
+    if (event.key === 'Enter') {
+        this.performSearch();
     }
 }
+
+performSearch() {
+    this.showNotification('Функция поиска в разработке', 'info');
+}
+
+openCourseDetail(courseId) {
+    this.showNotification(`Открытие курса ${courseId}`, 'info');
+}
+
+downloadMaterial(materialId) {
+    this.showNotification(`Скачивание материала ${materialId}`, 'info');
+}
+
+playStream(streamId) {
+    this.showNotification(`Воспроизведение эфира ${streamId}`, 'info');
+}
+
+registerForEvent(eventId) {
+    this.showNotification(`Регистрация на мероприятие ${eventId}`, 'info');
+}
+
+openChat(chatId) {
+    this.showNotification(`Открытие чата ${chatId}`, 'info');
+}
+
+showSettingsModal() {
+    this.showNotification('Открытие настроек', 'info');
+}
+
+renderSubPage(subPage) {
+    return `<div class="page"><h2>Подстраница: ${subPage}</h2></div>`;
+}
+}
 // конец класса AcademyApp
-        
-        // ==================== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ====================
 
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 DOM загружен, запуск приложения...');
+// ==================== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ====================
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM загружен, запуск приложения...');
+    
+    const loadingScreen = document.getElementById('loadingScreen');
+    const errorScreen = document.getElementById('errorScreen');
+    const appContainer = document.getElementById('app');
+    const retryButton = document.getElementById('retryButton');
+    
+    // Обработчики форм аутентификации
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        await window.app.login(email, password);
+    });
+
+    document.getElementById('registerForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const userData = {
+            firstName: document.getElementById('registerFirstName').value,
+            lastName: document.getElementById('registerLastName').value,
+            email: document.getElementById('registerEmail').value,
+            password: document.getElementById('registerPassword').value,
+            specialization: document.getElementById('registerSpecialization').value
+        };
+        await window.app.register(userData);
+    });
+
+    async function initializeApp() {
+        try {
+            // Имитация загрузки
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
-            const loadingScreen = document.getElementById('loadingScreen');
-            const errorScreen = document.getElementById('errorScreen');
-            const appContainer = document.getElementById('app');
-            const retryButton = document.getElementById('retryButton');
+            if (typeof AcademyApp === 'undefined') {
+                throw new Error('AcademyApp class not found');
+            }
             
-            // Обработчики форм аутентификации
-            document.getElementById('loginForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const email = document.getElementById('loginEmail').value;
-                const password = document.getElementById('loginPassword').value;
-                await window.app.login(email, password);
-            });
-
-            document.getElementById('registerForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const userData = {
-                    firstName: document.getElementById('registerFirstName').value,
-                    lastName: document.getElementById('registerLastName').value,
-                    email: document.getElementById('registerEmail').value,
-                    password: document.getElementById('registerPassword').value,
-                    specialization: document.getElementById('registerSpecialization').value
-                };
-                await window.app.register(userData);
-            });
-
-            async function initializeApp() {
-                try {
-                    // Имитация загрузки
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
-                    if (typeof AcademyApp === 'undefined') {
-                        throw new Error('AcademyApp class not found');
-                    }
-                    
-                    window.app = new AcademyApp();
-                    await window.app.init();
-                    
-                    if (loadingScreen) loadingScreen.style.display = 'none';
-                    if (errorScreen) errorScreen.style.display = 'none';
-                    if (appContainer) appContainer.style.display = 'block';
-                    
-                    console.log('✅ Приложение успешно инициализировано');
-                    
-                } catch (error) {
-                    console.error('❌ Ошибка инициализации:', error);
-                    
-                    if (loadingScreen) loadingScreen.style.display = 'none';
-                    if (errorScreen) {
-                        errorScreen.style.display = 'flex';
-                        const errorMessage = document.getElementById('errorMessage');
-                        if (errorMessage) {
-                            errorMessage.textContent = error.message || 'Не удалось загрузить приложение';
-                        }
-                    }
+            window.app = new AcademyApp();
+            await window.app.init();
+            
+            if (loadingScreen) loadingScreen.style.display = 'none';
+            if (errorScreen) errorScreen.style.display = 'none';
+            if (appContainer) appContainer.style.display = 'block';
+            
+            console.log('✅ Приложение успешно инициализировано');
+            
+        } catch (error) {
+            console.error('❌ Ошибка инициализации:', error);
+            
+            if (loadingScreen) loadingScreen.style.display = 'none';
+            if (errorScreen) {
+                errorScreen.style.display = 'flex';
+                const errorMessage = document.getElementById('errorMessage');
+                if (errorMessage) {
+                    errorMessage.textContent = error.message || 'Не удалось загрузить приложение';
                 }
             }
-            
-            if (retryButton) {
-                retryButton.addEventListener('click', function() {
-                    if (errorScreen) errorScreen.style.display = 'none';
-                    if (loadingScreen) loadingScreen.style.display = 'flex';
-                    setTimeout(initializeApp, 500);
-                });
-            }
-            
-            initializeApp();
+        }
+    }
+    
+    if (retryButton) {
+        retryButton.addEventListener('click', function() {
+            if (errorScreen) errorScreen.style.display = 'none';
+            if (loadingScreen) loadingScreen.style.display = 'flex';
+            setTimeout(initializeApp, 500);
         });
-    </script>
+    }
+    
+    initializeApp();
+});
+</script>
 </body>
 </html>
