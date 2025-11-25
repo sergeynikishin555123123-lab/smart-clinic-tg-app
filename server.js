@@ -2010,6 +2010,263 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
     }
 });
 
+// ==================== ПОЛУЧЕНИЕ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ ====================
+
+// Получение текущего пользователя (для фронтенда)
+app.get('/api/user', authenticateToken, async (req, res) => {
+    try {
+        const { rows: users } = await pool.query(`
+            SELECT u.id, u.email, u.first_name, u.last_name, u.phone, u.specialization, 
+                   u.city, u.country, u.bio, u.avatar_url, u.is_admin, u.is_super_admin,
+                   u.is_verified, u.subscription_end, u.created_at,
+                   up.level, up.experience, up.points, up.courses_completed, up.modules_completed,
+                   up.materials_watched, up.events_attended, up.total_study_time, up.streak_days
+            FROM users u
+            LEFT JOIN user_progress up ON u.id = up.user_id
+            WHERE u.id = $1
+        `, [req.user.userId]);
+
+        if (users.length === 0) {
+            return res.status(404).json({ success: false, error: 'Пользователь не найден' });
+        }
+
+        const user = users[0];
+
+        // Получаем активную подписку
+        const { rows: subscriptions } = await pool.query(`
+            SELECT s.*, sp.name as plan_name 
+            FROM subscriptions s
+            LEFT JOIN subscription_plans sp ON s.plan_id = sp.id
+            WHERE s.user_id = $1 AND s.status = 'active' AND s.ends_at > NOW()
+            ORDER BY s.created_at DESC
+            LIMIT 1
+        `, [req.user.userId]);
+
+        // Получаем избранное пользователя
+        const { rows: favorites } = await pool.query(`
+            SELECT content_type, COUNT(*) as count 
+            FROM favorites 
+            WHERE user_id = $1 
+            GROUP BY content_type
+        `, [req.user.userId]);
+
+        // Форматируем избранное для фронтенда
+        const favoritesObj = {
+            courses: [],
+            podcasts: [],
+            streams: [],
+            videos: [],
+            materials: [],
+            events: []
+        };
+
+        favorites.forEach(fav => {
+            if (favoritesObj.hasOwnProperty(fav.content_type)) {
+                // Здесь можно добавить логику для получения ID избранных элементов
+                // Пока возвращаем пустой массив с количеством
+                favoritesObj[fav.content_type] = Array.from({length: Math.min(fav.count, 10)}, (_, i) => i + 1);
+            }
+        });
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                email: user.email,
+                phone: user.phone,
+                specialization: user.specialization,
+                city: user.city,
+                country: user.country,
+                bio: user.bio,
+                avatarUrl: user.avatar_url,
+                isAdmin: user.is_admin,
+                isSuperAdmin: user.is_super_admin,
+                isVerified: user.is_verified,
+                hasActiveSubscription: subscriptions.length > 0,
+                subscriptionEnd: user.subscription_end,
+                joinDate: user.created_at,
+                favorites: favoritesObj,
+                progress: {
+                    level: user.level || 'Новичок',
+                    experience: user.experience || 0,
+                    points: user.points || 0,
+                    coursesCompleted: user.courses_completed || 0,
+                    modulesCompleted: user.modules_completed || 0,
+                    materialsWatched: user.materials_watched || 0,
+                    eventsAttended: user.events_attended || 0,
+                    studyHours: Math.floor((user.total_study_time || 0) / 60),
+                    weeklyHours: Math.floor((user.total_study_time || 0) / 60 / 4),
+                    streakDays: user.streak_days || 0
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Get user error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки пользователя' });
+    }
+});
+
+// ==================== ПОЛУЧЕНИЕ АКТИВНОЙ ПОДПИСКИ ====================
+
+// Получение активной подписки пользователя
+app.get('/api/user/subscription', authenticateToken, async (req, res) => {
+    try {
+        const { rows: subscriptions } = await pool.query(`
+            SELECT s.*, sp.name as plan_name, sp.description as plan_description,
+                   sp.features as plan_features
+            FROM subscriptions s
+            LEFT JOIN subscription_plans sp ON s.plan_id = sp.id
+            WHERE s.user_id = $1 AND s.status = 'active' AND s.ends_at > NOW()
+            ORDER BY s.created_at DESC
+            LIMIT 1
+        `, [req.user.userId]);
+
+        if (subscriptions.length === 0) {
+            return res.json({
+                success: true,
+                data: null,
+                message: 'Активная подписка не найдена'
+            });
+        }
+
+        const subscription = subscriptions[0];
+        
+        // Парсим features если они в формате JSON string
+        let features = [];
+        try {
+            features = typeof subscription.plan_features === 'string' 
+                ? JSON.parse(subscription.plan_features)
+                : subscription.plan_features || [];
+        } catch (e) {
+            features = [];
+        }
+
+        res.json({
+            success: true,
+            data: {
+                id: subscription.id,
+                planId: subscription.plan_id,
+                planName: subscription.plan_name,
+                planType: subscription.plan_type,
+                price: subscription.price,
+                status: subscription.status,
+                startsAt: subscription.starts_at,
+                endsAt: subscription.ends_at,
+                autoRenew: subscription.auto_renew,
+                features: features,
+                description: subscription.plan_description
+            }
+        });
+
+    } catch (error) {
+        console.error('Get subscription error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки подписки' });
+    }
+});
+
+// ==================== ОБНОВЛЕНИЕ ПРОГРЕССА ПОЛЬЗОВАТЕЛЯ ====================
+
+// Обновление прогресса пользователя
+app.post('/api/user/progress', authenticateToken, async (req, res) => {
+    try {
+        const { 
+            courseId, 
+            progress, 
+            completed, 
+            timeSpent,
+            contentType,
+            contentId
+        } = req.body;
+        
+        const userId = req.user.userId;
+
+        // Обновляем общий прогресс пользователя
+        if (contentType === 'courses' && courseId) {
+            // Проверяем существование записи прогресса
+            const { rows: existingProgress } = await pool.query(
+                'SELECT id FROM user_course_progress WHERE user_id = $1 AND course_id = $2',
+                [userId, courseId]
+            );
+
+            if (existingProgress.length > 0) {
+                // Обновляем существующую запись
+                await pool.query(`
+                    UPDATE user_course_progress 
+                    SET progress_percentage = $1, completed = $2, time_spent = time_spent + $3,
+                        last_accessed = NOW(), updated_at = NOW()
+                    WHERE user_id = $4 AND course_id = $5
+                `, [progress, completed, timeSpent || 0, userId, courseId]);
+            } else {
+                // Создаем новую запись
+                await pool.query(`
+                    INSERT INTO user_course_progress 
+                    (user_id, course_id, progress_percentage, completed, time_spent)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [userId, courseId, progress, completed, timeSpent || 0]);
+            }
+
+            // Обновляем общую статистику пользователя
+            if (completed) {
+                await pool.query(`
+                    UPDATE user_progress 
+                    SET courses_completed = courses_completed + 1,
+                        experience = experience + 100,
+                        updated_at = NOW()
+                    WHERE user_id = $1
+                `, [userId]);
+            } else {
+                await pool.query(`
+                    UPDATE user_progress 
+                    SET experience = experience + 10,
+                        total_study_time = total_study_time + $1,
+                        updated_at = NOW()
+                    WHERE user_id = $2
+                `, [timeSpent || 10, userId]);
+            }
+        }
+
+        // Обновляем прогресс для других типов контента
+        if (contentType && contentId && !courseId) {
+            const progressFieldMap = {
+                'videos': 'materials_watched',
+                'podcasts': 'materials_watched', 
+                'materials': 'materials_watched',
+                'events': 'events_attended'
+            };
+
+            const progressField = progressFieldMap[contentType];
+            if (progressField) {
+                await pool.query(`
+                    UPDATE user_progress 
+                    SET ${progressField} = ${progressField} + 1,
+                        experience = experience + 5,
+                        updated_at = NOW()
+                    WHERE user_id = $1
+                `, [userId]);
+            }
+        }
+
+        // Получаем обновленный прогресс
+        const { rows: updatedProgress } = await pool.query(
+            'SELECT * FROM user_progress WHERE user_id = $1',
+            [userId]
+        );
+
+        res.json({
+            success: true,
+            message: 'Прогресс обновлен',
+            progress: updatedProgress[0] || {}
+        });
+
+    } catch (error) {
+        console.error('Update progress error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка обновления прогресса' });
+    }
+});
+
 // ==================== API ДЛЯ КОНТЕНТА ====================
 
 // Получение всего контента с пагинацией
@@ -2109,6 +2366,115 @@ app.get('/api/content/:type', async (req, res) => {
     } catch (error) {
         console.error(`Content API error (${type}):`, error);
         res.status(500).json({ success: false, error: `Ошибка загрузки ${type}` });
+    }
+});
+
+// ==================== ПОЛУЧЕНИЕ ВСЕГО КОНТЕНТА ДЛЯ ГЛАВНОЙ СТРАНИЦЫ ====================
+
+// Получение всего контента (для главной страницы)
+app.get('/api/content', async (req, res) => {
+    try {
+        // Получаем курсы
+        const { rows: courses } = await pool.query(`
+            SELECT c.*, cat.name as category_name, cat.icon as category_icon
+            FROM courses c
+            LEFT JOIN categories cat ON c.category_id = cat.id
+            WHERE c.is_published = true
+            ORDER BY c.featured DESC, c.created_at DESC
+            LIMIT 12
+        `);
+
+        // Получаем подкасты
+        const { rows: podcasts } = await pool.query(`
+            SELECT p.*, cat.name as category_name, cat.icon as category_icon
+            FROM podcasts p
+            LEFT JOIN categories cat ON p.category_id = cat.id
+            WHERE p.is_published = true
+            ORDER BY p.created_at DESC
+            LIMIT 8
+        `);
+
+        // Получаем видео
+        const { rows: videos } = await pool.query(`
+            SELECT v.*, cat.name as category_name, cat.icon as category_icon
+            FROM videos v
+            LEFT JOIN categories cat ON v.category_id = cat.id
+            WHERE v.is_published = true
+            ORDER BY v.created_at DESC
+            LIMIT 8
+        `);
+
+        // Получаем материалы
+        const { rows: materials } = await pool.query(`
+            SELECT m.*, cat.name as category_name, cat.icon as category_icon
+            FROM materials m
+            LEFT JOIN categories cat ON m.category_id = cat.id
+            WHERE m.is_published = true
+            ORDER BY m.created_at DESC
+            LIMIT 8
+        `);
+
+        // Получаем стримы
+        const { rows: streams } = await pool.query(`
+            SELECT s.*, cat.name as category_name, cat.icon as category_icon
+            FROM streams s
+            LEFT JOIN categories cat ON s.category_id = cat.id
+            WHERE s.is_published = true
+            ORDER BY s.is_live DESC, s.scheduled_start DESC
+            LIMIT 6
+        `);
+
+        // Получаем мероприятия
+        const { rows: events } = await pool.query(`
+            SELECT e.*, cat.name as category_name, cat.icon as category_icon
+            FROM events e
+            LEFT JOIN categories cat ON e.category_id = cat.id
+            WHERE e.is_published = true AND e.event_date > NOW()
+            ORDER BY e.event_date ASC
+            LIMIT 6
+        `);
+
+        // Получаем новости
+        const { rows: news } = await pool.query(`
+            SELECT n.*, cat.name as category_name, cat.icon as category_icon
+            FROM news n
+            LEFT JOIN categories cat ON n.category_id = cat.id
+            WHERE n.is_published = true
+            ORDER BY n.publish_date DESC
+            LIMIT 6
+        `);
+
+        // Получаем статистику
+        const { rows: stats } = await pool.query(`
+            SELECT 
+                (SELECT COUNT(*) FROM users) as total_users,
+                (SELECT COUNT(*) FROM courses WHERE is_published = true) as total_courses,
+                (SELECT COUNT(*) FROM instructors WHERE is_active = true) as total_experts,
+                (SELECT COUNT(*) FROM materials WHERE is_published = true) as total_materials
+        `);
+
+        res.json({
+            success: true,
+            data: {
+                courses: courses,
+                podcasts: podcasts,
+                videos: videos,
+                materials: materials,
+                streams: streams,
+                events: events,
+                news: news,
+                stats: {
+                    courses: parseInt(stats[0].total_courses),
+                    students: parseInt(stats[0].total_users),
+                    experts: parseInt(stats[0].total_experts),
+                    materials: parseInt(stats[0].total_materials)
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Get all content error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки контента' });
     }
 });
 
@@ -2329,6 +2695,101 @@ app.get('/api/favorites', authenticateToken, async (req, res) => {
     }
 });
 
+// ==================== ПОЛУЧЕНИЕ ВСЕГО ИЗБРАННОГО С ДАННЫМИ ====================
+
+// Получение полного избранного с данными контента
+app.get('/api/favorites/detailed', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        
+        // Получаем избранные курсы
+        const { rows: favoriteCourses } = await pool.query(`
+            SELECT c.*, cat.name as category_name, cat.icon as category_icon
+            FROM favorites f
+            JOIN courses c ON f.content_id = c.id AND f.content_type = 'courses'
+            LEFT JOIN categories cat ON c.category_id = cat.id
+            WHERE f.user_id = $1 AND c.is_published = true
+            ORDER BY f.created_at DESC
+        `, [userId]);
+
+        // Получаем избранные подкасты
+        const { rows: favoritePodcasts } = await pool.query(`
+            SELECT p.*, cat.name as category_name, cat.icon as category_icon
+            FROM favorites f
+            JOIN podcasts p ON f.content_id = p.id AND f.content_type = 'podcasts'
+            LEFT JOIN categories cat ON p.category_id = cat.id
+            WHERE f.user_id = $1 AND p.is_published = true
+            ORDER BY f.created_at DESC
+        `, [userId]);
+
+        // Получаем избранные видео
+        const { rows: favoriteVideos } = await pool.query(`
+            SELECT v.*, cat.name as category_name, cat.icon as category_icon
+            FROM favorites f
+            JOIN videos v ON f.content_id = v.id AND f.content_type = 'videos'
+            LEFT JOIN categories cat ON v.category_id = cat.id
+            WHERE f.user_id = $1 AND v.is_published = true
+            ORDER BY f.created_at DESC
+        `, [userId]);
+
+        // Получаем избранные материалы
+        const { rows: favoriteMaterials } = await pool.query(`
+            SELECT m.*, cat.name as category_name, cat.icon as category_icon
+            FROM favorites f
+            JOIN materials m ON f.content_id = m.id AND f.content_type = 'materials'
+            LEFT JOIN categories cat ON m.category_id = cat.id
+            WHERE f.user_id = $1 AND m.is_published = true
+            ORDER BY f.created_at DESC
+        `, [userId]);
+
+        // Получаем избранные стримы
+        const { rows: favoriteStreams } = await pool.query(`
+            SELECT s.*, cat.name as category_name, cat.icon as category_icon
+            FROM favorites f
+            JOIN streams s ON f.content_id = s.id AND f.content_type = 'streams'
+            LEFT JOIN categories cat ON s.category_id = cat.id
+            WHERE f.user_id = $1 AND s.is_published = true
+            ORDER BY f.created_at DESC
+        `, [userId]);
+
+        // Получаем избранные мероприятия
+        const { rows: favoriteEvents } = await pool.query(`
+            SELECT e.*, cat.name as category_name, cat.icon as category_icon
+            FROM favorites f
+            JOIN events e ON f.content_id = e.id AND f.content_type = 'events'
+            LEFT JOIN categories cat ON e.category_id = cat.id
+            WHERE f.user_id = $1 AND e.is_published = true
+            ORDER BY f.created_at DESC
+        `, [userId]);
+
+        res.json({
+            success: true,
+            data: {
+                courses: favoriteCourses,
+                podcasts: favoritePodcasts,
+                videos: favoriteVideos,
+                materials: favoriteMaterials,
+                streams: favoriteStreams,
+                events: favoriteEvents
+            },
+            totals: {
+                courses: favoriteCourses.length,
+                podcasts: favoritePodcasts.length,
+                videos: favoriteVideos.length,
+                materials: favoriteMaterials.length,
+                streams: favoriteStreams.length,
+                events: favoriteEvents.length,
+                all: favoriteCourses.length + favoritePodcasts.length + favoriteVideos.length + 
+                     favoriteMaterials.length + favoriteStreams.length + favoriteEvents.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Get detailed favorites error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки избранного' });
+    }
+});
+
 // ==================== ПОДПИСКИ И ПЛАТЕЖИ ====================
 
 // Получение планов подписок
@@ -2447,8 +2908,8 @@ app.get('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) =>
             pool.query('SELECT COUNT(*) FROM materials'),
             pool.query('SELECT COUNT(*) FROM events'),
             pool.query('SELECT COUNT(*) FROM news'),
-            pool.query('SELECT COUNT(*) FROM subscriptions WHERE status = \"active\" AND ends_at > NOW()'),
-            pool.query('SELECT COALESCE(SUM(amount), 0) as total FROM payment_transactions WHERE status = \"completed\"')
+            pool.query('SELECT COUNT(*) FROM subscriptions WHERE status = "active" AND ends_at > NOW()'),
+            pool.query('SELECT COALESCE(SUM(amount), 0) as total FROM payment_transactions WHERE status = "completed"')
         ]);
 
         const stats = {
@@ -2517,6 +2978,380 @@ app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) =>
     } catch (error) {
         console.error('Admin users error:', error);
         res.status(500).json({ success: false, error: 'Ошибка загрузки пользователей' });
+    }
+});
+
+// ==================== АДМИН API ДЛЯ УПРАВЛЕНИЯ КОНТЕНТОМ ====================
+
+// Создание курса
+app.post('/api/admin/courses', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { title, description, price, category_id, duration, level, image_url, is_published } = req.body;
+        
+        const { rows } = await pool.query(`
+            INSERT INTO courses (title, description, price, category_id, duration, level, image_url, is_published, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING *
+        `, [title, description, price, category_id, duration, level, image_url, is_published, req.user.userId]);
+        
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Create course error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания курса' });
+    }
+});
+
+// Обновление курса
+app.put('/api/admin/courses/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description, price, category_id, duration, level, image_url, is_published } = req.body;
+        
+        const { rows } = await pool.query(`
+            UPDATE courses 
+            SET title = $1, description = $2, price = $3, category_id = $4, 
+                duration = $5, level = $6, image_url = $7, is_published = $8,
+                updated_at = NOW()
+            WHERE id = $9
+            RETURNING *
+        `, [title, description, price, category_id, duration, level, image_url, is_published, id]);
+        
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Update course error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка обновления курса' });
+    }
+});
+
+// Удаление курса
+app.delete('/api/admin/courses/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM courses WHERE id = $1', [id]);
+        res.json({ success: true, message: 'Курс удален' });
+    } catch (error) {
+        console.error('Delete course error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка удаления курса' });
+    }
+});
+
+// Создание подкаста
+app.post('/api/admin/podcasts', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { title, description, category_id, duration, image_url, audio_url, is_published } = req.body;
+        
+        const { rows } = await pool.query(`
+            INSERT INTO podcasts (title, description, category_id, duration, image_url, audio_url, is_published, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING *
+        `, [title, description, category_id, duration, image_url, audio_url, is_published, req.user.userId]);
+        
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Create podcast error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания подкаста' });
+    }
+});
+
+// Обновление подкаста
+app.put('/api/admin/podcasts/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description, category_id, duration, image_url, audio_url, is_published } = req.body;
+        
+        const { rows } = await pool.query(`
+            UPDATE podcasts 
+            SET title = $1, description = $2, category_id = $3, 
+                duration = $4, image_url = $5, audio_url = $6, is_published = $7,
+                updated_at = NOW()
+            WHERE id = $8
+            RETURNING *
+        `, [title, description, category_id, duration, image_url, audio_url, is_published, id]);
+        
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Update podcast error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка обновления подкаста' });
+    }
+});
+
+// Удаление подкаста
+app.delete('/api/admin/podcasts/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM podcasts WHERE id = $1', [id]);
+        res.json({ success: true, message: 'Подкаст удален' });
+    } catch (error) {
+        console.error('Delete podcast error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка удаления подкаста' });
+    }
+});
+
+// Создание видео
+app.post('/api/admin/videos', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { title, description, category_id, duration, thumbnail_url, video_url, is_published } = req.body;
+        
+        const { rows } = await pool.query(`
+            INSERT INTO videos (title, description, category_id, duration, thumbnail_url, video_url, is_published, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING *
+        `, [title, description, category_id, duration, thumbnail_url, video_url, is_published, req.user.userId]);
+        
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Create video error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания видео' });
+    }
+});
+
+// Обновление видео
+app.put('/api/admin/videos/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description, category_id, duration, thumbnail_url, video_url, is_published } = req.body;
+        
+        const { rows } = await pool.query(`
+            UPDATE videos 
+            SET title = $1, description = $2, category_id = $3, 
+                duration = $4, thumbnail_url = $5, video_url = $6, is_published = $7,
+                updated_at = NOW()
+            WHERE id = $8
+            RETURNING *
+        `, [title, description, category_id, duration, thumbnail_url, video_url, is_published, id]);
+        
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Update video error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка обновления видео' });
+    }
+});
+
+// Удаление видео
+app.delete('/api/admin/videos/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM videos WHERE id = $1', [id]);
+        res.json({ success: true, message: 'Видео удалено' });
+    } catch (error) {
+        console.error('Delete video error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка удаления видео' });
+    }
+});
+
+// Создание материала
+app.post('/api/admin/materials', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { title, description, category_id, material_type, file_url, file_size, image_url, is_published } = req.body;
+        
+        const { rows } = await pool.query(`
+            INSERT INTO materials (title, description, category_id, material_type, file_url, file_size, image_url, is_published, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING *
+        `, [title, description, category_id, material_type, file_url, file_size, image_url, is_published, req.user.userId]);
+        
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Create material error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания материала' });
+    }
+});
+
+// Обновление материала
+app.put('/api/admin/materials/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description, category_id, material_type, file_url, file_size, image_url, is_published } = req.body;
+        
+        const { rows } = await pool.query(`
+            UPDATE materials 
+            SET title = $1, description = $2, category_id = $3, 
+                material_type = $4, file_url = $5, file_size = $6, image_url = $7, is_published = $8,
+                updated_at = NOW()
+            WHERE id = $9
+            RETURNING *
+        `, [title, description, category_id, material_type, file_url, file_size, image_url, is_published, id]);
+        
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Update material error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка обновления материала' });
+    }
+});
+
+// Удаление материала
+app.delete('/api/admin/materials/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM materials WHERE id = $1', [id]);
+        res.json({ success: true, message: 'Материал удален' });
+    } catch (error) {
+        console.error('Delete material error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка удаления материала' });
+    }
+});
+
+// Создание преподавателя
+app.post('/api/admin/instructors', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { name, specialization, bio, avatar_url, email, social_links, is_featured } = req.body;
+        
+        const { rows } = await pool.query(`
+            INSERT INTO instructors (name, specialization, bio, avatar_url, email, social_links, is_featured)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING *
+        `, [name, specialization, bio, avatar_url, email, social_links, is_featured]);
+        
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Create instructor error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания преподавателя' });
+    }
+});
+
+// Обновление преподавателя
+app.put('/api/admin/instructors/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, specialization, bio, avatar_url, email, social_links, is_featured } = req.body;
+        
+        const { rows } = await pool.query(`
+            UPDATE instructors 
+            SET name = $1, specialization = $2, bio = $3, 
+                avatar_url = $4, email = $5, social_links = $6, is_featured = $7,
+                updated_at = NOW()
+            WHERE id = $8
+            RETURNING *
+        `, [name, specialization, bio, avatar_url, email, social_links, is_featured, id]);
+        
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Update instructor error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка обновления преподавателя' });
+    }
+});
+
+// Удаление преподавателя
+app.delete('/api/admin/instructors/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM instructors WHERE id = $1', [id]);
+        res.json({ success: true, message: 'Преподаватель удален' });
+    } catch (error) {
+        console.error('Delete instructor error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка удаления преподавателя' });
+    }
+});
+
+// Создание навигационного элемента
+app.post('/api/admin/navigation', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { title, description, icon, image_url, page, position, is_active, required_subscription, required_role } = req.body;
+        
+        const { rows } = await pool.query(`
+            INSERT INTO navigation_items (title, description, icon, image_url, page, position, is_active, required_subscription, required_role)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING *
+        `, [title, description, icon, image_url, page, position, is_active, required_subscription, required_role]);
+        
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Create navigation item error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка создания навигационного элемента' });
+    }
+});
+
+// Обновление навигационного элемента
+app.put('/api/admin/navigation/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description, icon, image_url, page, position, is_active, required_subscription, required_role } = req.body;
+        
+        const { rows } = await pool.query(`
+            UPDATE navigation_items 
+            SET title = $1, description = $2, icon = $3, image_url = $4,
+                page = $5, position = $6, is_active = $7, required_subscription = $8, required_role = $9,
+                updated_at = NOW()
+            WHERE id = $10
+            RETURNING *
+        `, [title, description, icon, image_url, page, position, is_active, required_subscription, required_role, id]);
+        
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Update navigation item error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка обновления навигационного элемента' });
+    }
+});
+
+// Удаление навигационного элемента
+app.delete('/api/admin/navigation/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM navigation_items WHERE id = $1', [id]);
+        res.json({ success: true, message: 'Навигационный элемент удален' });
+    } catch (error) {
+        console.error('Delete navigation item error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка удаления навигационного элемента' });
+    }
+});
+
+// Получение медиафайлов
+app.get('/api/admin/media', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { page = 1, limit = 20 } = req.query;
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+
+        const { rows: media } = await pool.query(`
+            SELECT mf.*, u.first_name, u.last_name
+            FROM media_files mf
+            LEFT JOIN users u ON mf.uploaded_by = u.id
+            ORDER BY mf.created_at DESC
+            LIMIT $1 OFFSET $2
+        `, [limit, offset]);
+
+        const { rows: countResult } = await pool.query('SELECT COUNT(*) FROM media_files');
+
+        res.json({
+            success: true,
+            data: media,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total: parseInt(countResult[0].count),
+                pages: Math.ceil(parseInt(countResult[0].count) / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Get media error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка загрузки медиафайлов' });
+    }
+});
+
+// Удаление медиафайла
+app.delete('/api/admin/media/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Получаем информацию о файле
+        const { rows: file } = await pool.query('SELECT * FROM media_files WHERE id = $1', [id]);
+        
+        if (file.length === 0) {
+            return res.status(404).json({ success: false, error: 'Файл не найден' });
+        }
+
+        // Удаляем физический файл
+        const filePath = join(__dirname, file[0].url);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+
+        // Удаляем запись из БД
+        await pool.query('DELETE FROM media_files WHERE id = $1', [id]);
+        
+        res.json({ success: true, message: 'Медиафайл удален' });
+    } catch (error) {
+        console.error('Delete media error:', error);
+        res.status(500).json({ success: false, error: 'Ошибка удаления медиафайла' });
     }
 });
 
