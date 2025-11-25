@@ -2542,6 +2542,236 @@
                 this.restoreState();
             }
 
+    // ==================== ДЕМО-ДАННЫЕ ====================
+
+    createDemoContent() {
+        this.allContent = this.getDemoContentData();
+    }
+
+    getDemoContentData() {
+        return {
+            courses: [
+                {
+                    id: 1,
+                    title: 'Мануальные техники в практике невролога',
+                    description: '6 модулей по современным мануальным методикам',
+                    price: 25000,
+                    discount: 16,
+                    duration: '12 недель',
+                    modules: 6,
+                    category: 'Мануальные техники',
+                    level: 'advanced',
+                    students_count: 156,
+                    rating: 4.8,
+                    featured: true,
+                    image_url: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop',
+                    video_url: '',
+                    created_at: new Date().toISOString(),
+                    instructors: [1, 2]
+                },
+                {
+                    id: 2,
+                    title: 'Неврологическая диагностика',
+                    description: '5 модулей по современной диагностике',
+                    price: 18000,
+                    discount: 0,
+                    duration: '8 недель',
+                    modules: 5,
+                    category: 'Неврология',
+                    level: 'intermediate',
+                    students_count: 234,
+                    rating: 4.6,
+                    featured: true,
+                    image_url: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop',
+                    video_url: '',
+                    created_at: new Date().toISOString(),
+                    instructors: [1]
+                }
+            ],
+            materials: [
+                {
+                    id: 1,
+                    title: 'Чек-лист неврологического осмотра',
+                    description: 'Полный чек-лист для стандартного осмотра',
+                    category: 'Неврология',
+                    material_type: 'checklist',
+                    downloads: 234,
+                    file_size: 1024 * 1024 * 2,
+                    image_url: 'https://images.unsplash.com/photo-1589998059171-988d887df646?w=400&h=250&fit=crop',
+                    file_url: '',
+                    created_at: new Date().toISOString()
+                }
+            ],
+            streams: [
+                {
+                    id: 1,
+                    title: 'LIVE: Ответы на вопросы по мануальной терапии',
+                    description: 'Прямой эфир с ответами на вопросы',
+                    duration: '2:15:00',
+                    category: 'Мануальные техники',
+                    participants: 156,
+                    is_live: true,
+                    thumbnail_url: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop',
+                    video_url: '',
+                    scheduled_start: new Date(Date.now() + 3600000).toISOString(),
+                    created_at: new Date().toISOString()
+                }
+            ],
+            events: [
+                {
+                    id: 1,
+                    title: 'Конференция по современной неврологии',
+                    description: 'Ежегодная конференция с ведущими специалистами',
+                    event_type: 'offline',
+                    event_date: '2024-12-15T10:00:00.000Z',
+                    location: 'Москва, ул. Профессиональная, 15',
+                    participants: 250,
+                    image_url: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop',
+                    registration_url: '',
+                    created_at: new Date().toISOString()
+                }
+            ],
+            stats: {
+                totalUsers: 1567,
+                totalCourses: 4,
+                totalMaterials: 3,
+                totalEvents: 3
+            }
+        };
+    }
+
+    loadDemoNavigation() {
+        this.navigationItems = [
+            { 
+                id: 1, 
+                title: 'Курсы', 
+                page: 'courses', 
+                icon: '📚',
+                description: 'Системное обучение с сертификатами',
+                image_url: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop'
+            },
+            { 
+                id: 2, 
+                title: 'Материалы', 
+                page: 'materials', 
+                icon: '📋',
+                description: 'Презентации, статьи и методички',
+                image_url: 'https://images.unsplash.com/photo-1589998059171-988d887df646?w=400&h=250&fit=crop'
+            }
+        ];
+    }
+
+    loadDemoCategories() {
+        this.categories = {
+            courses: [
+                { id: 1, name: 'Неврология', type: 'courses', icon: '🧠', color: '#4CAF50' },
+                { id: 2, name: 'Мануальные техники', type: 'courses', icon: '💆', color: '#FF9800' }
+            ],
+            materials: [
+                { id: 1, name: 'Чек-листы', type: 'materials', icon: '✅', color: '#4CAF50' },
+                { id: 2, name: 'Протоколы', type: 'materials', icon: '📋', color: '#FF9800' }
+            ]
+        };
+    }
+
+    loadSubscriptionData() {
+        this.subscriptionPlans = [
+            {
+                id: 1,
+                name: 'Базовый',
+                description: 'Доступ к основным курсам',
+                price_monthly: 2900,
+                price_quarterly: 7500,
+                price_yearly: 27000,
+                features: JSON.stringify(['Доступ к 3 курсам', 'Базовые материалы', 'Поддержка по email'])
+            },
+            {
+                id: 2,
+                name: 'Профессиональный',
+                description: 'Полный доступ ко всем материалам',
+                price_monthly: 5900,
+                price_quarterly: 15000,
+                price_yearly: 54000,
+                features: JSON.stringify(['Все курсы', 'Все материалы', 'Приоритетная поддержка', 'Закрытые эфиры'])
+            }
+        ];
+
+        this.userSubscription = {
+            plan_id: 2,
+            plan_name: 'Профессиональный',
+            plan_type: 'monthly',
+            price: 5900,
+            starts_at: new Date().toISOString(),
+            ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        };
+    }
+
+    loadInstructors() {
+        this.instructors = [
+            {
+                id: 1,
+                name: 'Доктор Иванов А.В.',
+                specialization: 'Неврология, Мануальная терапия',
+                role: 'Ведущий специалист',
+                experience_years: 15,
+                bio: 'Ведущий специалист по мануальной терапии, автор методик лечения болей в спине.',
+                avatar_url: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop',
+                email: 'ivanov@anb.ru'
+            }
+        ];
+    }
+
+    loadUserProgress() {
+        this.state.progress = {
+            level: 'Понимаю',
+            experience: 1250,
+            completedCourses: 2,
+            completedModules: 8,
+            studyHours: 45,
+            weeklyHours: 5,
+            courses: {
+                1: 75,
+                2: 100
+            },
+            materials: {
+                1: true
+            },
+            streams: {
+                1: false
+            },
+            events: {
+                1: { registered: true, attended: false }
+            }
+        };
+    }
+
+    loadCommunityData() {
+        this.communityPosts = [
+            {
+                id: 1,
+                author: 'Доктор Иванов',
+                avatar: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop',
+                time: '2 часа назад',
+                content: 'Интересный клинический случай: пациент с хроническими болями в спине...',
+                likes: 15,
+                comments: 3
+            }
+        ];
+    }
+
+    loadChatsData() {
+        this.chats = [
+            {
+                id: 1,
+                name: 'Общий чат Академии',
+                avatar: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop',
+                lastMessage: 'Добро пожаловать в Академию!',
+                time: '10:30',
+                unread: 0
+            }
+        ];
+    }
+            
             // ==================== ИНИЦИАЛИЗАЦИЯ ====================
 
             async init() {
@@ -2671,6 +2901,46 @@
                 }
             }
 
+    // ==================== СИСТЕМА СОХРАНЕНИЯ СОСТОЯНИЯ ====================
+
+    saveState() {
+        const state = {
+            favorites: this.state.favorites,
+            progress: this.state.progress,
+            settings: this.state.settings,
+            filters: this.filters,
+            currentPage: this.currentPage
+        };
+        localStorage.setItem('academyAppState', JSON.stringify(state));
+    }
+
+    restoreState() {
+        try {
+            const saved = localStorage.getItem('academyAppState');
+            if (saved) {
+                const state = JSON.parse(saved);
+                this.state.favorites = state.favorites || this.state.favorites;
+                this.state.progress = state.progress || this.state.progress;
+                this.state.settings = state.settings || this.state.settings;
+                this.filters = state.filters || this.filters;
+                this.currentPage = state.currentPage || 'home';
+                
+                // Применяем настройки
+                this.applySettings();
+            }
+        } catch (error) {
+            console.error('Ошибка восстановления состояния:', error);
+        }
+    }
+
+    applySettings() {
+        // Применение темы
+        document.documentElement.setAttribute('data-theme', this.state.settings.theme);
+        
+        // Применение языка
+        document.documentElement.lang = this.state.settings.language;
+    }
+            
             // ==================== АУТЕНТИФИКАЦИЯ ====================
 
             async login(email, password) {
@@ -2802,8 +3072,495 @@
                 };
             }
 
-            // ... остальные методы класса AcademyApp остаются без изменений
-            // (createHomePage, createCourseCard, setupEventListeners и т.д.)
+    // ==================== ОСНОВНЫЕ СТРАНИЦЫ ====================
+
+    createHomePage() {
+        return `
+            <div class="page home-page">
+                <div class="hero-section">
+                    <div class="hero-content">
+                        <h1>Академия АНБ</h1>
+                        <p class="hero-subtitle">Профессиональное сообщество неврологов и реабилитологов</p>
+                        <div class="hero-search">
+                            <input type="text" 
+                                   class="search-input" 
+                                   placeholder="Поиск курсов, материалов, видео..."
+                                   value="${this.searchTerm}"
+                                   oninput="app.handleSearchInput(this.value)"
+                                   onkeypress="app.handleSearchKeypress(event)">
+                            <button class="search-btn" onclick="app.performSearch()">
+                                🔍 Поиск
+                            </button>
+                        </div>
+                        <div class="hero-stats">
+                            <div class="stat">
+                                <div class="stat-number">${this.allContent.stats?.totalCourses || 0}</div>
+                                <div class="stat-label">Курсов</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-number">${this.allContent.stats?.totalUsers || 0}</div>
+                                <div class="stat-label">Студентов</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-number">25</div>
+                                <div class="stat-label">Экспертов</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-number">${this.allContent.stats?.totalMaterials || 0}</div>
+                                <div class="stat-label">Материалов</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="main-navigation-grid">
+                    <div class="nav-card-large" onclick="app.renderPage('courses')">
+                        <div class="nav-card-image">
+                            <img src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop" alt="Курсы">
+                            <div class="nav-card-overlay">
+                                <div class="nav-card-icon">📚</div>
+                                <h3>Курсы</h3>
+                                <p>Системное обучение с сертификатами</p>
+                            </div>
+                        </div>
+                        <div class="nav-count">${this.allContent.courses?.length || 0}</div>
+                    </div>
+
+                    <div class="nav-card-large" onclick="app.renderPage('materials')">
+                        <div class="nav-card-image">
+                            <img src="https://images.unsplash.com/photo-1589998059171-988d887df646?w=400&h=250&fit=crop" alt="Материалы">
+                            <div class="nav-card-overlay">
+                                <div class="nav-card-icon">📋</div>
+                                <h3>Материалы</h3>
+                                <p>Презентации, статьи и методички</p>
+                            </div>
+                        </div>
+                        <div class="nav-count">${this.allContent.materials?.length || 0}</div>
+                    </div>
+                </div>
+
+                <div class="featured-section">
+                    <div class="section-header">
+                        <h2 class="section-title">⭐ Рекомендуемые курсы</h2>
+                        <button class="btn btn-outline" onclick="app.renderPage('courses')">
+                            Все курсы →
+                        </button>
+                    </div>
+                    <div class="content-grid">
+                        ${(this.allContent.courses || []).slice(0, 3).map(course => this.createCourseCard(course)).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createCourseCard(course) {
+        return `
+            <div class="content-card course-card" onclick="app.openCourseDetail(${course.id})">
+                <div class="card-image">
+                    <img src="${course.image_url}" alt="${course.title}" 
+                         onerror="this.src='https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop'">
+                    <div class="card-overlay">
+                        <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
+                                onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
+                            ${this.isFavorite(course.id, 'courses') ? '❤️' : '🤍'}
+                        </button>
+                    </div>
+                    ${course.featured ? '<div class="featured-badge">Рекомендуем</div>' : ''}
+                </div>
+                <div class="card-content">
+                    <div class="card-category">${course.category || 'Общее'}</div>
+                    <h3 class="card-title">${course.title}</h3>
+                    <p class="card-description">${course.description}</p>
+                    <div class="card-footer">
+                        <div class="price-section">
+                            <span class="price-current">${this.formatPrice(course.price)}</span>
+                        </div>
+                        <button class="btn btn-primary btn-small">
+                            Подробнее
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createCoursesPage() {
+        return `
+            <div class="page courses-page">
+                <div class="page-header">
+                    <h2>📚 Курсы</h2>
+                    <p>Профессиональные курсы по неврологии и реабилитации</p>
+                </div>
+                <div class="content-grid">
+                    ${(this.allContent.courses || []).map(course => this.createCourseCard(course)).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createMaterialsPage() {
+        return `
+            <div class="page materials-page">
+                <div class="page-header">
+                    <h2>📋 Материалы</h2>
+                    <p>Презентации, статьи, чек-листы и методические материалы</p>
+                </div>
+                <div class="content-grid">
+                    ${(this.allContent.materials || []).map(material => `
+                        <div class="content-card material-card">
+                            <div class="card-image">
+                                <img src="${material.image_url}" alt="${material.title}">
+                                <div class="card-overlay">
+                                    <button class="download-btn" onclick="app.downloadMaterial(${material.id})">
+                                        📥
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-category">${material.category}</div>
+                                <h3 class="card-title">${material.title}</h3>
+                                <p class="card-description">${material.description}</p>
+                                <div class="card-meta">
+                                    <div class="meta-item">📥 ${material.downloads} загрузок</div>
+                                    <div class="meta-item">📊 ${this.formatFileSize(material.file_size)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createStreamsPage() {
+        return `
+            <div class="page streams-page">
+                <div class="page-header">
+                    <h2>📹 Эфиры</h2>
+                    <p>Прямые трансляции и записи вебинаров</p>
+                </div>
+                <div class="content-grid">
+                    ${(this.allContent.streams || []).map(stream => `
+                        <div class="content-card stream-card">
+                            <div class="card-image">
+                                <img src="${stream.thumbnail_url}" alt="${stream.title}">
+                                <div class="card-overlay">
+                                    <button class="play-btn" onclick="app.playStream(${stream.id})">
+                                        ▶️
+                                    </button>
+                                </div>
+                                ${stream.is_live ? '<div class="live-badge">LIVE</div>' : ''}
+                            </div>
+                            <div class="card-content">
+                                <div class="card-category">${stream.category}</div>
+                                <h3 class="card-title">${stream.title}</h3>
+                                <p class="card-description">${stream.description}</p>
+                                <div class="card-meta">
+                                    <div class="meta-item">👥 ${stream.participants} участников</div>
+                                    <div class="meta-item">⏱️ ${stream.duration}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createEventsPage() {
+        return `
+            <div class="page events-page">
+                <div class="page-header">
+                    <h2>🗺️ Мероприятия</h2>
+                    <p>Конференции, семинары и встречи сообщества</p>
+                </div>
+                <div class="content-grid">
+                    ${(this.allContent.events || []).map(event => `
+                        <div class="content-card event-card">
+                            <div class="card-image">
+                                <img src="${event.image_url}" alt="${event.title}">
+                            </div>
+                            <div class="card-content">
+                                <div class="card-category">${event.event_type === 'offline' ? '📍 Оффлайн' : '💻 Онлайн'}</div>
+                                <h3 class="card-title">${event.title}</h3>
+                                <p class="card-description">${event.description}</p>
+                                <div class="card-meta">
+                                    <div class="meta-item">📅 ${new Date(event.event_date).toLocaleDateString('ru-RU')}</div>
+                                    <div class="meta-item">👥 ${event.participants} участников</div>
+                                </div>
+                                ${event.location ? `<div class="meta-item">📍 ${event.location}</div>` : ''}
+                                <div class="card-footer">
+                                    <button class="btn btn-primary" onclick="app.registerForEvent(${event.id})">
+                                        Зарегистрироваться
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createCommunityPage() {
+        return `
+            <div class="page community-page">
+                <div class="page-header">
+                    <h2>👥 Сообщество</h2>
+                    <p>Общайтесь с коллегами и экспертами</p>
+                </div>
+                <div class="community-container">
+                    <div class="community-feed">
+                        ${this.communityPosts.map(post => `
+                            <div class="community-post">
+                                <div class="post-header">
+                                    <img src="${post.avatar}" alt="${post.author}" class="post-avatar">
+                                    <div>
+                                        <div class="post-author">${post.author}</div>
+                                        <div class="post-time">${post.time}</div>
+                                    </div>
+                                </div>
+                                <div class="post-content">${post.content}</div>
+                                <div class="post-actions">
+                                    <button class="post-action">👍 ${post.likes}</button>
+                                    <button class="post-action">💬 ${post.comments}</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="community-sidebar">
+                        <div class="sidebar-section">
+                            <h3 class="sidebar-title">Онлайн эксперты</h3>
+                            <div class="expert-list">
+                                ${this.instructors.map(instructor => `
+                                    <div class="expert-item">
+                                        <img src="${instructor.avatar_url}" alt="${instructor.name}" class="expert-avatar">
+                                        <div class="expert-info">
+                                            <div class="expert-name">${instructor.name}</div>
+                                            <div class="expert-specialty">${instructor.specialization}</div>
+                                        </div>
+                                        <div class="online-status"></div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createChatsPage() {
+        return `
+            <div class="page chats-page">
+                <div class="page-header">
+                    <h2>💬 Чаты</h2>
+                    <p>Общайтесь с коллегами в реальном времени</p>
+                </div>
+                <div class="chats-container">
+                    <div class="chats-list">
+                        <div class="chats-header">
+                            <input type="text" class="chats-search" placeholder="Поиск чатов...">
+                        </div>
+                        <div class="chat-items">
+                            ${this.chats.map(chat => `
+                                <div class="chat-item" onclick="app.openChat(${chat.id})">
+                                    <img src="${chat.avatar}" alt="${chat.name}" class="chat-avatar">
+                                    <div class="chat-info">
+                                        <div class="chat-name">${chat.name}</div>
+                                        <div class="chat-preview">${chat.lastMessage}</div>
+                                    </div>
+                                    <div class="chat-meta">
+                                        <div class="chat-time">${chat.time}</div>
+                                        ${chat.unread > 0 ? `<div class="chat-unread">${chat.unread}</div>` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="chat-window">
+                        <div class="chat-header">
+                            <img src="${this.chats[0]?.avatar}" alt="${this.chats[0]?.name}" class="chat-avatar">
+                            <div class="chat-info">
+                                <div class="chat-name">${this.chats[0]?.name}</div>
+                            </div>
+                        </div>
+                        <div class="chat-messages">
+                            <div class="message incoming">
+                                <div class="message-text">Добро пожаловать в Академию АНБ!</div>
+                                <div class="message-time">10:30</div>
+                            </div>
+                            <div class="message outgoing">
+                                <div class="message-text">Спасибо! Рад присоединиться к сообществу</div>
+                                <div class="message-time">10:32</div>
+                            </div>
+                        </div>
+                        <div class="chat-input">
+                            <textarea class="message-input" placeholder="Введите сообщение..."></textarea>
+                            <button class="send-btn">➤</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createProfilePage() {
+        return `
+            <div class="page profile-page">
+                <div class="page-header">
+                    <h2>👤 Профиль</h2>
+                    <p>Управление вашим аккаунтом и настройками</p>
+                </div>
+                <div class="detail-content">
+                    <div class="instructor-card">
+                        <div class="instructor-avatar">👨‍⚕️</div>
+                        <div class="instructor-info">
+                            <div class="instructor-name">${this.currentUser?.firstName || 'Гость'} ${this.currentUser?.lastName || ''}</div>
+                            <div class="instructor-specialization">${this.currentUser?.specialization || 'Невролог'}</div>
+                            <div class="instructor-bio">
+                                ${this.isAuthenticated ? 
+                                    `Зарегистрирован с ${new Date(this.currentUser?.joinDate).toLocaleDateString('ru-RU')}` : 
+                                    'Войдите в систему для доступа ко всем функциям'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-section" style="margin-top: 2rem;">
+                        <div class="progress-header">
+                            <span>Прогресс обучения</span>
+                            <span>${this.state.progress.experience || 0} XP</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${(this.state.progress.experience || 0) / 2000 * 100}%"></div>
+                        </div>
+                        <div class="progress-text">
+                            Уровень: ${this.state.progress.level || 'Новичок'} | 
+                            Завершено курсов: ${this.state.progress.completedCourses || 0}
+                        </div>
+                    </div>
+
+                    <div class="detail-actions" style="margin-top: 2rem;">
+                        <button class="btn btn-primary" onclick="app.showSettingsModal()">
+                            ⚙️ Настройки
+                        </button>
+                        ${!this.isAuthenticated ? `
+                            <button class="btn btn-outline" onclick="app.showAuthModal()">
+                                🔐 Войти
+                            </button>
+                        ` : ''}
+                        ${this.isAdmin ? `
+                            <button class="btn btn-outline" onclick="app.renderPage('admin')">
+                                🔧 Админ-панель
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createAdminPage() {
+        if (!this.isAdmin) {
+            return this.createNotFoundPage();
+        }
+
+        return `
+            <div class="page admin-page">
+                <div class="page-header">
+                    <h2>🔧 Админ-панель</h2>
+                    <p>Управление контентом и пользователями</p>
+                </div>
+                <div class="admin-panel">
+                    <div class="admin-stats">
+                        <div class="admin-stat">
+                            <div class="admin-stat-value">${this.allContent.stats?.totalUsers || 0}</div>
+                            <div class="admin-stat-label">Пользователей</div>
+                        </div>
+                        <div class="admin-stat">
+                            <div class="admin-stat-value">${this.allContent.stats?.totalCourses || 0}</div>
+                            <div class="admin-stat-label">Курсов</div>
+                        </div>
+                        <div class="admin-stat">
+                            <div class="admin-stat-value">${this.allContent.stats?.totalMaterials || 0}</div>
+                            <div class="admin-stat-label">Материалов</div>
+                        </div>
+                        <div class="admin-stat">
+                            <div class="admin-stat-value">${this.allContent.stats?.totalEvents || 0}</div>
+                            <div class="admin-stat-label">Мероприятий</div>
+                        </div>
+                    </div>
+
+                    <div class="admin-tabs">
+                        <button class="admin-tab active">Пользователи</button>
+                        <button class="admin-tab">Курсы</button>
+                        <button class="admin-tab">Материалы</button>
+                    </div>
+
+                    <div class="admin-content">
+                        <h3>Последние пользователи</h3>
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Имя</th>
+                                    <th>Email</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>${this.currentUser?.id || '1'}</td>
+                                    <td>${this.currentUser?.firstName || 'Админ'} ${this.currentUser?.lastName || ''}</td>
+                                    <td>${this.currentUser?.email || 'admin@anb.ru'}</td>
+                                    <td><span style="color: var(--success)">Активен</span></td>
+                                    <td>
+                                        <div class="admin-actions">
+                                            <button class="btn btn-small btn-outline">Редактировать</button>
+                                            <button class="btn btn-small btn-outline">Статистика</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createNotFoundPage() {
+        return `
+            <div class="page">
+                <div class="empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <div class="empty-title">Страница не найдена</div>
+                    <div class="empty-description">Запрашиваемая страница не существует</div>
+                    <button class="btn btn-primary" onclick="app.renderPage('home')">
+                        На главную
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    createErrorPage(message) {
+        return `
+            <div class="page">
+                <div class="empty-state">
+                    <div class="empty-icon">⚠️</div>
+                    <div class="empty-title">Ошибка</div>
+                    <div class="empty-description">${message}</div>
+                    <button class="btn btn-primary" onclick="window.location.reload()">
+                        Перезагрузить
+                    </button>
+                </div>
+            </div>
+        `;
+    }
 
             // ==================== СИСТЕМА СОХРАНЕНИЯ СОСТОЯНИЯ ====================
 
@@ -2891,7 +3648,495 @@
                 }
             }
 
-            // ... остальные методы рендеринга остаются без изменений
+            // ==================== ОСНОВНЫЕ СТРАНИЦЫ ====================
+
+    createHomePage() {
+        return `
+            <div class="page home-page">
+                <div class="hero-section">
+                    <div class="hero-content">
+                        <h1>Академия АНБ</h1>
+                        <p class="hero-subtitle">Профессиональное сообщество неврологов и реабилитологов</p>
+                        <div class="hero-search">
+                            <input type="text" 
+                                   class="search-input" 
+                                   placeholder="Поиск курсов, материалов, видео..."
+                                   value="${this.searchTerm}"
+                                   oninput="app.handleSearchInput(this.value)"
+                                   onkeypress="app.handleSearchKeypress(event)">
+                            <button class="search-btn" onclick="app.performSearch()">
+                                🔍 Поиск
+                            </button>
+                        </div>
+                        <div class="hero-stats">
+                            <div class="stat">
+                                <div class="stat-number">${this.allContent.stats?.totalCourses || 0}</div>
+                                <div class="stat-label">Курсов</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-number">${this.allContent.stats?.totalUsers || 0}</div>
+                                <div class="stat-label">Студентов</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-number">25</div>
+                                <div class="stat-label">Экспертов</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-number">${this.allContent.stats?.totalMaterials || 0}</div>
+                                <div class="stat-label">Материалов</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="main-navigation-grid">
+                    <div class="nav-card-large" onclick="app.renderPage('courses')">
+                        <div class="nav-card-image">
+                            <img src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop" alt="Курсы">
+                            <div class="nav-card-overlay">
+                                <div class="nav-card-icon">📚</div>
+                                <h3>Курсы</h3>
+                                <p>Системное обучение с сертификатами</p>
+                            </div>
+                        </div>
+                        <div class="nav-count">${this.allContent.courses?.length || 0}</div>
+                    </div>
+
+                    <div class="nav-card-large" onclick="app.renderPage('materials')">
+                        <div class="nav-card-image">
+                            <img src="https://images.unsplash.com/photo-1589998059171-988d887df646?w=400&h=250&fit=crop" alt="Материалы">
+                            <div class="nav-card-overlay">
+                                <div class="nav-card-icon">📋</div>
+                                <h3>Материалы</h3>
+                                <p>Презентации, статьи и методички</p>
+                            </div>
+                        </div>
+                        <div class="nav-count">${this.allContent.materials?.length || 0}</div>
+                    </div>
+                </div>
+
+                <div class="featured-section">
+                    <div class="section-header">
+                        <h2 class="section-title">⭐ Рекомендуемые курсы</h2>
+                        <button class="btn btn-outline" onclick="app.renderPage('courses')">
+                            Все курсы →
+                        </button>
+                    </div>
+                    <div class="content-grid">
+                        ${(this.allContent.courses || []).slice(0, 3).map(course => this.createCourseCard(course)).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createCourseCard(course) {
+        return `
+            <div class="content-card course-card" onclick="app.openCourseDetail(${course.id})">
+                <div class="card-image">
+                    <img src="${course.image_url}" alt="${course.title}" 
+                         onerror="this.src='https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop'">
+                    <div class="card-overlay">
+                        <button class="favorite-btn ${this.isFavorite(course.id, 'courses') ? 'active' : ''}" 
+                                onclick="event.stopPropagation(); app.toggleFavorite(${course.id}, 'courses')">
+                            ${this.isFavorite(course.id, 'courses') ? '❤️' : '🤍'}
+                        </button>
+                    </div>
+                    ${course.featured ? '<div class="featured-badge">Рекомендуем</div>' : ''}
+                </div>
+                <div class="card-content">
+                    <div class="card-category">${course.category || 'Общее'}</div>
+                    <h3 class="card-title">${course.title}</h3>
+                    <p class="card-description">${course.description}</p>
+                    <div class="card-footer">
+                        <div class="price-section">
+                            <span class="price-current">${this.formatPrice(course.price)}</span>
+                        </div>
+                        <button class="btn btn-primary btn-small">
+                            Подробнее
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createCoursesPage() {
+        return `
+            <div class="page courses-page">
+                <div class="page-header">
+                    <h2>📚 Курсы</h2>
+                    <p>Профессиональные курсы по неврологии и реабилитации</p>
+                </div>
+                <div class="content-grid">
+                    ${(this.allContent.courses || []).map(course => this.createCourseCard(course)).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createMaterialsPage() {
+        return `
+            <div class="page materials-page">
+                <div class="page-header">
+                    <h2>📋 Материалы</h2>
+                    <p>Презентации, статьи, чек-листы и методические материалы</p>
+                </div>
+                <div class="content-grid">
+                    ${(this.allContent.materials || []).map(material => `
+                        <div class="content-card material-card">
+                            <div class="card-image">
+                                <img src="${material.image_url}" alt="${material.title}">
+                                <div class="card-overlay">
+                                    <button class="download-btn" onclick="app.downloadMaterial(${material.id})">
+                                        📥
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-category">${material.category}</div>
+                                <h3 class="card-title">${material.title}</h3>
+                                <p class="card-description">${material.description}</p>
+                                <div class="card-meta">
+                                    <div class="meta-item">📥 ${material.downloads} загрузок</div>
+                                    <div class="meta-item">📊 ${this.formatFileSize(material.file_size)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createStreamsPage() {
+        return `
+            <div class="page streams-page">
+                <div class="page-header">
+                    <h2>📹 Эфиры</h2>
+                    <p>Прямые трансляции и записи вебинаров</p>
+                </div>
+                <div class="content-grid">
+                    ${(this.allContent.streams || []).map(stream => `
+                        <div class="content-card stream-card">
+                            <div class="card-image">
+                                <img src="${stream.thumbnail_url}" alt="${stream.title}">
+                                <div class="card-overlay">
+                                    <button class="play-btn" onclick="app.playStream(${stream.id})">
+                                        ▶️
+                                    </button>
+                                </div>
+                                ${stream.is_live ? '<div class="live-badge">LIVE</div>' : ''}
+                            </div>
+                            <div class="card-content">
+                                <div class="card-category">${stream.category}</div>
+                                <h3 class="card-title">${stream.title}</h3>
+                                <p class="card-description">${stream.description}</p>
+                                <div class="card-meta">
+                                    <div class="meta-item">👥 ${stream.participants} участников</div>
+                                    <div class="meta-item">⏱️ ${stream.duration}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createEventsPage() {
+        return `
+            <div class="page events-page">
+                <div class="page-header">
+                    <h2>🗺️ Мероприятия</h2>
+                    <p>Конференции, семинары и встречи сообщества</p>
+                </div>
+                <div class="content-grid">
+                    ${(this.allContent.events || []).map(event => `
+                        <div class="content-card event-card">
+                            <div class="card-image">
+                                <img src="${event.image_url}" alt="${event.title}">
+                            </div>
+                            <div class="card-content">
+                                <div class="card-category">${event.event_type === 'offline' ? '📍 Оффлайн' : '💻 Онлайн'}</div>
+                                <h3 class="card-title">${event.title}</h3>
+                                <p class="card-description">${event.description}</p>
+                                <div class="card-meta">
+                                    <div class="meta-item">📅 ${new Date(event.event_date).toLocaleDateString('ru-RU')}</div>
+                                    <div class="meta-item">👥 ${event.participants} участников</div>
+                                </div>
+                                ${event.location ? `<div class="meta-item">📍 ${event.location}</div>` : ''}
+                                <div class="card-footer">
+                                    <button class="btn btn-primary" onclick="app.registerForEvent(${event.id})">
+                                        Зарегистрироваться
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createCommunityPage() {
+        return `
+            <div class="page community-page">
+                <div class="page-header">
+                    <h2>👥 Сообщество</h2>
+                    <p>Общайтесь с коллегами и экспертами</p>
+                </div>
+                <div class="community-container">
+                    <div class="community-feed">
+                        ${this.communityPosts.map(post => `
+                            <div class="community-post">
+                                <div class="post-header">
+                                    <img src="${post.avatar}" alt="${post.author}" class="post-avatar">
+                                    <div>
+                                        <div class="post-author">${post.author}</div>
+                                        <div class="post-time">${post.time}</div>
+                                    </div>
+                                </div>
+                                <div class="post-content">${post.content}</div>
+                                <div class="post-actions">
+                                    <button class="post-action">👍 ${post.likes}</button>
+                                    <button class="post-action">💬 ${post.comments}</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="community-sidebar">
+                        <div class="sidebar-section">
+                            <h3 class="sidebar-title">Онлайн эксперты</h3>
+                            <div class="expert-list">
+                                ${this.instructors.map(instructor => `
+                                    <div class="expert-item">
+                                        <img src="${instructor.avatar_url}" alt="${instructor.name}" class="expert-avatar">
+                                        <div class="expert-info">
+                                            <div class="expert-name">${instructor.name}</div>
+                                            <div class="expert-specialty">${instructor.specialization}</div>
+                                        </div>
+                                        <div class="online-status"></div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createChatsPage() {
+        return `
+            <div class="page chats-page">
+                <div class="page-header">
+                    <h2>💬 Чаты</h2>
+                    <p>Общайтесь с коллегами в реальном времени</p>
+                </div>
+                <div class="chats-container">
+                    <div class="chats-list">
+                        <div class="chats-header">
+                            <input type="text" class="chats-search" placeholder="Поиск чатов...">
+                        </div>
+                        <div class="chat-items">
+                            ${this.chats.map(chat => `
+                                <div class="chat-item" onclick="app.openChat(${chat.id})">
+                                    <img src="${chat.avatar}" alt="${chat.name}" class="chat-avatar">
+                                    <div class="chat-info">
+                                        <div class="chat-name">${chat.name}</div>
+                                        <div class="chat-preview">${chat.lastMessage}</div>
+                                    </div>
+                                    <div class="chat-meta">
+                                        <div class="chat-time">${chat.time}</div>
+                                        ${chat.unread > 0 ? `<div class="chat-unread">${chat.unread}</div>` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="chat-window">
+                        <div class="chat-header">
+                            <img src="${this.chats[0]?.avatar}" alt="${this.chats[0]?.name}" class="chat-avatar">
+                            <div class="chat-info">
+                                <div class="chat-name">${this.chats[0]?.name}</div>
+                            </div>
+                        </div>
+                        <div class="chat-messages">
+                            <div class="message incoming">
+                                <div class="message-text">Добро пожаловать в Академию АНБ!</div>
+                                <div class="message-time">10:30</div>
+                            </div>
+                            <div class="message outgoing">
+                                <div class="message-text">Спасибо! Рад присоединиться к сообществу</div>
+                                <div class="message-time">10:32</div>
+                            </div>
+                        </div>
+                        <div class="chat-input">
+                            <textarea class="message-input" placeholder="Введите сообщение..."></textarea>
+                            <button class="send-btn">➤</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createProfilePage() {
+        return `
+            <div class="page profile-page">
+                <div class="page-header">
+                    <h2>👤 Профиль</h2>
+                    <p>Управление вашим аккаунтом и настройками</p>
+                </div>
+                <div class="detail-content">
+                    <div class="instructor-card">
+                        <div class="instructor-avatar">👨‍⚕️</div>
+                        <div class="instructor-info">
+                            <div class="instructor-name">${this.currentUser?.firstName || 'Гость'} ${this.currentUser?.lastName || ''}</div>
+                            <div class="instructor-specialization">${this.currentUser?.specialization || 'Невролог'}</div>
+                            <div class="instructor-bio">
+                                ${this.isAuthenticated ? 
+                                    `Зарегистрирован с ${new Date(this.currentUser?.joinDate).toLocaleDateString('ru-RU')}` : 
+                                    'Войдите в систему для доступа ко всем функциям'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-section" style="margin-top: 2rem;">
+                        <div class="progress-header">
+                            <span>Прогресс обучения</span>
+                            <span>${this.state.progress.experience || 0} XP</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${(this.state.progress.experience || 0) / 2000 * 100}%"></div>
+                        </div>
+                        <div class="progress-text">
+                            Уровень: ${this.state.progress.level || 'Новичок'} | 
+                            Завершено курсов: ${this.state.progress.completedCourses || 0}
+                        </div>
+                    </div>
+
+                    <div class="detail-actions" style="margin-top: 2rem;">
+                        <button class="btn btn-primary" onclick="app.showSettingsModal()">
+                            ⚙️ Настройки
+                        </button>
+                        ${!this.isAuthenticated ? `
+                            <button class="btn btn-outline" onclick="app.showAuthModal()">
+                                🔐 Войти
+                            </button>
+                        ` : ''}
+                        ${this.isAdmin ? `
+                            <button class="btn btn-outline" onclick="app.renderPage('admin')">
+                                🔧 Админ-панель
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createAdminPage() {
+        if (!this.isAdmin) {
+            return this.createNotFoundPage();
+        }
+
+        return `
+            <div class="page admin-page">
+                <div class="page-header">
+                    <h2>🔧 Админ-панель</h2>
+                    <p>Управление контентом и пользователями</p>
+                </div>
+                <div class="admin-panel">
+                    <div class="admin-stats">
+                        <div class="admin-stat">
+                            <div class="admin-stat-value">${this.allContent.stats?.totalUsers || 0}</div>
+                            <div class="admin-stat-label">Пользователей</div>
+                        </div>
+                        <div class="admin-stat">
+                            <div class="admin-stat-value">${this.allContent.stats?.totalCourses || 0}</div>
+                            <div class="admin-stat-label">Курсов</div>
+                        </div>
+                        <div class="admin-stat">
+                            <div class="admin-stat-value">${this.allContent.stats?.totalMaterials || 0}</div>
+                            <div class="admin-stat-label">Материалов</div>
+                        </div>
+                        <div class="admin-stat">
+                            <div class="admin-stat-value">${this.allContent.stats?.totalEvents || 0}</div>
+                            <div class="admin-stat-label">Мероприятий</div>
+                        </div>
+                    </div>
+
+                    <div class="admin-tabs">
+                        <button class="admin-tab active">Пользователи</button>
+                        <button class="admin-tab">Курсы</button>
+                        <button class="admin-tab">Материалы</button>
+                    </div>
+
+                    <div class="admin-content">
+                        <h3>Последние пользователи</h3>
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Имя</th>
+                                    <th>Email</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>${this.currentUser?.id || '1'}</td>
+                                    <td>${this.currentUser?.firstName || 'Админ'} ${this.currentUser?.lastName || ''}</td>
+                                    <td>${this.currentUser?.email || 'admin@anb.ru'}</td>
+                                    <td><span style="color: var(--success)">Активен</span></td>
+                                    <td>
+                                        <div class="admin-actions">
+                                            <button class="btn btn-small btn-outline">Редактировать</button>
+                                            <button class="btn btn-small btn-outline">Статистика</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createNotFoundPage() {
+        return `
+            <div class="page">
+                <div class="empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <div class="empty-title">Страница не найдена</div>
+                    <div class="empty-description">Запрашиваемая страница не существует</div>
+                    <button class="btn btn-primary" onclick="app.renderPage('home')">
+                        На главную
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    createErrorPage(message) {
+        return `
+            <div class="page">
+                <div class="empty-state">
+                    <div class="empty-icon">⚠️</div>
+                    <div class="empty-title">Ошибка</div>
+                    <div class="empty-description">${message}</div>
+                    <button class="btn btn-primary" onclick="window.location.reload()">
+                        Перезагрузить
+                    </button>
+                </div>
+            </div>
+        `;
+    }
 
             // ==================== РАБОТА С API ====================
 
@@ -2988,6 +4233,68 @@
 
         }
 
+    // ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ====================
+
+    formatPrice(price) {
+        return new Intl.NumberFormat('ru-RU').format(Math.round(price)) + ' ₽';
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    isFavorite(contentId, contentType) {
+        return this.state.favorites[contentType]?.includes(contentId) || false;
+    }
+
+    handleSearchInput(value) {
+        this.searchTerm = value;
+    }
+
+    handleSearchKeypress(event) {
+        if (event.key === 'Enter') {
+            this.performSearch();
+        }
+    }
+
+    performSearch() {
+        this.showNotification('Функция поиска в разработке', 'info');
+    }
+
+    openCourseDetail(courseId) {
+        this.showNotification(`Открытие курса ${courseId}`, 'info');
+    }
+
+    downloadMaterial(materialId) {
+        this.showNotification(`Скачивание материала ${materialId}`, 'info');
+    }
+
+    playStream(streamId) {
+        this.showNotification(`Воспроизведение эфира ${streamId}`, 'info');
+    }
+
+    registerForEvent(eventId) {
+        this.showNotification(`Регистрация на мероприятие ${eventId}`, 'info');
+    }
+
+    openChat(chatId) {
+        this.showNotification(`Открытие чата ${chatId}`, 'info');
+    }
+
+    showSettingsModal() {
+        this.showNotification('Открытие настроек', 'info');
+    }
+
+    renderSubPage(subPage) {
+        return `<div class="page"><h2>Подстраница: ${subPage}</h2></div>`;
+    }
+}
+// конец класса AcademyApp
+        
         // ==================== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ====================
 
         document.addEventListener('DOMContentLoaded', function() {
