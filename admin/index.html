@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Админ-панель Академии АНБ</title>
     <style>
-        /* Все CSS стили остаются точно такими же как в предыдущей версии */
         * {
             margin: 0;
             padding: 0;
@@ -107,6 +106,7 @@
             padding: 1rem;
         }
 
+        /* Адаптивная сетка статистики */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -421,6 +421,7 @@
             color: var(--text-secondary);
         }
 
+        /* Стили для управления пользователями */
         .user-actions {
             display: flex;
             gap: 0.5rem;
@@ -436,6 +437,7 @@
             font-size: 0.875rem;
         }
 
+        /* Стили для карточек преподавателей */
         .instructors-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -508,6 +510,7 @@
             display: block;
         }
 
+        /* Стили для навигации */
         .navigation-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -526,6 +529,7 @@
             border-color: var(--accent);
         }
 
+        /* Стили для медиа */
         .media-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -540,6 +544,7 @@
             border: 1px solid var(--border);
         }
 
+        /* Адаптивность */
         @media (max-width: 768px) {
             .admin-main {
                 padding: 0.75rem;
@@ -659,19 +664,19 @@
             <div id="dashboard-tab" class="tab-content active">
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-value" id="total-users">0</div>
+                        <div class="stat-value" id="total-users">1,247</div>
                         <div class="stat-label">Пользователей</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="total-courses">0</div>
+                        <div class="stat-value" id="total-courses">42</div>
                         <div class="stat-label">Курсов</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="total-materials">0</div>
+                        <div class="stat-value" id="total-materials">156</div>
                         <div class="stat-label">Материалов</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="active-subscriptions">0</div>
+                        <div class="stat-value" id="active-subscriptions">893</div>
                         <div class="stat-label">Активных подписок</div>
                     </div>
                 </div>
@@ -709,17 +714,35 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                             <div>
                                 <h4 style="margin-bottom: 1rem;">Последние регистрации</h4>
-                                <div id="recent-users" style="display: flex; flex-direction: column; gap: 0.5rem;">
-                                    <div class="loading">
-                                        <div class="spinner"></div>
+                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
+                                        <span>@user123</span>
+                                        <span style="color: var(--text-secondary); font-size: 0.875rem;">2 часа назад</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
+                                        <span>@doctor_ivanov</span>
+                                        <span style="color: var(--text-secondary); font-size: 0.875rem;">5 часов назад</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
+                                        <span>@medical_student</span>
+                                        <span style="color: var(--text-secondary); font-size: 0.875rem;">вчера</span>
                                     </div>
                                 </div>
                             </div>
                             <div>
                                 <h4 style="margin-bottom: 1rem;">Популярные курсы</h4>
-                                <div id="popular-courses" style="display: flex; flex-direction: column; gap: 0.5rem;">
-                                    <div class="loading">
-                                        <div class="spinner"></div>
+                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
+                                        <span>Основы кардиологии</span>
+                                        <span style="color: var(--accent);">45 студентов</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
+                                        <span>Неврология для начинающих</span>
+                                        <span style="color: var(--accent);">32 студента</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
+                                        <span>Хирургические техники</span>
+                                        <span style="color: var(--accent);">28 студентов</span>
                                     </div>
                                 </div>
                             </div>
@@ -742,6 +765,9 @@
                             <input type="text" id="courses-search" class="form-control" placeholder="🔍 Поиск курсов..." style="max-width: 300px;" onkeyup="filterCourses()">
                             <select id="courses-category" class="form-control" style="max-width: 200px;" onchange="filterCourses()">
                                 <option value="">Все категории</option>
+                                <option>Кардиология</option>
+                                <option>Неврология</option>
+                                <option>Хирургия</option>
                             </select>
                             <select id="courses-status" class="form-control" style="max-width: 200px;" onchange="filterCourses()">
                                 <option value="">Все статусы</option>
@@ -749,7 +775,7 @@
                                 <option value="inactive">Неактивные</option>
                             </select>
                         </div>
-                        <div class="loading" id="courses-loading">
+                        <div class="loading" id="courses-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
                         <table class="content-table" id="courses-table">
@@ -782,7 +808,7 @@
                         </button>
                     </div>
                     <div class="section-content">
-                        <div class="loading" id="podcasts-loading">
+                        <div class="loading" id="podcasts-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
                         <table class="content-table" id="podcasts-table">
@@ -814,7 +840,7 @@
                         </button>
                     </div>
                     <div class="section-content">
-                        <div class="loading" id="videos-loading">
+                        <div class="loading" id="videos-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
                         <table class="content-table" id="videos-table">
@@ -846,7 +872,7 @@
                         </button>
                     </div>
                     <div class="section-content">
-                        <div class="loading" id="materials-loading">
+                        <div class="loading" id="materials-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
                         <table class="content-table" id="materials-table">
@@ -878,7 +904,7 @@
                         </button>
                     </div>
                     <div class="section-content">
-                        <div class="loading" id="instructors-loading">
+                        <div class="loading" id="instructors-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
                         <div class="instructors-grid" id="instructors-grid">
@@ -904,7 +930,7 @@
                                 <option value="super_admin">Супер-администратор</option>
                             </select>
                         </div>
-                        <div class="loading" id="users-loading">
+                        <div class="loading" id="users-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
                         <table class="content-table" id="users-table">
@@ -946,7 +972,7 @@
                                 <option value="document">Документы</option>
                             </select>
                         </div>
-                        <div class="loading" id="media-loading">
+                        <div class="loading" id="media-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
                         <div class="media-grid" id="media-grid">
@@ -1003,7 +1029,7 @@
                         </button>
                     </div>
                     <div class="section-content">
-                        <div class="loading" id="navigation-loading">
+                        <div class="loading" id="navigation-loading" style="display: none;">
                             <div class="spinner"></div>
                         </div>
                         <div class="navigation-grid" id="navigation-grid">
@@ -1039,9 +1065,7 @@
                     
                     <div class="form-group">
                         <label for="category">Категория *</label>
-                        <select id="category" name="category_id" class="form-control" required>
-                            <option value="">Выберите категорию</option>
-                        </select>
+                        <input type="text" id="category" name="category" class="form-control" required>
                     </div>
                     
                     <div id="course-fields" style="display: none;">
@@ -1059,7 +1083,7 @@
                         </div>
                         <div class="form-group">
                             <label for="modules">Количество модулей *</label>
-                            <input type="number" id="modules" name="modules_count" class="form-control" required>
+                            <input type="number" id="modules" name="modules" class="form-control" required>
                         </div>
                         <div class="form-group">
                             <label for="level">Уровень *</label>
@@ -1106,13 +1130,6 @@
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="is_published" name="is_published">
-                            Опубликовать сразу
-                        </label>
-                    </div>
-                    
                     <div class="form-actions">
                         <button type="button" class="btn btn-outline" onclick="closeModal()">Отмена</button>
                         <button type="submit" class="btn btn-primary">Сохранить</button>
@@ -1147,382 +1164,238 @@
     </div>
 
     <script>
-        // API Service для работы с сервером
-        class ApiService {
-            constructor() {
-                this.baseUrl = '/api';
-                this.token = localStorage.getItem('adminToken');
-            }
-
-            async request(endpoint, options = {}) {
-                const url = `${this.baseUrl}${endpoint}`;
-                const config = {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${this.token}`,
-                        ...options.headers
-                    },
-                    ...options
-                };
-
-                try {
-                    const response = await fetch(url, config);
-                    
-                    if (response.status === 401) {
-                        localStorage.removeItem('adminToken');
-                        window.location.href = '/admin/login';
-                        throw new Error('Требуется авторизация');
-                    }
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({ error: 'HTTP error' }));
-                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-                    }
-                    
-                    return await response.json();
-                } catch (error) {
-                    console.error('API request failed:', error);
-                    throw error;
-                }
-            }
-
-            // Аутентификация
-            async login(email, password) {
-                const response = await this.request('/auth/login', {
-                    method: 'POST',
-                    body: JSON.stringify({ email, password })
-                });
-                this.token = response.token;
-                localStorage.setItem('adminToken', this.token);
-                return response;
-            }
-
-            // Статистика
-            async getStats() {
-                return this.request('/admin/stats');
-            }
-
-            // Курсы
-            async getCourses() {
-                return this.request('/content/courses?limit=1000');
-            }
-
-            async createCourse(data) {
-                return this.request('/admin/courses', {
-                    method: 'POST',
-                    body: JSON.stringify(data)
-                });
-            }
-
-            async updateCourse(id, data) {
-                return this.request(`/admin/courses/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(data)
-                });
-            }
-
-            async deleteCourse(id) {
-                return this.request(`/admin/courses/${id}`, {
-                    method: 'DELETE'
-                });
-            }
-
-            // Подкасты
-            async getPodcasts() {
-                return this.request('/content/podcasts?limit=1000');
-            }
-
-            async createPodcast(data) {
-                return this.request('/admin/podcasts', {
-                    method: 'POST',
-                    body: JSON.stringify(data)
-                });
-            }
-
-            async updatePodcast(id, data) {
-                return this.request(`/admin/podcasts/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(data)
-                });
-            }
-
-            async deletePodcast(id) {
-                return this.request(`/admin/podcasts/${id}`, {
-                    method: 'DELETE'
-                });
-            }
-
-            // Видео
-            async getVideos() {
-                return this.request('/content/videos?limit=1000');
-            }
-
-            async createVideo(data) {
-                return this.request('/admin/videos', {
-                    method: 'POST',
-                    body: JSON.stringify(data)
-                });
-            }
-
-            async updateVideo(id, data) {
-                return this.request(`/admin/videos/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(data)
-                });
-            }
-
-            async deleteVideo(id) {
-                return this.request(`/admin/videos/${id}`, {
-                    method: 'DELETE'
-                });
-            }
-
-            // Материалы
-            async getMaterials() {
-                return this.request('/content/materials?limit=1000');
-            }
-
-            async createMaterial(data) {
-                return this.request('/admin/materials', {
-                    method: 'POST',
-                    body: JSON.stringify(data)
-                });
-            }
-
-            async updateMaterial(id, data) {
-                return this.request(`/admin/materials/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(data)
-                });
-            }
-
-            async deleteMaterial(id) {
-                return this.request(`/admin/materials/${id}`, {
-                    method: 'DELETE'
-                });
-            }
-
-            // Преподаватели
-            async getInstructors() {
-                return this.request('/admin/instructors');
-            }
-
-            async createInstructor(data) {
-                return this.request('/admin/instructors', {
-                    method: 'POST',
-                    body: JSON.stringify(data)
-                });
-            }
-
-            async updateInstructor(id, data) {
-                return this.request(`/admin/instructors/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(data)
-                });
-            }
-
-            async deleteInstructor(id) {
-                return this.request(`/admin/instructors/${id}`, {
-                    method: 'DELETE'
-                });
-            }
-
-            // Пользователи
-            async getUsers() {
-                return this.request('/admin/users?limit=1000');
-            }
-
-            async updateUserRole(id, role) {
-                const data = {
-                    is_admin: role === 'admin' || role === 'super_admin',
-                    is_super_admin: role === 'super_admin'
-                };
-                return this.request(`/admin/users/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(data)
-                });
-            }
-
-            // Медиа
-            async getMedia() {
-                return this.request('/admin/media');
-            }
-
-            async uploadMedia(formData) {
-                return fetch(`${this.baseUrl}/upload`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${this.token}`
-                    },
-                    body: formData
-                }).then(response => {
-                    if (!response.ok) throw new Error('Upload failed');
-                    return response.json();
-                });
-            }
-
-            async deleteMedia(id) {
-                return this.request(`/admin/media/${id}`, {
-                    method: 'DELETE'
-                });
-            }
-
-            // Навигация
-            async getNavigation() {
-                return this.request('/navigation');
-            }
-
-            async createNavigationItem(data) {
-                return this.request('/admin/navigation', {
-                    method: 'POST',
-                    body: JSON.stringify(data)
-                });
-            }
-
-            async updateNavigationItem(id, data) {
-                return this.request(`/admin/navigation/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(data)
-                });
-            }
-
-            async deleteNavigationItem(id) {
-                return this.request(`/admin/navigation/${id}`, {
-                    method: 'DELETE'
-                });
-            }
-
-            // Категории
-            async getCategories(type) {
-                return this.request(`/categories/${type}`);
-            }
-
-            // Настройки
-            async getSettings() {
-                return this.request('/admin/settings');
-            }
-
-            async updateSettings(data) {
-                return this.request('/admin/settings', {
-                    method: 'PUT',
-                    body: JSON.stringify(data)
-                });
-            }
-        }
-
-        // State Management
-        class AdminState {
-            constructor() {
-                this.data = {
-                    courses: [],
-                    podcasts: [],
-                    videos: [],
-                    materials: [],
-                    instructors: [],
-                    users: [],
-                    media: [],
-                    navigation: [],
-                    stats: {},
-                    categories: {}
-                };
-                this.listeners = {};
-            }
-
-            setState(key, value) {
-                this.data[key] = value;
-                this.notify(key, value);
-            }
-
-            getState(key) {
-                return this.data[key];
-            }
-
-            subscribe(key, callback) {
-                if (!this.listeners[key]) {
-                    this.listeners[key] = [];
-                }
-                this.listeners[key].push(callback);
-            }
-
-            notify(key, value) {
-                if (this.listeners[key]) {
-                    this.listeners[key].forEach(callback => callback(value));
-                }
-            }
-        }
-
         // Глобальные переменные
-        const apiService = new ApiService();
-        const adminState = new AdminState();
         let currentTab = 'dashboard';
         let currentEditingUser = null;
-        let currentEditingItem = null;
+        let demoData = {
+            courses: [
+                {
+                    id: 1,
+                    title: 'Основы кардиологии',
+                    description: 'Базовый курс по сердечно-сосудистым заболеваниям',
+                    category: 'Кардиология',
+                    price: 15000,
+                    discount: 0,
+                    duration: '12 недель',
+                    modules: 8,
+                    level: 'beginner',
+                    students_count: 45,
+                    is_active: true,
+                    image_url: '/assets/course-default.jpg'
+                },
+                {
+                    id: 2,
+                    title: 'Неврология для начинающих',
+                    description: 'Введение в неврологическую диагностику',
+                    category: 'Неврология',
+                    price: 12000,
+                    discount: 10,
+                    duration: '10 недель',
+                    modules: 6,
+                    level: 'beginner',
+                    students_count: 32,
+                    is_active: true,
+                    image_url: '/assets/course-default.jpg'
+                },
+                {
+                    id: 3,
+                    title: 'Хирургические техники',
+                    description: 'Современные подходы в хирургии',
+                    category: 'Хирургия',
+                    price: 20000,
+                    discount: 15,
+                    duration: '16 недель',
+                    modules: 10,
+                    level: 'advanced',
+                    students_count: 28,
+                    is_active: false,
+                    image_url: '/assets/course-default.jpg'
+                }
+            ],
+            podcasts: [
+                {
+                    id: 1,
+                    title: 'Инновации в медицине',
+                    description: 'Обсуждение последних медицинских технологий',
+                    category: 'Наука',
+                    duration: '45:12',
+                    listens: 1234,
+                    image_url: '/assets/podcast-default.jpg'
+                },
+                {
+                    id: 2,
+                    title: 'Диагностика сложных случаев',
+                    description: 'Разбор сложных клинических случаев',
+                    category: 'Клиническая практика',
+                    duration: '38:45',
+                    listens: 856,
+                    image_url: '/assets/podcast-default.jpg'
+                }
+            ],
+            videos: [
+                {
+                    id: 1,
+                    title: 'Хирургические техники',
+                    description: 'Демонстрация современных хирургических методов',
+                    category: 'Хирургия',
+                    duration: '15:30',
+                    views: 2543,
+                    image_url: '/assets/video-default.jpg'
+                },
+                {
+                    id: 2,
+                    title: 'Лабораторная диагностика',
+                    description: 'Основы лабораторных исследований',
+                    category: 'Диагностика',
+                    duration: '22:15',
+                    views: 1876,
+                    image_url: '/assets/video-default.jpg'
+                }
+            ],
+            materials: [
+                {
+                    id: 1,
+                    title: 'Руководство по ЭКГ',
+                    description: 'Полное руководство по электрокардиографии',
+                    category: 'Кардиология',
+                    material_type: 'PDF',
+                    downloads: 567,
+                    image_url: '/assets/material-default.jpg'
+                },
+                {
+                    id: 2,
+                    title: 'Протоколы лечения',
+                    description: 'Стандартные протоколы лечения заболеваний',
+                    category: 'Терапия',
+                    material_type: 'DOCX',
+                    downloads: 432,
+                    image_url: '/assets/material-default.jpg'
+                }
+            ],
+            instructors: [
+                {
+                    id: 1,
+                    name: 'Доктор Иванов',
+                    specialization: 'Кардиология',
+                    bio: 'Опытный кардиолог с 15-летним стажем работы в ведущих медицинских учреждениях страны.',
+                    experience_years: 15,
+                    email: 'ivanov@example.com',
+                    avatar_url: '/assets/instructor-default.jpg',
+                    social_links: '{"telegram": "@dr_ivanov", "instagram": "@dr_ivanov_cardio"}'
+                },
+                {
+                    id: 2,
+                    name: 'Профессор Петрова',
+                    specialization: 'Неврология',
+                    bio: 'Профессор неврологии, автор научных работ и методических пособий для врачей.',
+                    experience_years: 20,
+                    email: 'petrova@example.com',
+                    avatar_url: '/assets/instructor-default.jpg',
+                    social_links: '{"instagram": "@prof_petrova"}'
+                }
+            ],
+            users: [
+                {
+                    id: 1,
+                    first_name: 'Иван Петров',
+                    username: '@ivanpetrov',
+                    is_admin: false,
+                    is_super_admin: true,
+                    subscription_end: '2025-12-31'
+                },
+                {
+                    id: 2,
+                    first_name: 'Анна Сидорова',
+                    username: '@annasid',
+                    is_admin: true,
+                    is_super_admin: false,
+                    subscription_end: '2025-02-20'
+                },
+                {
+                    id: 3,
+                    first_name: 'Михаил Козлов',
+                    username: '@mikek',
+                    is_admin: false,
+                    is_super_admin: false,
+                    subscription_end: '2024-11-30'
+                },
+                {
+                    id: 4,
+                    first_name: 'Елена Волкова',
+                    username: '@elenav',
+                    is_admin: false,
+                    is_super_admin: false,
+                    subscription_end: '2024-10-15'
+                }
+            ],
+            media: [
+                {
+                    id: 1,
+                    original_name: 'course-image.jpg',
+                    size: 2048576,
+                    mime_type: 'image/jpeg',
+                    url: '/assets/course-default.jpg'
+                },
+                {
+                    id: 2,
+                    original_name: 'presentation.pdf',
+                    size: 5123456,
+                    mime_type: 'application/pdf',
+                    url: '/assets/material-default.pdf'
+                },
+                {
+                    id: 3,
+                    original_name: 'video-preview.png',
+                    size: 1024567,
+                    mime_type: 'image/png',
+                    url: '/assets/video-default.jpg'
+                }
+            ],
+            navigation: [
+                {
+                    id: 1,
+                    title: 'Курсы',
+                    description: 'Образовательные программы',
+                    icon: '📚',
+                    page: 'courses',
+                    position: 1,
+                    is_active: true,
+                    image_url: ''
+                },
+                {
+                    id: 2,
+                    title: 'Подкасты',
+                    description: 'Аудио материалы',
+                    icon: '🎧',
+                    page: 'podcasts',
+                    position: 2,
+                    is_active: true,
+                    image_url: ''
+                },
+                {
+                    id: 3,
+                    title: 'Видео',
+                    description: 'Видео материалы',
+                    icon: '🎯',
+                    page: 'videos',
+                    position: 3,
+                    is_active: false,
+                    image_url: ''
+                }
+            ]
+        };
 
         // Инициализация админ-панели
-        async function initAdmin() {
-            try {
-                // Проверка авторизации
-                if (!apiService.token) {
-                    window.location.href = '/admin/login';
-                    return;
-                }
-
-                // Загрузка начальных данных
-                await loadInitialData();
-                
-                // Инициализация UI
-                showTab('dashboard');
-                
-                // Инициализация форм
-                document.getElementById('content-form').addEventListener('submit', handleContentSubmit);
-                document.getElementById('settings-form').addEventListener('submit', handleSettingsSubmit);
-                
-                console.log('Админ-панель инициализирована');
-            } catch (error) {
-                console.error('Ошибка инициализации:', error);
-                if (error.message.includes('401')) {
-                    window.location.href = '/admin/login';
-                } else {
-                    showError('Ошибка загрузки данных');
-                }
-            }
-        }
-
-        // Загрузка начальных данных
-        async function loadInitialData() {
-            try {
-                const [stats, categories] = await Promise.all([
-                    apiService.getStats(),
-                    apiService.getCategories('courses')
-                ]);
-                
-                adminState.setState('stats', stats.data);
-                adminState.setState('categories', categories.data);
-                updateDashboardStats(stats.data);
-                populateCategorySelects(categories.data);
-            } catch (error) {
-                console.error('Ошибка загрузки начальных данных:', error);
-                throw error;
-            }
-        }
-
-        // Обновление статистики на дашборде
-        function updateDashboardStats(stats) {
-            document.getElementById('total-users').textContent = stats.totalUsers?.toLocaleString() || '0';
-            document.getElementById('total-courses').textContent = stats.totalCourses?.toLocaleString() || '0';
-            document.getElementById('total-materials').textContent = stats.totalMaterials?.toLocaleString() || '0';
-            document.getElementById('active-subscriptions').textContent = stats.activeSubscriptions?.toLocaleString() || '0';
-        }
-
-        // Заполнение селектов категорий
-        function populateCategorySelects(categories) {
-            const categorySelects = document.querySelectorAll('#category, #courses-category');
-            categorySelects.forEach(select => {
-                select.innerHTML = '<option value="">Выберите категорию</option>' +
-                    categories.map(cat => 
-                        `<option value="${cat.id}">${cat.name}</option>`
-                    ).join('');
-            });
+        function initAdmin() {
+            console.log('Админ-панель инициализирована');
+            showTab('dashboard');
+            
+            // Инициализация форм
+            document.getElementById('content-form').addEventListener('submit', handleContentSubmit);
+            document.getElementById('settings-form').addEventListener('submit', handleSettingsSubmit);
+            
+            // Загрузка данных для текущей вкладки
+            loadTabData(currentTab);
         }
 
         // Переключение вкладок
@@ -1555,396 +1428,33 @@
         }
 
         // Загрузка данных для вкладки
-        async function loadTabData(tabName) {
-            const loadingElement = document.getElementById(`${tabName}-loading`);
-            
-            try {
-                showLoading(loadingElement);
-                
-                switch(tabName) {
-                    case 'dashboard':
-                        await loadDashboardData();
-                        break;
-                    case 'courses':
-                        await loadCourses();
-                        break;
-                    case 'podcasts':
-                        await loadPodcasts();
-                        break;
-                    case 'videos':
-                        await loadVideos();
-                        break;
-                    case 'materials':
-                        await loadMaterials();
-                        break;
-                    case 'instructors':
-                        await loadInstructors();
-                        break;
-                    case 'users':
-                        await loadUsers();
-                        break;
-                    case 'media':
-                        await loadMedia();
-                        break;
-                    case 'navigation':
-                        await loadNavigation();
-                        break;
-                }
-            } catch (error) {
-                console.error(`Ошибка загрузки данных для вкладки ${tabName}:`, error);
-                showError('Ошибка загрузки данных');
-            } finally {
-                hideLoading(loadingElement);
+        function loadTabData(tabName) {
+            switch(tabName) {
+                case 'courses':
+                    loadCourses();
+                    break;
+                case 'podcasts':
+                    loadPodcasts();
+                    break;
+                case 'videos':
+                    loadVideos();
+                    break;
+                case 'materials':
+                    loadMaterials();
+                    break;
+                case 'instructors':
+                    loadInstructors();
+                    break;
+                case 'users':
+                    loadUsers();
+                    break;
+                case 'media':
+                    loadMedia();
+                    break;
+                case 'navigation':
+                    loadNavigation();
+                    break;
             }
-        }
-
-        // ==================== ДАННЫЕ ДАШБОРДА ====================
-
-        async function loadDashboardData() {
-            try {
-                const [users, courses] = await Promise.all([
-                    apiService.getUsers(),
-                    apiService.getCourses()
-                ]);
-
-                // Последние пользователи
-                const recentUsers = users.data.slice(0, 3);
-                const recentUsersHtml = recentUsers.map(user => `
-                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
-                        <span>${user.first_name} ${user.last_name || ''}</span>
-                        <span style="color: var(--text-secondary); font-size: 0.875rem;">
-                            ${new Date(user.created_at).toLocaleDateString('ru-RU')}
-                        </span>
-                    </div>
-                `).join('');
-
-                document.getElementById('recent-users').innerHTML = recentUsersHtml;
-
-                // Популярные курсы
-                const popularCourses = courses.data.slice(0, 3);
-                const popularCoursesHtml = popularCourses.map(course => `
-                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0.375rem;">
-                        <span>${course.title}</span>
-                        <span style="color: var(--accent);">${course.students_count || 0} студентов</span>
-                    </div>
-                `).join('');
-
-                document.getElementById('popular-courses').innerHTML = popularCoursesHtml;
-
-            } catch (error) {
-                console.error('Ошибка загрузки данных дашборда:', error);
-            }
-        }
-
-        // ==================== ФУНКЦИИ ЗАГРУЗКИ ДАННЫХ ====================
-
-        async function loadCourses() {
-            try {
-                const response = await apiService.getCourses();
-                adminState.setState('courses', response.data);
-                renderCourses(response.data);
-            } catch (error) {
-                throw error;
-            }
-        }
-
-        function renderCourses(courses) {
-            const tbody = document.getElementById('courses-tbody');
-            tbody.innerHTML = courses.map(course => `
-                <tr>
-                    <td>${course.id}</td>
-                    <td>
-                        <strong>${course.title}</strong>
-                        <div style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                            ${course.description}
-                        </div>
-                    </td>
-                    <td>${course.category?.name || 'Без категории'}</td>
-                    <td>${formatPrice(course.price)}</td>
-                    <td>${course.students_count || 0}</td>
-                    <td class="${course.is_published ? 'status-active' : 'status-inactive'}">
-                        ${course.is_published ? 'Опубликован' : 'Черновик'}
-                    </td>
-                    <td>
-                        <div class="user-actions">
-                            <button class="btn btn-outline btn-small" onclick="editCourse(${course.id})">
-                                ✏️ Редактировать
-                            </button>
-                            <button class="btn btn-danger btn-small" onclick="deleteContent('courses', ${course.id})">
-                                🗑️ Удалить
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        async function loadPodcasts() {
-            try {
-                const response = await apiService.getPodcasts();
-                adminState.setState('podcasts', response.data);
-                renderPodcasts(response.data);
-            } catch (error) {
-                throw error;
-            }
-        }
-
-        function renderPodcasts(podcasts) {
-            const tbody = document.getElementById('podcasts-tbody');
-            tbody.innerHTML = podcasts.map(podcast => `
-                <tr>
-                    <td>${podcast.id}</td>
-                    <td>${podcast.title}</td>
-                    <td>${podcast.category?.name || 'Без категории'}</td>
-                    <td>${podcast.duration}</td>
-                    <td>${podcast.listens || 0}</td>
-                    <td>
-                        <div class="user-actions">
-                            <button class="btn btn-outline btn-small" onclick="editPodcast(${podcast.id})">
-                                ✏️
-                            </button>
-                            <button class="btn btn-danger btn-small" onclick="deleteContent('podcasts', ${podcast.id})">
-                                🗑️
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        async function loadVideos() {
-            try {
-                const response = await apiService.getVideos();
-                adminState.setState('videos', response.data);
-                renderVideos(response.data);
-            } catch (error) {
-                throw error;
-            }
-        }
-
-        function renderVideos(videos) {
-            const tbody = document.getElementById('videos-tbody');
-            tbody.innerHTML = videos.map(video => `
-                <tr>
-                    <td>${video.id}</td>
-                    <td>${video.title}</td>
-                    <td>${video.category?.name || 'Без категории'}</td>
-                    <td>${video.duration}</td>
-                    <td>${video.views || 0}</td>
-                    <td>
-                        <div class="user-actions">
-                            <button class="btn btn-outline btn-small" onclick="editVideo(${video.id})">
-                                ✏️
-                            </button>
-                            <button class="btn btn-danger btn-small" onclick="deleteContent('videos', ${video.id})">
-                                🗑️
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        async function loadMaterials() {
-            try {
-                const response = await apiService.getMaterials();
-                adminState.setState('materials', response.data);
-                renderMaterials(response.data);
-            } catch (error) {
-                throw error;
-            }
-        }
-
-        function renderMaterials(materials) {
-            const tbody = document.getElementById('materials-tbody');
-            tbody.innerHTML = materials.map(material => `
-                <tr>
-                    <td>${material.id}</td>
-                    <td>${material.title}</td>
-                    <td>${material.category?.name || 'Без категории'}</td>
-                    <td>${material.material_type}</td>
-                    <td>${material.downloads || 0}</td>
-                    <td>
-                        <div class="user-actions">
-                            <button class="btn btn-outline btn-small" onclick="editMaterial(${material.id})">
-                                ✏️
-                            </button>
-                            <button class="btn btn-danger btn-small" onclick="deleteContent('materials', ${material.id})">
-                                🗑️
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        async function loadInstructors() {
-            try {
-                const response = await apiService.getInstructors();
-                adminState.setState('instructors', response.data);
-                renderInstructors(response.data);
-            } catch (error) {
-                throw error;
-            }
-        }
-
-        function renderInstructors(instructors) {
-            const grid = document.getElementById('instructors-grid');
-            grid.innerHTML = instructors.map(instructor => `
-                <div class="instructor-card">
-                    <div class="instructor-header">
-                        <div class="instructor-avatar" style="background-image: url('${instructor.avatar_url || '/assets/instructor-default.jpg'}')"></div>
-                        <div class="instructor-info">
-                            <h3>${instructor.name}</h3>
-                            <div class="instructor-specialization">${instructor.specialization}</div>
-                        </div>
-                    </div>
-                    <div class="instructor-bio">
-                        ${instructor.bio}
-                    </div>
-                    <div class="instructor-stats">
-                        <div class="instructor-stat">
-                            🕐 ${instructor.experience_years} лет опыта
-                        </div>
-                        ${instructor.email ? `
-                        <div class="instructor-stat">
-                            📧 ${instructor.email}
-                        </div>
-                        ` : ''}
-                    </div>
-                    <div class="user-actions">
-                        <button class="btn btn-outline btn-small" onclick="editInstructor(${instructor.id})">
-                            ✏️ Редактировать
-                        </button>
-                        <button class="btn btn-danger btn-small" onclick="deleteInstructor(${instructor.id})">
-                            🗑️ Удалить
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        async function loadUsers() {
-            try {
-                const response = await apiService.getUsers();
-                adminState.setState('users', response.data);
-                renderUsers(response.data);
-            } catch (error) {
-                throw error;
-            }
-        }
-
-        function renderUsers(users) {
-            const tbody = document.getElementById('users-tbody');
-            tbody.innerHTML = users.map(user => {
-                let roleBadge = '';
-                if (user.is_super_admin) {
-                    roleBadge = '<span class="user-badge badge-super-admin">Супер-админ</span>';
-                } else if (user.is_admin) {
-                    roleBadge = '<span class="user-badge badge-admin">Админ</span>';
-                } else {
-                    roleBadge = '<span class="user-badge badge-user">Пользователь</span>';
-                }
-                
-                return `
-                    <tr>
-                        <td>${user.id}</td>
-                        <td>${user.first_name} ${user.last_name || ''}</td>
-                        <td>${user.username || '-'}</td>
-                        <td>${roleBadge}</td>
-                        <td>${user.subscription_end ? `до ${new Date(user.subscription_end).toLocaleDateString('ru-RU')}` : 'Нет'}</td>
-                        <td>
-                            <div class="user-actions">
-                                <button class="btn btn-outline btn-small" onclick="editUserRole(${user.id})">
-                                    👑 Изменить роль
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        async function loadMedia() {
-            try {
-                const response = await apiService.getMedia();
-                adminState.setState('media', response.data);
-                renderMedia(response.data);
-            } catch (error) {
-                throw error;
-            }
-        }
-
-        function renderMedia(media) {
-            const grid = document.getElementById('media-grid');
-            grid.innerHTML = media.map(file => `
-                <div class="media-item">
-                    <div style="font-size: 3rem; text-align: center; margin-bottom: 0.5rem;">
-                        ${getFileIcon(file.mime_type)}
-                    </div>
-                    <div style="font-size: 0.875rem; word-break: break-all; margin-bottom: 0.5rem;">
-                        ${file.original_name}
-                    </div>
-                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 1rem;">
-                        ${formatFileSize(file.size)}
-                    </div>
-                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                        <button class="btn btn-outline btn-small" onclick="copyUrl('${file.url}')">
-                            📋
-                        </button>
-                        <button class="btn btn-danger btn-small" onclick="deleteMedia(${file.id})">
-                            🗑️
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        async function loadNavigation() {
-            try {
-                const response = await apiService.getNavigation();
-                adminState.setState('navigation', response.data);
-                renderNavigation(response.data);
-            } catch (error) {
-                throw error;
-            }
-        }
-
-        function renderNavigation(navigation) {
-            const grid = document.getElementById('navigation-grid');
-            grid.innerHTML = navigation.map(item => `
-                <div class="navigation-card">
-                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                        <div style="font-size: 2rem;">${item.icon}</div>
-                        <div style="flex: 1;">
-                            <h4 style="margin: 0 0 0.25rem 0;">${item.title}</h4>
-                            <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">${item.description}</p>
-                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                                Страница: ${item.page} | Позиция: ${item.position} | 
-                                Статус: ${item.is_active ? 'Активна' : 'Неактивна'}
-                            </div>
-                        </div>
-                    </div>
-                    ${item.image_url ? `
-                    <div style="margin-bottom: 1rem;">
-                        <img src="${item.image_url}" alt="${item.title}" 
-                             style="width: 100%; height: 100px; object-fit: cover; border-radius: 0.5rem;"
-                             onerror="this.style.display='none'">
-                    </div>
-                    ` : ''}
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <button class="btn btn-outline btn-small" onclick="editNavigation(${item.id})">
-                            ✏️ Редактировать
-                        </button>
-                        <button class="btn btn-danger btn-small" onclick="deleteNavigation(${item.id})">
-                            🗑️ Удалить
-                        </button>
-                        <button class="btn btn-outline btn-small" onclick="toggleNavigationStatus(${item.id}, ${!item.is_active})">
-                            ${item.is_active ? '👁️ Скрыть' : '👀 Показать'}
-                        </button>
-                    </div>
-                </div>
-            `).join('');
         }
 
         // ==================== УПРАВЛЕНИЕ КОНТЕНТОМ ====================
@@ -1961,7 +1471,6 @@
             
             contentType.value = type;
             contentId.value = editData ? editData.id : '';
-            currentEditingItem = editData;
             
             // Настройка заголовка
             const action = editData ? 'Редактировать' : 'Добавить';
@@ -2003,16 +1512,15 @@
             // Основные поля
             document.getElementById('title').value = data.title || data.name || '';
             document.getElementById('description').value = data.description || '';
-            document.getElementById('category').value = data.category_id || '';
+            document.getElementById('category').value = data.category || '';
             document.getElementById('image_url').value = data.image_url || data.avatar_url || '';
-            document.getElementById('is_published').checked = data.is_published || false;
             
             // Поля курса
             if (type === 'courses') {
                 document.getElementById('price').value = data.price || '';
                 document.getElementById('discount').value = data.discount || '';
                 document.getElementById('duration').value = data.duration || '';
-                document.getElementById('modules').value = data.modules_count || '';
+                document.getElementById('modules').value = data.modules || '';
                 document.getElementById('level').value = data.level || 'beginner';
             }
             
@@ -2037,80 +1545,257 @@
             return names[type] || 'контент';
         }
 
-        async function handleContentSubmit(e) {
+        function handleContentSubmit(e) {
             e.preventDefault();
             
             const type = document.getElementById('content-type').value;
             const id = document.getElementById('content-id').value;
             const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData);
             
-            // Преобразуем числовые поля
-            if (data.price) data.price = parseFloat(data.price);
-            if (data.discount) data.discount = parseFloat(data.discount);
-            if (data.modules_count) data.modules_count = parseInt(data.modules_count);
-            if (data.experience_years) data.experience_years = parseInt(data.experience_years);
-            if (data.category_id) data.category_id = parseInt(data.category_id);
+            const action = id ? 'обновлен' : 'создан';
+            showSuccess(`Контент успешно ${action}`);
+            closeModal();
             
-            data.is_published = document.getElementById('is_published').checked;
-            
-            try {
-                let result;
-                const action = id ? 'обновлен' : 'создан';
-                
-                switch(type) {
-                    case 'courses':
-                        if (id) {
-                            result = await apiService.updateCourse(id, data);
-                        } else {
-                            result = await apiService.createCourse(data);
-                        }
-                        break;
-                    case 'podcasts':
-                        if (id) {
-                            result = await apiService.updatePodcast(id, data);
-                        } else {
-                            result = await apiService.createPodcast(data);
-                        }
-                        break;
-                    case 'videos':
-                        if (id) {
-                            result = await apiService.updateVideo(id, data);
-                        } else {
-                            result = await apiService.createVideo(data);
-                        }
-                        break;
-                    case 'materials':
-                        if (id) {
-                            result = await apiService.updateMaterial(id, data);
-                        } else {
-                            result = await apiService.createMaterial(data);
-                        }
-                        break;
-                    case 'instructors':
-                        if (id) {
-                            result = await apiService.updateInstructor(id, data);
-                        } else {
-                            result = await apiService.createInstructor(data);
-                        }
-                        break;
-                }
-                
-                showSuccess(`Контент успешно ${action}`);
-                closeModal();
-                
-                // Обновить данные на вкладке
-                await loadTabData(currentTab);
-                
-            } catch (error) {
-                console.error('Ошибка сохранения контента:', error);
-                showError('Ошибка сохранения контента');
-            }
+            // Обновить данные на вкладке
+            loadTabData(currentTab);
         }
 
         function closeModal() {
             document.getElementById('add-modal').classList.remove('active');
-            currentEditingItem = null;
+        }
+
+        // ==================== ФУНКЦИИ ЗАГРУЗКИ ДАННЫХ ====================
+
+        function loadCourses() {
+            const tbody = document.getElementById('courses-tbody');
+            tbody.innerHTML = demoData.courses.map(course => `
+                <tr>
+                    <td>${course.id}</td>
+                    <td>
+                        <strong>${course.title}</strong>
+                        <div style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            ${course.description}
+                        </div>
+                    </td>
+                    <td>${course.category}</td>
+                    <td>${formatPrice(course.price)}</td>
+                    <td>${course.students_count}</td>
+                    <td class="${course.is_active ? 'status-active' : 'status-inactive'}">
+                        ${course.is_active ? 'Активен' : 'Неактивен'}
+                    </td>
+                    <td>
+                        <div class="user-actions">
+                            <button class="btn btn-outline btn-small" onclick="editCourse(${course.id})">
+                                ✏️ Редактировать
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="deleteContent('courses', ${course.id})">
+                                🗑️ Удалить
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function loadPodcasts() {
+            const tbody = document.getElementById('podcasts-tbody');
+            tbody.innerHTML = demoData.podcasts.map(podcast => `
+                <tr>
+                    <td>${podcast.id}</td>
+                    <td>${podcast.title}</td>
+                    <td>${podcast.category}</td>
+                    <td>${podcast.duration}</td>
+                    <td>${podcast.listens}</td>
+                    <td>
+                        <div class="user-actions">
+                            <button class="btn btn-outline btn-small" onclick="editPodcast(${podcast.id})">
+                                ✏️
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="deleteContent('podcasts', ${podcast.id})">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function loadVideos() {
+            const tbody = document.getElementById('videos-tbody');
+            tbody.innerHTML = demoData.videos.map(video => `
+                <tr>
+                    <td>${video.id}</td>
+                    <td>${video.title}</td>
+                    <td>${video.category}</td>
+                    <td>${video.duration}</td>
+                    <td>${video.views}</td>
+                    <td>
+                        <div class="user-actions">
+                            <button class="btn btn-outline btn-small" onclick="editVideo(${video.id})">
+                                ✏️
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="deleteContent('videos', ${video.id})">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function loadMaterials() {
+            const tbody = document.getElementById('materials-tbody');
+            tbody.innerHTML = demoData.materials.map(material => `
+                <tr>
+                    <td>${material.id}</td>
+                    <td>${material.title}</td>
+                    <td>${material.category}</td>
+                    <td>${material.material_type}</td>
+                    <td>${material.downloads}</td>
+                    <td>
+                        <div class="user-actions">
+                            <button class="btn btn-outline btn-small" onclick="editMaterial(${material.id})">
+                                ✏️
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="deleteContent('materials', ${material.id})">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function loadInstructors() {
+            const grid = document.getElementById('instructors-grid');
+            grid.innerHTML = demoData.instructors.map(instructor => `
+                <div class="instructor-card">
+                    <div class="instructor-header">
+                        <div class="instructor-avatar"></div>
+                        <div class="instructor-info">
+                            <h3>${instructor.name}</h3>
+                            <div class="instructor-specialization">${instructor.specialization}</div>
+                        </div>
+                    </div>
+                    <div class="instructor-bio">
+                        ${instructor.bio}
+                    </div>
+                    <div class="instructor-stats">
+                        <div class="instructor-stat">
+                            🕐 ${instructor.experience_years} лет опыта
+                        </div>
+                        ${instructor.email ? `
+                        <div class="instructor-stat">
+                            📧 ${instructor.email}
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="user-actions">
+                        <button class="btn btn-outline btn-small" onclick="editInstructor(${instructor.id})">
+                            ✏️ Редактировать
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteInstructor(${instructor.id})">
+                            🗑️ Удалить
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadUsers() {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = demoData.users.map(user => {
+                let roleBadge = '';
+                if (user.is_super_admin) {
+                    roleBadge = '<span class="user-badge badge-super-admin">Супер-админ</span>';
+                } else if (user.is_admin) {
+                    roleBadge = '<span class="user-badge badge-admin">Админ</span>';
+                } else {
+                    roleBadge = '<span class="user-badge badge-user">Пользователь</span>';
+                }
+                
+                return `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.first_name}</td>
+                        <td>${user.username}</td>
+                        <td>${roleBadge}</td>
+                        <td>до ${new Date(user.subscription_end).toLocaleDateString('ru-RU')}</td>
+                        <td>
+                            <div class="user-actions">
+                                <button class="btn btn-outline btn-small" onclick="editUserRole(${user.id})">
+                                    👑 Изменить роль
+                                </button>
+                                <button class="btn btn-outline btn-small">
+                                    ✉️ Написать
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function loadMedia() {
+            const grid = document.getElementById('media-grid');
+            grid.innerHTML = demoData.media.map(file => `
+                <div class="media-item">
+                    <div style="font-size: 3rem; text-align: center; margin-bottom: 0.5rem;">
+                        ${getFileIcon(file.mime_type)}
+                    </div>
+                    <div style="font-size: 0.875rem; word-break: break-all; margin-bottom: 0.5rem;">
+                        ${file.original_name}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        ${formatFileSize(file.size)}
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                        <button class="btn btn-outline btn-small" onclick="copyUrl('${file.url}')">
+                            📋
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteMedia(${file.id})">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadNavigation() {
+            const grid = document.getElementById('navigation-grid');
+            grid.innerHTML = demoData.navigation.map(item => `
+                <div class="navigation-card">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="font-size: 2rem;">${item.icon}</div>
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0 0 0.25rem 0;">${item.title}</h4>
+                            <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">${item.description}</p>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                                Страница: ${item.page} | Позиция: ${item.position} | 
+                                Статус: ${item.is_active ? 'Активна' : 'Неактивна'}
+                            </div>
+                        </div>
+                    </div>
+                    ${item.image_url ? `
+                    <div style="margin-bottom: 1rem;">
+                        <img src="${item.image_url}" alt="${item.title}" 
+                             style="width: 100%; height: 100px; object-fit: cover; border-radius: 0.5rem;"
+                             onerror="this.style.display='none'">
+                    </div>
+                    ` : ''}
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-outline btn-small" onclick="editNavigation(${item.id})">
+                            ✏️ Редактировать
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteNavigation(${item.id})">
+                            🗑️ Удалить
+                        </button>
+                        <button class="btn btn-outline btn-small" onclick="toggleNavigationStatus(${item.id}, ${!item.is_active})">
+                            ${item.is_active ? '👁️ Скрыть' : '👀 Показать'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
         }
 
         // ==================== ФИЛЬТРАЦИЯ ДАННЫХ ====================
@@ -2119,31 +1804,55 @@
             const search = document.getElementById('courses-search').value.toLowerCase();
             const category = document.getElementById('courses-category').value;
             const status = document.getElementById('courses-status').value;
-            const courses = adminState.getState('courses');
             
-            const filtered = courses.filter(course => {
+            const filtered = demoData.courses.filter(course => {
                 const matchesSearch = course.title.toLowerCase().includes(search) || 
                                     course.description.toLowerCase().includes(search);
-                const matchesCategory = !category || course.category_id == category;
+                const matchesCategory = !category || course.category === category;
                 const matchesStatus = !status || 
-                                    (status === 'active' && course.is_published) ||
-                                    (status === 'inactive' && !course.is_published);
+                                    (status === 'active' && course.is_active) ||
+                                    (status === 'inactive' && !course.is_active);
                 
                 return matchesSearch && matchesCategory && matchesStatus;
             });
             
-            renderCourses(filtered);
+            const tbody = document.getElementById('courses-tbody');
+            tbody.innerHTML = filtered.map(course => `
+                <tr>
+                    <td>${course.id}</td>
+                    <td>
+                        <strong>${course.title}</strong>
+                        <div style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            ${course.description}
+                        </div>
+                    </td>
+                    <td>${course.category}</td>
+                    <td>${formatPrice(course.price)}</td>
+                    <td>${course.students_count}</td>
+                    <td class="${course.is_active ? 'status-active' : 'status-inactive'}">
+                        ${course.is_active ? 'Активен' : 'Неактивен'}
+                    </td>
+                    <td>
+                        <div class="user-actions">
+                            <button class="btn btn-outline btn-small" onclick="editCourse(${course.id})">
+                                ✏️ Редактировать
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="deleteContent('courses', ${course.id})">
+                                🗑️ Удалить
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         function filterUsers() {
             const search = document.getElementById('users-search').value.toLowerCase();
             const role = document.getElementById('users-role').value;
-            const users = adminState.getState('users');
             
-            const filtered = users.filter(user => {
+            const filtered = demoData.users.filter(user => {
                 const matchesSearch = user.first_name.toLowerCase().includes(search) || 
-                                    (user.last_name && user.last_name.toLowerCase().includes(search)) ||
-                                    (user.username && user.username.toLowerCase().includes(search));
+                                    user.username.toLowerCase().includes(search);
                 const matchesRole = !role || 
                                   (role === 'user' && !user.is_admin && !user.is_super_admin) ||
                                   (role === 'admin' && user.is_admin && !user.is_super_admin) ||
@@ -2152,15 +1861,44 @@
                 return matchesSearch && matchesRole;
             });
             
-            renderUsers(filtered);
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = filtered.map(user => {
+                let roleBadge = '';
+                if (user.is_super_admin) {
+                    roleBadge = '<span class="user-badge badge-super-admin">Супер-админ</span>';
+                } else if (user.is_admin) {
+                    roleBadge = '<span class="user-badge badge-admin">Админ</span>';
+                } else {
+                    roleBadge = '<span class="user-badge badge-user">Пользователь</span>';
+                }
+                
+                return `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.first_name}</td>
+                        <td>${user.username}</td>
+                        <td>${roleBadge}</td>
+                        <td>до ${new Date(user.subscription_end).toLocaleDateString('ru-RU')}</td>
+                        <td>
+                            <div class="user-actions">
+                                <button class="btn btn-outline btn-small" onclick="editUserRole(${user.id})">
+                                    👑 Изменить роль
+                                </button>
+                                <button class="btn btn-outline btn-small">
+                                    ✉️ Написать
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function filterMedia() {
             const search = document.getElementById('media-search').value.toLowerCase();
             const type = document.getElementById('media-type').value;
-            const media = adminState.getState('media');
             
-            const filtered = media.filter(file => {
+            const filtered = demoData.media.filter(file => {
                 const matchesSearch = file.original_name.toLowerCase().includes(search);
                 const matchesType = !type || 
                                   (type === 'image' && file.mime_type.startsWith('image/')) ||
@@ -2171,15 +1909,35 @@
                 return matchesSearch && matchesType;
             });
             
-            renderMedia(filtered);
+            const grid = document.getElementById('media-grid');
+            grid.innerHTML = filtered.map(file => `
+                <div class="media-item">
+                    <div style="font-size: 3rem; text-align: center; margin-bottom: 0.5rem;">
+                        ${getFileIcon(file.mime_type)}
+                    </div>
+                    <div style="font-size: 0.875rem; word-break: break-all; margin-bottom: 0.5rem;">
+                        ${file.original_name}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        ${formatFileSize(file.size)}
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                        <button class="btn btn-outline btn-small" onclick="copyUrl('${file.url}')">
+                            📋
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteMedia(${file.id})">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
         }
 
         // ==================== УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ ====================
 
-        async function editUserRole(userId) {
+        function editUserRole(userId) {
             currentEditingUser = userId;
-            const users = adminState.getState('users');
-            const user = users.find(u => u.id === userId);
+            const user = demoData.users.find(u => u.id === userId);
             
             if (user) {
                 const roleSelect = document.getElementById('user-role');
@@ -2200,11 +1958,13 @@
             currentEditingUser = null;
         }
 
-        async function saveUserRole() {
+        function saveUserRole() {
             const role = document.getElementById('user-role').value;
+            const userIndex = demoData.users.findIndex(u => u.id === currentEditingUser);
             
-            try {
-                await apiService.updateUserRole(currentEditingUser, role);
+            if (userIndex !== -1) {
+                demoData.users[userIndex].is_admin = role === 'admin';
+                demoData.users[userIndex].is_super_admin = role === 'super_admin';
                 
                 const roleNames = {
                     'user': 'Пользователь',
@@ -2214,10 +1974,7 @@
                 
                 showSuccess(`Роль пользователя #${currentEditingUser} изменена на: ${roleNames[role]}`);
                 closeUserModal();
-                await loadUsers();
-            } catch (error) {
-                console.error('Ошибка обновления роли:', error);
-                showError('Ошибка обновления роли пользователя');
+                loadUsers();
             }
         }
 
@@ -2253,11 +2010,6 @@
                                     <option value="podcasts" ${editItem && editItem.page === 'podcasts' ? 'selected' : ''}>Подкасты</option>
                                     <option value="videos" ${editItem && editItem.page === 'videos' ? 'selected' : ''}>Видео</option>
                                     <option value="materials" ${editItem && editItem.page === 'materials' ? 'selected' : ''}>Материалы</option>
-                                    <option value="streams" ${editItem && editItem.page === 'streams' ? 'selected' : ''}>Эфиры</option>
-                                    <option value="events" ${editItem && editItem.page === 'events' ? 'selected' : ''}>Мероприятия</option>
-                                    <option value="community" ${editItem && editItem.page === 'community' ? 'selected' : ''}>Сообщество</option>
-                                    <option value="favorites" ${editItem && editItem.page === 'favorites' ? 'selected' : ''}>Избранное</option>
-                                    <option value="admin" ${editItem && editItem.page === 'admin' ? 'selected' : ''}>Админ-панель</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -2281,70 +2033,66 @@
             
             document.body.appendChild(modal);
             
-            document.getElementById('navigation-form').addEventListener('submit', async function(e) {
+            document.getElementById('navigation-form').addEventListener('submit', function(e) {
                 e.preventDefault();
                 
-                const formData = {
-                    title: document.getElementById('nav-title').value,
-                    description: document.getElementById('nav-description').value,
-                    icon: document.getElementById('nav-icon').value,
-                    page: document.getElementById('nav-page').value,
-                    position: parseInt(document.getElementById('nav-position').value),
-                    is_active: document.getElementById('nav-active').checked
-                };
-                
-                try {
-                    if (editItem) {
-                        await apiService.updateNavigationItem(editItem.id, formData);
-                    } else {
-                        await apiService.createNavigationItem(formData);
+                if (editItem) {
+                    // Обновление существующего элемента
+                    const index = demoData.navigation.findIndex(nav => nav.id === editItem.id);
+                    if (index !== -1) {
+                        demoData.navigation[index] = {
+                            ...editItem,
+                            title: document.getElementById('nav-title').value,
+                            description: document.getElementById('nav-description').value,
+                            icon: document.getElementById('nav-icon').value,
+                            page: document.getElementById('nav-page').value,
+                            position: parseInt(document.getElementById('nav-position').value),
+                            is_active: document.getElementById('nav-active').checked
+                        };
                     }
-                    
-                    showSuccess(`Навигационная кнопка ${editItem ? 'обновлена' : 'создана'}`);
-                    modal.remove();
-                    await loadNavigation();
-                } catch (error) {
-                    console.error('Ошибка сохранения навигации:', error);
-                    showError('Ошибка сохранения навигационной кнопки');
+                } else {
+                    // Создание нового элемента
+                    const newId = Math.max(...demoData.navigation.map(nav => nav.id)) + 1;
+                    demoData.navigation.push({
+                        id: newId,
+                        title: document.getElementById('nav-title').value,
+                        description: document.getElementById('nav-description').value,
+                        icon: document.getElementById('nav-icon').value,
+                        page: document.getElementById('nav-page').value,
+                        position: parseInt(document.getElementById('nav-position').value),
+                        is_active: document.getElementById('nav-active').checked,
+                        image_url: ''
+                    });
                 }
+                
+                showSuccess(`Навигационная кнопка ${editItem ? 'обновлена' : 'создана'}`);
+                modal.remove();
+                loadNavigation();
             });
         }
 
-        async function editNavigation(id) {
-            const navigation = adminState.getState('navigation');
-            const item = navigation.find(nav => nav.id === id);
+        function editNavigation(id) {
+            const item = demoData.navigation.find(nav => nav.id === id);
             if (item) {
                 showAddNavigationModal(item);
             }
         }
 
-        async function deleteNavigation(id) {
+        function deleteNavigation(id) {
             if (confirm('Вы уверены, что хотите удалить этот навигационный элемент?')) {
-                try {
-                    await apiService.deleteNavigationItem(id);
-                    showSuccess('Навигационный элемент удален');
-                    await loadNavigation();
-                } catch (error) {
-                    console.error('Ошибка удаления навигации:', error);
-                    showError('Ошибка удаления навигационного элемента');
-                }
+                demoData.navigation = demoData.navigation.filter(nav => nav.id !== id);
+                showSuccess('Навигационный элемент удален');
+                loadNavigation();
             }
         }
 
-        async function toggleNavigationStatus(id, newStatus) {
-            try {
-                const navigation = adminState.getState('navigation');
-                const item = navigation.find(nav => nav.id === id);
-                
-                if (item) {
-                    await apiService.updateNavigationItem(id, { ...item, is_active: newStatus });
-                    const status = newStatus ? 'активирована' : 'деактивирована';
-                    showSuccess(`Навигация ${status}`);
-                    await loadNavigation();
-                }
-            } catch (error) {
-                console.error('Ошибка изменения статуса навигации:', error);
-                showError('Ошибка изменения статуса навигации');
+        function toggleNavigationStatus(id, newStatus) {
+            const item = demoData.navigation.find(nav => nav.id === id);
+            if (item) {
+                item.is_active = newStatus;
+                const status = newStatus ? 'активирована' : 'деактивирована';
+                showSuccess(`Навигация ${status}`);
+                loadNavigation();
             }
         }
 
@@ -2380,31 +2128,32 @@
             
             document.body.appendChild(modal);
             
-            document.getElementById('media-upload-form').addEventListener('submit', async function(e) {
+            document.getElementById('media-upload-form').addEventListener('submit', function(e) {
                 e.preventDefault();
                 
                 const fileInput = document.getElementById('media-file');
                 if (fileInput.files.length > 0) {
-                    const formData = new FormData();
-                    formData.append('file', fileInput.files[0]);
-                    formData.append('description', document.getElementById('media-description').value);
+                    const file = fileInput.files[0];
+                    const newId = Math.max(...demoData.media.map(m => m.id)) + 1;
                     
-                    try {
-                        await apiService.uploadMedia(formData);
-                        showSuccess('Файл успешно загружен');
-                        modal.remove();
-                        await loadMedia();
-                    } catch (error) {
-                        console.error('Ошибка загрузки файла:', error);
-                        showError('Ошибка загрузки файла');
-                    }
+                    demoData.media.push({
+                        id: newId,
+                        original_name: file.name,
+                        size: file.size,
+                        mime_type: file.type,
+                        url: URL.createObjectURL(file)
+                    });
+                    
+                    showSuccess('Файл успешно загружен');
+                    modal.remove();
+                    loadMedia();
                 }
             });
         }
 
         // ==================== ФУНКЦИИ УДАЛЕНИЯ ====================
 
-        async function deleteContent(type, id) {
+        function deleteContent(type, id) {
             const typeNames = {
                 'courses': 'курс',
                 'podcasts': 'подкаст',
@@ -2413,94 +2162,74 @@
             };
             
             if (confirm(`Вы уверены, что хотите удалить этот ${typeNames[type]}?`)) {
-                try {
-                    switch(type) {
-                        case 'courses':
-                            await apiService.deleteCourse(id);
-                            break;
-                        case 'podcasts':
-                            await apiService.deletePodcast(id);
-                            break;
-                        case 'videos':
-                            await apiService.deleteVideo(id);
-                            break;
-                        case 'materials':
-                            await apiService.deleteMaterial(id);
-                            break;
-                    }
-                    
-                    showSuccess(`${typeNames[type]} успешно удален`);
-                    await loadTabData(currentTab);
-                } catch (error) {
-                    console.error(`Ошибка удаления ${type}:`, error);
-                    showError(`Ошибка удаления ${typeNames[type]}`);
+                switch(type) {
+                    case 'courses':
+                        demoData.courses = demoData.courses.filter(c => c.id !== id);
+                        break;
+                    case 'podcasts':
+                        demoData.podcasts = demoData.podcasts.filter(p => p.id !== id);
+                        break;
+                    case 'videos':
+                        demoData.videos = demoData.videos.filter(v => v.id !== id);
+                        break;
+                    case 'materials':
+                        demoData.materials = demoData.materials.filter(m => m.id !== id);
+                        break;
                 }
+                
+                showSuccess(`${typeNames[type]} успешно удален`);
+                loadTabData(currentTab);
             }
         }
 
-        async function deleteInstructor(id) {
+        function deleteInstructor(id) {
             if (confirm('Вы уверены, что хотите удалить этого преподавателя?')) {
-                try {
-                    await apiService.deleteInstructor(id);
-                    showSuccess('Преподаватель успешно удален');
-                    await loadInstructors();
-                } catch (error) {
-                    console.error('Ошибка удаления преподавателя:', error);
-                    showError('Ошибка удаления преподавателя');
-                }
+                demoData.instructors = demoData.instructors.filter(i => i.id !== id);
+                showSuccess('Преподаватель успешно удален');
+                loadInstructors();
             }
         }
 
-        async function deleteMedia(id) {
+        function deleteMedia(id) {
             if (confirm('Вы уверены, что хотите удалить этот файл?')) {
-                try {
-                    await apiService.deleteMedia(id);
-                    showSuccess('Файл успешно удален');
-                    await loadMedia();
-                } catch (error) {
-                    console.error('Ошибка удаления файла:', error);
-                    showError('Ошибка удаления файла');
-                }
+                demoData.media = demoData.media.filter(m => m.id !== id);
+                showSuccess('Файл успешно удален');
+                loadMedia();
             }
         }
 
         // ==================== РЕДАКТИРОВАНИЕ КОНТЕНТА ====================
 
-        async function editCourse(id) {
-            const courses = adminState.getState('courses');
-            const course = courses.find(c => c.id === id);
+        function editCourse(id) {
+            const course = demoData.courses.find(c => c.id === id);
             if (course) {
                 showAddModal('courses', course);
             }
         }
 
-        async function editInstructor(id) {
-            const instructors = adminState.getState('instructors');
-            const instructor = instructors.find(i => i.id === id);
+        function editInstructor(id) {
+            const instructor = demoData.instructors.find(i => i.id === id);
             if (instructor) {
                 showAddModal('instructors', instructor);
             }
         }
 
-        async function editPodcast(id) {
-            const podcasts = adminState.getState('podcasts');
-            const podcast = podcasts.find(p => p.id === id);
+        function editPodcast(id) {
+            const podcast = demoData.podcasts.find(p => p.id === id);
             if (podcast) {
                 showAddModal('podcasts', podcast);
             }
         }
 
-        async function editVideo(id) {
-            const videos = adminState.getState('videos');
-            const video = videos.find(v => v.id === id);
+        function editVideo(id) {
+            const video = demoData.videos.find(v => v.id === id);
             if (video) {
                 showAddModal('videos', video);
             }
         }
 
-        async function editMaterial(id) {
-            const materials = adminState.getState('materials');
-            const material = materials.find(m => m.id === id);
+        function editMaterial(id) {
+            const material = demoData.materials.find(m => m.id === id);
             if (material) {
                 showAddModal('materials', material);
             }
@@ -2508,47 +2237,28 @@
 
         // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 
-        async function handleSettingsSubmit(e) {
+        function handleSettingsSubmit(e) {
             e.preventDefault();
-            
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData);
-            
-            try {
-                await apiService.updateSettings(data);
-                showSuccess('Настройки успешно сохранены');
-            } catch (error) {
-                console.error('Ошибка сохранения настроек:', error);
-                showError('Ошибка сохранения настроек');
-            }
+            showSuccess('Настройки успешно сохранены');
         }
 
-        async function resetSettings() {
+        function resetSettings() {
             if (confirm('Вы уверены, что хотите сбросить настройки?')) {
-                try {
-                    const defaultSettings = await apiService.getSettings();
-                    // Здесь нужно будет заполнить форму значениями по умолчанию
-                    document.getElementById('settings-form').reset();
-                    showSuccess('Настройки сброшены');
-                } catch (error) {
-                    console.error('Ошибка сброса настроек:', error);
-                    showError('Ошибка сброса настроек');
-                }
+                document.getElementById('settings-form').reset();
+                showSuccess('Настройки сброшены');
             }
         }
 
         function copyUrl(url) {
             navigator.clipboard.writeText(url).then(() => {
                 showSuccess('URL скопирован в буфер обмена');
-            }).catch(() => {
-                showError('Ошибка копирования URL');
             });
         }
 
         function logout() {
             if (confirm('Вы уверены, что хотите выйти?')) {
-                localStorage.removeItem('adminToken');
-                window.location.href = '/admin/login';
+                showSuccess('Вы вышли из системы');
+                // В реальном приложении здесь будет редирект на страницу входа
             }
         }
 
@@ -2573,18 +2283,6 @@
             return '📎';
         }
 
-        function showLoading(element) {
-            if (element) {
-                element.style.display = 'flex';
-            }
-        }
-
-        function hideLoading(element) {
-            if (element) {
-                element.style.display = 'none';
-            }
-        }
-
         function showError(message) {
             showNotification(message, 'error');
         }
@@ -2598,16 +2296,11 @@
             notification.className = type === 'error' ? 'error-message' : 'success-message';
             notification.textContent = message;
             
-            const main = document.querySelector('.admin-main');
-            if (main) {
-                main.insertBefore(notification, main.firstChild);
-                
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.remove();
-                    }
-                }, 5000);
-            }
+            document.querySelector('.admin-main').insertBefore(notification, document.querySelector('.admin-main').firstChild);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
         }
 
         // Инициализация при загрузке
